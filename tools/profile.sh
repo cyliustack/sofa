@@ -53,7 +53,7 @@ done
 
 args=$*
 sofa_root=$(dirname $0)/..
-rm perf.data
+rm -f perf.data
 perf record -a ${args}
 perf script > perf.script
 ${sofa_root}/sofa perf.script
