@@ -9,6 +9,10 @@ Authors: All the contributors of SOFA
 `sudo apt-get install perf` 
 ### CentOS 7
 `sudo yum install perf`
+### Arch Linux
+`pacman -S perf`
+`pacman -S boost`
+`pacman -S python-matplotlib`
 
 ## 2-2. Perf Configuration
 `su`  

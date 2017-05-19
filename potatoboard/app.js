@@ -4,7 +4,7 @@ Highcharts.chart('container', {
         zoomType: 'xy'
     },
     title: {
-        text: 'Tmie Versus Executing Functions of TensorFlow'
+        text: 'Tmie Versus Executing Functions'
     },
     subtitle: {
       text: 'BatchSize: 128,   Recorded Steps: 20'
