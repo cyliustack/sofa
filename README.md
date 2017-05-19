@@ -25,12 +25,12 @@ With the command above, you get raw access to kernel tracepoints (specifically, 
 ## For Case 1
 ```
 sofa ls -ah
-potato 
+potato . 
 ```
 ## For Case 2
 ```
 sofa --logdir=/tmp/sofalog-001 python -c "import tensorflow as tf; print(tf.__version__)"
-potato --logdir=/tmp/sofalog-001
+potato /tmp/sofalog-001
 ```
 ## Interactive and Visualization Result Provided by Potato:  
 ![Alt text](demo.png)

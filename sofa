@@ -52,9 +52,8 @@ while [[ 1 ]]; do
 done
 
 args=$*
-sofa_root=$(dirname $0)/..
 rm -f perf.data
 perf record -a ${args}
 perf script > perf.script
-${sofa_root}/sofa perf.script
+/opt/sofa/bin/fsa perf.script
 #python3  $SOFA_ROOT/sofaviz.py

@@ -61,7 +61,7 @@ void dump_by(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto r
         if ((count++) % downsample == 0) {
             int id_offset = 0;
             std::string key((*it).func_name);
-            if (key.find(filter) != std::string::npos) {
+            if (key.find(filter) != std::string::npos || bTraceAll) {
                 id_offset = offset;
                 fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", (*it).timestamp, kf_map[key] + id_offset, key.c_str());
             }
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 
     int t = 0;
     if (argc < 2) {
-        printf("Usage: ./sofa perf.script\n");
+        printf("Usage: ./fsa perf.script\n");
         return -1;
     }
 
@@ -129,9 +129,7 @@ int main(int argc, char* argv[])
 
     pFileReport = fopen("data.js", "w");
     fprintf(pFileReport, "trace_data = [");
-    dump_by(pFileReport, vec_ltr, kf_map, "tensorflow", "rgba(223,83,83,.5)", 0, false);
-    dump_by(pFileReport, vec_ltr, kf_map, "cuda", "rgba(83,83,223,.5)", 0, false);
-    dump_by(pFileReport, vec_ltr, kf_map, "CUDA", "rgba(83,223,83,.5)", 0, true);
+    dump_by(pFileReport, vec_ltr, kf_map, "none", "rgba(223,83,83,.5)", 0, true);
     fprintf(pFileReport, "\n];");
     fclose(pFileReport);
 
