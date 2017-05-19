@@ -7,8 +7,8 @@ Authors: All the contributors of SOFA
 ## 2-1. Perf Installation 
 ### Debian/Ubuntu
 `sudo apt-get install perf` 
-### CentOS 7
-`sudo yum install perf`
+### Fedora 25
+`sudo dnf -y install perf boost-devel`
 
 ## 2-2. Perf Configuration
 `su`  
