@@ -1,3 +1,12 @@
+C_NONE=$(shell echo -e "\033[0m")
+C_RED=$(shell echo -e "\033[31m")
+C_GREEN=$(shell echo -e "\033[32m")
+C_ORANGE=$(shell echo -e "\033[33m")
+C_BLUE=$(shell echo -e "\033[34m")
+C_PURPLE=$(shell echo -e "\033[35m")
+C_CYAN=$(shell echo -e "\033[36m")
+C_LIGHT_GRAY=$(shell echo -e "\033[37m")
+
 TARGET := fsa
 OBJS := main.o
 LIB_USER := 
@@ -10,17 +19,17 @@ CXX := g++
 all	: $(TARGET) $(LIB_USER)
 $(TARGET): $(OBJS) $(LIB_USER)
 	@$(CXX) -o $@ $(OBJS) $(LIB_USER)
-	@echo "\033[0;33m Generated	$@\033[0m"
-	@echo "\033[0;33m Generated	$@\033[0m"
+	@echo -e "$(C_ORANGE)Generated	$@$(C_NONE)"
+	@echo -e "$(C_ORANGE)Generated	$@$(C_NONE)"
 $(LIB_USER):	$(LIB_USER_OBJS)
 	@ar -rcs $@ $^
-	@echo "\033[0;32m LINK	$@	by	$^\033[0m"
+	@echo -e "$(C_GREEN)LINK	$@	by	$^$(C_NONE)"
 %.o	:	%.c
 	@$(CC) -c -fPIC $(CFLAGS) $< -o $@
-	@echo "\033[0;32m CC	$@\033[0m"
+	@echo -e "$(C_GREEN)CC	$@$(C_NONE)"
 %.o	:	%.cpp
 	@$(CXX) -c -fPIC $(CXXFLAGS) $< -o $@
-	@echo "\033[0;32m CXX	$@\033[0m"
+	@echo -e "$(C_GREEN)CXX	$@$(C_NONE)"
 run: $(TARGET)
 	./$(TARGET)
 	python3 -i plot-all.py
@@ -42,4 +51,4 @@ uninstall:
 	rm -r /opt/sofa
 clean:
 	@rm $(TARGET) $(LIB_USER) *.o
-	@echo "\033[0;34m Removed all TARGET and objects\033[0m"
+	@echo -e "$(C_BLUE)Removed all TARGET and objects$(C_NONE)"
