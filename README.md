@@ -1,25 +1,30 @@
-# Introduction
-SOFA : Swarm of Functions Analysis
-Author Cheng-Yueh Liu
+# 1. Introduction
+SOFA: Swarm of Functions Analysis  
+Authors: All the contributors of SOFA
 
-# Prerequisite
+# 2. Prerequisite
 
-## Debian/Ubuntu
-`sudo apt-get install perf nodejs` 
+## Perf Installation 
+### Debian/Ubuntu
+`sudo apt-get install perf` 
+### CentOS 7
+`sudo yum install perf`
 
-## CentOS 7
-`sudo yum install perf nodejs`
+## Perf Configuration
+`su`  
+`echo -1 /proc/sys/kernel/perf_event_paranoid`    
+With the command above, you get raw access to kernel tracepoints (specifically, you can mmap the file created by perf_event_open, I don't know what the implications are).
 
-# SOFA Installation 
+# 3. SOFA Build and Installation 
 1. git clone https://github.com/cyliustack/sofa
 2. cd sofa 
 3. make 
 4. sudo make install
 
-# How To Use
+# 4. How To Use
 ## For Case 1
 ```
-sofa ls
+sofa ls -ah
 potato 
 ```
 ## For Case 2
