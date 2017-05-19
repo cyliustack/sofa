@@ -6,9 +6,13 @@ Authors: All the contributors of SOFA
 
 ## 2-1. Perf Installation 
 ### Debian/Ubuntu
-`sudo apt-get install perf` 
+`apt-get install perf` 
+### Arch Linux
+`pacman -S perf`
+`pacman -S boost`
+`pacman -S python-matplotlib`
 ### Fedora 25
-`sudo dnf -y install perf boost-devel`
+`dnf -y install perf boost-devel`
 
 ## 2-2. Perf Configuration
 `su`  
