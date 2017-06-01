@@ -55,5 +55,5 @@ args=$*
 rm -f perf.data
 perf record -a ${args}
 perf script > perf.script
-/opt/sofa/bin/fsa perf.script
+/opt/sofa/bin/fsa default.cfg perf.script
 #python3  $SOFA_ROOT/sofaviz.py

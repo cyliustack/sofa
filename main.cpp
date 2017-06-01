@@ -1,6 +1,9 @@
 #include <boost/core/demangle.hpp>
+#include <cstdlib>
+#include <iomanip>
 #include <iostream>
 #include <iostream>
+#include <libconfig.h++>
 #include <map>
 #include <regex>
 #include <stdint.h>
@@ -10,6 +13,7 @@
 #include <typeinfo>
 #include <unistd.h>
 #include <vector>
+
 template <class T>
 struct X {
 };
@@ -22,6 +26,118 @@ int test()
     name = "_ZNSt14error_categoryD2Ev@plt";
     std::cout << name << std::endl;                                // prints 1XIiE
     std::cout << boost::core::demangle(name.c_str()) << std::endl; // prints X<int>
+    return 0;
+}
+
+// This example reads the configuration file 'example.cfg' and displays
+// some of its contents.
+using namespace libconfig;
+using namespace std;
+int config(int argc, char** argv)
+{
+    Config cfg;
+
+    // Read the file. If there is an error, report it and exit.
+    try {
+        cfg.readFile(argv[1]);
+    } catch (const FileIOException& fioex) {
+        std::cerr << "I/O error while reading file." << std::endl;
+        return (EXIT_FAILURE);
+    } catch (const ParseException& pex) {
+        std::cerr << "Parse error at " << pex.getFile() << ":" << pex.getLine()
+                  << " - " << pex.getError() << std::endl;
+        return (EXIT_FAILURE);
+    }
+
+    // Get the store name.
+    try {
+        string name = cfg.lookup("name");
+        cout << "Store name: " << name << endl
+             << endl;
+    } catch (const SettingNotFoundException& nfex) {
+        cerr << "No 'name' setting in configuration file." << endl;
+    }
+
+    const Setting& root = cfg.getRoot();
+
+    // Output a list of all books in the inventory.
+    try {
+        const Setting& books = root["inventory"]["books"];
+        int count = books.getLength();
+
+        cout << setw(30) << left << "TITLE"
+             << "  "
+             << setw(30) << left << "AUTHOR"
+             << "   "
+             << setw(6) << left << "PRICE"
+             << "  "
+             << "QTY"
+             << endl;
+
+        for (int i = 0; i < count; ++i) {
+            const Setting& book = books[i];
+
+            // Only output the record if all of the expected fields are present.
+            string title, author;
+            double price;
+            int qty;
+
+            if (!(book.lookupValue("title", title)
+                    && book.lookupValue("author", author)
+                    && book.lookupValue("price", price)
+                    && book.lookupValue("qty", qty)))
+                continue;
+
+            cout << setw(30) << left << title << "  "
+                 << setw(30) << left << author << "  "
+                 << '$' << setw(6) << right << price << "  "
+                 << qty
+                 << endl;
+        }
+        cout << endl;
+    } catch (const SettingNotFoundException& nfex) {
+        // Ignore.
+    }
+
+    // Output a list of all books in the inventory.
+    try {
+        const Setting& movies = root["inventory"]["movies"];
+        int count = movies.getLength();
+
+        cout << setw(30) << left << "TITLE"
+             << "  "
+             << setw(10) << left << "MEDIA"
+             << "   "
+             << setw(6) << left << "PRICE"
+             << "  "
+             << "QTY"
+             << endl;
+
+        for (int i = 0; i < count; ++i) {
+            const Setting& movie = movies[i];
+
+            // Only output the record if all of the expected fields are present.
+            string title, media;
+            double price;
+            int qty;
+
+            if (!(movie.lookupValue("title", title)
+                    && movie.lookupValue("media", media)
+                    && movie.lookupValue("price", price)
+                    && movie.lookupValue("qty", qty)))
+                continue;
+
+            cout << setw(30) << left << title << "  "
+                 << setw(10) << left << media << "  "
+                 << '$' << setw(6) << right << price << "  "
+                 << qty
+                 << endl;
+        }
+        cout << endl;
+    } catch (const SettingNotFoundException& nfex) {
+        // Ignore.
+    }
+
     return 0;
 }
 
@@ -69,6 +185,7 @@ void dump_by(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto r
     }
     fprintf(pFileReport, "]},\n");
 }
+
 int main(int argc, char* argv[])
 {
     FILE *pFile, *pFileReport;
@@ -76,12 +193,14 @@ int main(int argc, char* argv[])
     std::vector<TraceRecord> vec_ltr;
 
     int t = 0;
-    if (argc < 2) {
-        printf("Usage: ./fsa perf.script\n");
+    if (argc < 3) {
+        printf("Usage: ./fsa filter.cfg perf.script\n");
         return -1;
     }
 
-    pFile = fopen(argv[1], "r");
+    config(argc, argv);
+
+    pFile = fopen(argv[2], "r");
     if (pFile == NULL) {
         perror("Error opening file");
     } else {
@@ -119,13 +238,13 @@ int main(int argc, char* argv[])
         (*it).second = kf_id += 10;
     }
 
-    //pFileReport = fopen("calltrace.csv", "w");
-    //fprintf(pFileReport, "timestamp,func_id,func_name\n");
-    //for (std::vector<TraceRecord>::iterator it = vec_ltr.begin(); it != vec_ltr.end(); it++) {
-    //    std::string key((*it).func_name);
-    //    fprintf(pFileReport, "%lf,%d,%s\n", (*it).timestamp, kf_map[key], key.c_str());
-    //}
-    //fclose(pFileReport);
+    pFileReport = fopen("trace.csv", "w");
+    fprintf(pFileReport, "timestamp,func_id,func_name\n");
+    for (std::vector<TraceRecord>::iterator it = vec_ltr.begin(); it != vec_ltr.end(); it++) {
+        std::string key((*it).func_name);
+        fprintf(pFileReport, "%lf,%d,%s\n", (*it).timestamp, kf_map[key], key.c_str());
+    }
+    fclose(pFileReport);
 
     pFileReport = fopen("data.js", "w");
     fprintf(pFileReport, "trace_data = [");

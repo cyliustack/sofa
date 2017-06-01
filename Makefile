@@ -14,11 +14,12 @@ LIB_USER_OBJS :=
 OPTIONS := -g 
 CFLAGS := $(OPTIONS)
 CXXFLAGS := $(OPTIONS)
+LINKFLAGS := -lconfig++
 CC := gcc
 CXX := g++
 all	: $(TARGET) $(LIB_USER)
 $(TARGET): $(OBJS) $(LIB_USER)
-	@$(CXX) -o $@ $(OBJS) $(LIB_USER)
+	@$(CXX) -o $@ $(OBJS) $(LIB_USER) $(LINKFLAGS)
 	@echo -e "$(C_ORANGE)Generated	$@$(C_NONE)"
 	@echo -e "$(C_ORANGE)Generated	$@$(C_NONE)"
 $(LIB_USER):	$(LIB_USER_OBJS)
@@ -31,8 +32,8 @@ $(LIB_USER):	$(LIB_USER_OBJS)
 	@$(CXX) -c -fPIC $(CXXFLAGS) $< -o $@
 	@echo -e "$(C_GREEN)CXX	$@$(C_NONE)"
 run: $(TARGET)
-	./$(TARGET)
-	python3 -i plot-all.py
+	./$(TARGET) default.cfg perf.script
+	./potato
 debug: $(TARGET)
 	gdb --args ./$(TARGET)
 install:

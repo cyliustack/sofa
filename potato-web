@@ -1,0 +1,11 @@
+#!/bin/sh 
+if [ "$1" = "" ] ; then
+    echo "Usage: potato /path/to/your/log/diretory"
+    exit -1    
+fi
+logdir=$1
+cp /opt/sofa/potatoboard/index.html ${logdir}
+cp /opt/sofa/potatoboard/app.js ${logdir}
+cp data.js ${logdir}
+python -mwebbrowser ${logdir}/index.html
+
