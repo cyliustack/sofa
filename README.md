@@ -16,7 +16,7 @@ Authors: All the contributors of SOFA
 
 ## 2-2. Perf Configuration
 `su`  
-`echo -1 /proc/sys/kernel/perf_event_paranoid`    
+`echo -1 >  /proc/sys/kernel/perf_event_paranoid`    
 With the command above, you get raw access to kernel tracepoints (specifically, you can mmap the file created by perf_event_open, I don't know what the implications are).
 
 # 3. SOFA Build and Installation 
