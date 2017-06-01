@@ -14,10 +14,6 @@
 #include <unistd.h>
 #include <vector>
 
-template <class T>
-struct X {
-};
-
 int test()
 {
     std::string name = "_ZSt4fabsf";
@@ -29,17 +25,23 @@ int test()
     return 0;
 }
 
+class Filter {
+public:
+    std::vector<std::string> functions;
+    std::vector<std::string> events;
+};
+
 // This example reads the configuration file 'example.cfg' and displays
 // some of its contents.
 using namespace libconfig;
 using namespace std;
-int config(int argc, char** argv)
+int config(char* config_file, Filter& filter)
 {
     Config cfg;
 
     // Read the file. If there is an error, report it and exit.
     try {
-        cfg.readFile(argv[1]);
+        cfg.readFile(config_file);
     } catch (const FileIOException& fioex) {
         std::cerr << "I/O error while reading file." << std::endl;
         return (EXIT_FAILURE);
@@ -52,7 +54,7 @@ int config(int argc, char** argv)
     // Get the store name.
     try {
         string name = cfg.lookup("name");
-        cout << "Store name: " << name << endl
+        cout << "Topic: " << name << endl
              << endl;
     } catch (const SettingNotFoundException& nfex) {
         cerr << "No 'name' setting in configuration file." << endl;
@@ -62,75 +64,27 @@ int config(int argc, char** argv)
 
     // Output a list of all books in the inventory.
     try {
-        const Setting& books = root["inventory"]["books"];
-        int count = books.getLength();
+        const Setting& functions = root["symbols"]["functions"];
+        int count = functions.getLength();
 
-        cout << setw(30) << left << "TITLE"
+        cout << setw(30) << left << "NAME"
              << "  "
-             << setw(30) << left << "AUTHOR"
+             << setw(30) << left << "COLOR"
              << "   "
-             << setw(6) << left << "PRICE"
-             << "  "
-             << "QTY"
              << endl;
 
         for (int i = 0; i < count; ++i) {
-            const Setting& book = books[i];
-
+            const Setting& function = functions[i];
             // Only output the record if all of the expected fields are present.
-            string title, author;
-            double price;
-            int qty;
-
-            if (!(book.lookupValue("title", title)
-                    && book.lookupValue("author", author)
-                    && book.lookupValue("price", price)
-                    && book.lookupValue("qty", qty)))
+            string name;
+            int color;
+            if (!(function.lookupValue("name", name)
+                    && function.lookupValue("color", color))) {
                 continue;
-
-            cout << setw(30) << left << title << "  "
-                 << setw(30) << left << author << "  "
-                 << '$' << setw(6) << right << price << "  "
-                 << qty
-                 << endl;
-        }
-        cout << endl;
-    } catch (const SettingNotFoundException& nfex) {
-        // Ignore.
-    }
-
-    // Output a list of all books in the inventory.
-    try {
-        const Setting& movies = root["inventory"]["movies"];
-        int count = movies.getLength();
-
-        cout << setw(30) << left << "TITLE"
-             << "  "
-             << setw(10) << left << "MEDIA"
-             << "   "
-             << setw(6) << left << "PRICE"
-             << "  "
-             << "QTY"
-             << endl;
-
-        for (int i = 0; i < count; ++i) {
-            const Setting& movie = movies[i];
-
-            // Only output the record if all of the expected fields are present.
-            string title, media;
-            double price;
-            int qty;
-
-            if (!(movie.lookupValue("title", title)
-                    && movie.lookupValue("media", media)
-                    && movie.lookupValue("price", price)
-                    && movie.lookupValue("qty", qty)))
-                continue;
-
-            cout << setw(30) << left << title << "  "
-                 << setw(10) << left << media << "  "
-                 << '$' << setw(6) << right << price << "  "
-                 << qty
+            }
+            filter.functions.push_back(name);
+            cout << setw(30) << left << name << "  "
+                 << setw(30) << left << color << "  "
                  << endl;
         }
         cout << endl;
@@ -159,31 +113,22 @@ void TraceRecord::dump()
     printf("proc_name:%s, pid:%d, timestamp:%lf, cycles:%llu addr:%llu, function:%s\n", proc_name, pid, timestamp, cycles, addr, func_name);
 }
 
-void dump_by(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto rgb, auto offset, auto bTraceAll)
+void dump_csv(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto offset)
 {
     uint64_t count = 0, downsample = 1;
-
-    fprintf(pFileReport, "\n{");
-
-    fprintf(pFileReport, "name: '%s',", filter);
-
-    fprintf(pFileReport, "color: '%s',", rgb);
-
-    fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
-
-    fprintf(pFileReport, "data: [\n");
-
     for (std::vector<TraceRecord>::iterator it = vec_ltr.begin(); it != vec_ltr.end(); it++) {
         if ((count++) % downsample == 0) {
             int id_offset = 0;
             std::string key((*it).func_name);
-            if (key.find(filter) != std::string::npos || bTraceAll) {
-                id_offset = offset;
-                fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", (*it).timestamp, kf_map[key] + id_offset, key.c_str());
+            for (auto filtered_function : filter.functions) {
+                if (key.find(filtered_function) != std::string::npos) {
+                    id_offset = offset;
+                    fprintf(pFileReport, "%lf,%d,%s\n", (*it).timestamp, kf_map[key] + id_offset, key.c_str());
+                    break; 
+                }
             }
         }
     }
-    fprintf(pFileReport, "]},\n");
 }
 
 int main(int argc, char* argv[])
@@ -191,6 +136,7 @@ int main(int argc, char* argv[])
     FILE *pFile, *pFileReport;
     char mystring[6000];
     std::vector<TraceRecord> vec_ltr;
+    Filter filter;
 
     int t = 0;
     if (argc < 3) {
@@ -198,7 +144,7 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    config(argc, argv);
+    config(argv[1], filter);
 
     pFile = fopen(argv[2], "r");
     if (pFile == NULL) {
@@ -240,16 +186,7 @@ int main(int argc, char* argv[])
 
     pFileReport = fopen("trace.csv", "w");
     fprintf(pFileReport, "timestamp,func_id,func_name\n");
-    for (std::vector<TraceRecord>::iterator it = vec_ltr.begin(); it != vec_ltr.end(); it++) {
-        std::string key((*it).func_name);
-        fprintf(pFileReport, "%lf,%d,%s\n", (*it).timestamp, kf_map[key], key.c_str());
-    }
-    fclose(pFileReport);
-
-    pFileReport = fopen("data.js", "w");
-    fprintf(pFileReport, "trace_data = [");
-    dump_by(pFileReport, vec_ltr, kf_map, "none", "rgba(223,83,83,.5)", 0, true);
-    fprintf(pFileReport, "\n];");
+    dump_csv(pFileReport, vec_ltr, kf_map, filter, 0);
     fclose(pFileReport);
 
     return 0;
