@@ -117,8 +117,6 @@ public:
     char proc_name[1000];
     char func_name[1000];
     void dump();
-
-private:
 };
 
 void TraceRecord::dump()
@@ -126,7 +124,7 @@ void TraceRecord::dump()
     printf("proc_name:%s, pid:%d, timestamp:%lf, cycles:%llu addr:%llu, function:%s\n", proc_name, pid, timestamp, cycles, addr, func_name);
 }
 
-void dump_json(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto offset)
+void dump_json(auto* pFileReport, const auto& vec_ltr, auto& kf_map, auto& filter, auto offset)
 {
     uint64_t count = 0, downsample = 1;
     fprintf(pFileReport, "trace_data = [");
@@ -141,7 +139,7 @@ void dump_json(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto
         fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
 
         fprintf(pFileReport, "data: [\n");
-        for (auto trace : vec_ltr) {
+        for (auto& trace : vec_ltr) {
             if ((count++) % downsample == 0) {
                 int id_offset = 0;
                 std::string tracename(trace.func_name);
@@ -151,7 +149,7 @@ void dump_json(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto
         }
         fprintf(pFileReport, "]},\n");
     } else {
-        for (auto keyword : filter.functions) {
+        for (auto& keyword : filter.functions) {
             fprintf(pFileReport, "\n{");
 
             fprintf(pFileReport, "name: '%s',", keyword.c_str());
@@ -161,7 +159,7 @@ void dump_json(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto
             fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
 
             fprintf(pFileReport, "data: [\n");
-            for (auto trace : vec_ltr) {
+            for (auto& trace : vec_ltr) {
                 if ((count++) % downsample == 0) {
                     int id_offset = 0;
                     std::string tracename(trace.func_name);
@@ -177,7 +175,6 @@ void dump_json(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto
     fprintf(pFileReport, "]\n");
 }
 
-
 void dump_csv(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto offset)
 {
     uint64_t count = 0, downsample = 1;
@@ -188,17 +185,17 @@ void dump_csv(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto 
 
     fprintf(pFileReport, "timestamp,func_id,func_name,color\n");
 
-    for (std::vector<TraceRecord>::iterator it = vec_ltr.begin(); it != vec_ltr.end(); it++) {
+    for (auto& trace : vec_ltr) {
         if ((count++) % downsample == 0) {
             int id_offset = 0;
-            std::string tracename((*it).func_name);
+            std::string tracename(trace.func_name);
             if (bTraceAll) {
-                fprintf(pFileReport, "%lf,%d,%s,%s\n", (*it).timestamp,
+                fprintf(pFileReport, "%lf,%d,%s,%s\n", trace.timestamp,
                     kf_map[tracename],
                     tracename.c_str(),
                     "grey");
             } else {
-                for (auto keyword : filter.functions) {
+                for (auto& keyword : filter.functions) {
                     //std::cout<<"Filtered function = "
                     //          << keyword
                     //          << " with color "
@@ -206,7 +203,7 @@ void dump_csv(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto 
                     //          << std::endl;
                     if (tracename.find(keyword) != std::string::npos) {
                         id_offset = offset;
-                        fprintf(pFileReport, "%lf,%d,%s,%s\n", (*it).timestamp,
+                        fprintf(pFileReport, "%lf,%d,%s,%s\n", trace.timestamp,
                             kf_map[tracename] + id_offset,
                             tracename.c_str(),
                             filter.colormap[keyword].c_str());
@@ -260,14 +257,18 @@ int main(int argc, char* argv[])
     }
 
     std::map<std::string, int> kf_map;
-    for (std::vector<TraceRecord>::iterator it = vec_ltr.begin(); it != vec_ltr.end(); ++it) {
-        std::string key((*it).func_name);
+    for (const auto& trace : vec_ltr) {
+        std::string key(trace.func_name);
         kf_map[key] = 1;
     }
 
     int kf_id = 0;
-    for (std::map<std::string, int>::iterator it = kf_map.begin(); it != kf_map.end(); ++it) {
-        (*it).second = kf_id += 10;
+//    for (std::map<std::string, int>::iterator it = kf_map.begin(); it != kf_map.end(); ++it) {
+//        (*it).second = kf_id += 10;
+//    }
+
+    for (auto& kf: kf_map) {
+        kf.second = kf_id += 10;
     }
 
     pFileReport = fopen("report.csv", "w");

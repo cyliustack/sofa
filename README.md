@@ -13,6 +13,16 @@ Authors: All the contributors of SOFA
 `pacman -S python-matplotlib`
 ### Fedora 25
 `dnf -y install perf boost-devel libconfig-devel python-matplotlib`
+### CentOS 7
+`yum -y install centos-release-scl`
+`yum -y install devtoolset-4-gcc*`
+`In Makefile, do that CC := /opt/rh/devtoolset-4/root/bin/gcc`
+`In Makefile, do that CXX := /opt/rh/devtoolset-4/root/bin/g++`
+`yum -y install perf boost-devel libconfig-devel python-matplotlib`
+
+
+
+
 
 ## 2-2. Perf Configuration
 `su`  

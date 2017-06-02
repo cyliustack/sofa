@@ -11,7 +11,7 @@ TARGET := fsa
 OBJS := main.o
 LIB_USER := 
 LIB_USER_OBJS :=  
-OPTIONS := -g 
+OPTIONS := -g -std=c++14 
 CFLAGS := $(OPTIONS)
 CXXFLAGS := $(OPTIONS)
 LINKFLAGS := -lconfig++
