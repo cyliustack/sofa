@@ -35,6 +35,7 @@ With the command above, we get raw access to kernel tracepoints.
 # 4. How To Use
 ## For Case 1
 ```
+cp examples/conf/default.cfg .
 sofa ls -ah  
 potato .    
 ```
