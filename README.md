@@ -38,8 +38,8 @@ With the command above, we get raw access to kernel tracepoints.
 # 4. How To Use
 ## For Case 1
 ```
-sofa ls -ah
-potato  
+sofa ls -ah  
+potato .    
 ```
 ## Interactive and Visualization Result Provided by Potato:  
 ![Alt text](demo.png)
