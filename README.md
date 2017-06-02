@@ -46,4 +46,7 @@ potato .
 
 ## Interactive and Visualization Result Provided by Potato:  
 ![Alt text](demo.png)
+![Alt text](demo2.png)
+
+
 
