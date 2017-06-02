@@ -32,24 +32,27 @@ $(LIB_USER):	$(LIB_USER_OBJS)
 	@$(CXX) -c -fPIC $(CXXFLAGS) $< -o $@
 	@echo -e "$(C_GREEN)CXX	$@$(C_NONE)"
 run: $(TARGET)
+	rm -f perf.data
+	perf record -a ls -la
+	perf script > perf.script
 	./$(TARGET) default.cfg perf.script
 	./potato
 debug: $(TARGET)
 	gdb --args ./$(TARGET)
-install:
+install: uninstall
 	mkdir -p /opt/sofa/bin
-	mkdir -p /opt/sofa/sbin
-	mkdir -p /opt/sofa/potatoboard
 	mkdir -p /opt/sofa/plugin
 	cp -i fsa /opt/sofa/bin
-	cp -i sofa /opt/sofa/sbin
-	cp -i potato /opt/sofa/sbin
-	cp potatoboard/app.js /opt/sofa/potatoboard
-	cp potatoboard/index.html /opt/sofa/potatoboard
-	ln -is /opt/sofa/sbin/sofa /usr/local/bin/sofa
-	ln -is /opt/sofa/sbin/potato /usr/local/bin/potato
+	cp -i sofa /opt/sofa/bin
+	cp -i potato /opt/sofa/bin
+	ln -is /opt/sofa/bin/fsa /usr/local/bin/fsa
+	ln -is /opt/sofa/bin/sofa /usr/local/bin/sofa
+	ln -is /opt/sofa/bin/potato /usr/local/bin/potato
 uninstall:
 	rm -r /opt/sofa
+	rm /usr/local/bin/fsa
+	rm /usr/local/bin/sofa
+	rm /usr/local/bin/potato
 clean:
 	@rm $(TARGET) $(LIB_USER) *.o
 	@echo -e "$(C_BLUE)Removed all TARGET and objects$(C_NONE)"

@@ -24,18 +24,6 @@ function encapsulate()
 options=""
 while [[ 1 ]]; do
     case "$1" in
-        "--monitor" )
-            options+="--monitor "
-            ;;
-        "--phase" )
-            options+="--phase "
-            ;;
-        "--trace" )
-            options+="--trace "
-            ;;
-        "--jit" )
-            options+="--jit "
-            ;;
         "--help" )
             print_help
             exit 0
@@ -55,5 +43,5 @@ args=$*
 rm -f perf.data
 perf record -a ${args}
 perf script > perf.script
-/opt/sofa/bin/fsa default.cfg perf.script
-#python3  $SOFA_ROOT/sofaviz.py
+echo "script source = $(dirname $0)"
+$(dirname $0)/fsa default.cfg perf.script

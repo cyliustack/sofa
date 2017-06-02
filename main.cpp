@@ -27,8 +27,10 @@ int test()
 
 class Filter {
 public:
+    std::string tracing_mode;
     std::vector<std::string> functions;
     std::vector<std::string> events;
+    std::map<std::string, std::string> colormap;
 };
 
 // This example reads the configuration file 'example.cfg' and displays
@@ -53,11 +55,21 @@ int config(char* config_file, Filter& filter)
 
     // Get the store name.
     try {
-        string name = cfg.lookup("name");
-        cout << "Topic: " << name << endl
-             << endl;
+        std::string name = cfg.lookup("name");
+        std::cout << "Topic: " << name << std::endl
+                  << std::endl;
     } catch (const SettingNotFoundException& nfex) {
-        cerr << "No 'name' setting in configuration file." << endl;
+        cerr << "No 'name' setting in configuration file." << std::endl;
+    }
+
+    // Get the mode.
+    try {
+        std::string tracing_mode = cfg.lookup("tracing_mode");
+        filter.tracing_mode = tracing_mode;
+        std::cout << "Tracing Mode: " << filter.tracing_mode << std::endl
+                  << std::endl;
+    } catch (const SettingNotFoundException& nfex) {
+        std::cerr << "No 'mode' setting in configuration file." << std::endl;
     }
 
     const Setting& root = cfg.getRoot();
@@ -67,27 +79,28 @@ int config(char* config_file, Filter& filter)
         const Setting& functions = root["symbols"]["functions"];
         int count = functions.getLength();
 
-        cout << setw(30) << left << "NAME"
-             << "  "
-             << setw(30) << left << "COLOR"
-             << "   "
-             << endl;
+        std::cout << setw(40) << left << "Traced Symbols"
+                  << "  "
+                  << setw(40) << left << "Color"
+                  << "   "
+                  << std::endl;
 
         for (int i = 0; i < count; ++i) {
             const Setting& function = functions[i];
             // Only output the record if all of the expected fields are present.
             string name;
-            int color;
+            string color;
             if (!(function.lookupValue("name", name)
                     && function.lookupValue("color", color))) {
                 continue;
             }
             filter.functions.push_back(name);
-            cout << setw(30) << left << name << "  "
-                 << setw(30) << left << color << "  "
-                 << endl;
+            filter.colormap[name] = color;
+            std::cout << setw(40) << left << name << "  "
+                      << setw(40) << left << color << "  "
+                      << std::endl;
         }
-        cout << endl;
+        std::cout << std::endl;
     } catch (const SettingNotFoundException& nfex) {
         // Ignore.
     }
@@ -116,15 +129,35 @@ void TraceRecord::dump()
 void dump_csv(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto offset)
 {
     uint64_t count = 0, downsample = 1;
+    bool bTraceAll = false;
+    if (filter.tracing_mode == "full") {
+        bTraceAll = true;
+    }
+
     for (std::vector<TraceRecord>::iterator it = vec_ltr.begin(); it != vec_ltr.end(); it++) {
         if ((count++) % downsample == 0) {
             int id_offset = 0;
-            std::string key((*it).func_name);
-            for (auto filtered_function : filter.functions) {
-                if (key.find(filtered_function) != std::string::npos) {
-                    id_offset = offset;
-                    fprintf(pFileReport, "%lf,%d,%s\n", (*it).timestamp, kf_map[key] + id_offset, key.c_str());
-                    break; 
+            std::string tracename((*it).func_name);
+            if (bTraceAll) {
+                fprintf(pFileReport, "%lf,%d,%s,%s\n", (*it).timestamp,
+                    kf_map[tracename],
+                    tracename.c_str(),
+                    "grey");
+            } else {
+                for (auto keyword : filter.functions) {
+                    //std::cout<<"Filtered function = "
+                    //          << keyword
+                    //          << " with color "
+                    //          << filter.colormap[keyword]
+                    //          << std::endl;
+                    if (tracename.find(keyword) != std::string::npos) {
+                        id_offset = offset;
+                        fprintf(pFileReport, "%lf,%d,%s,%s\n", (*it).timestamp,
+                            kf_map[tracename] + id_offset,
+                            tracename.c_str(),
+                            filter.colormap[keyword].c_str());
+                        break;
+                    }
                 }
             }
         }
@@ -140,7 +173,7 @@ int main(int argc, char* argv[])
 
     int t = 0;
     if (argc < 3) {
-        printf("Usage: ./fsa filter.cfg perf.script\n");
+        printf("Usage: ./fsa defaut.cfg perf.script\n");
         return -1;
     }
 
@@ -173,7 +206,6 @@ int main(int argc, char* argv[])
     }
 
     std::map<std::string, int> kf_map;
-    // show content:
     for (std::vector<TraceRecord>::iterator it = vec_ltr.begin(); it != vec_ltr.end(); ++it) {
         std::string key((*it).func_name);
         kf_map[key] = 1;
@@ -184,8 +216,8 @@ int main(int argc, char* argv[])
         (*it).second = kf_id += 10;
     }
 
-    pFileReport = fopen("trace.csv", "w");
-    fprintf(pFileReport, "timestamp,func_id,func_name\n");
+    pFileReport = fopen("report.csv", "w");
+    fprintf(pFileReport, "timestamp,func_id,func_name,color\n");
     dump_csv(pFileReport, vec_ltr, kf_map, filter, 0);
     fclose(pFileReport);
 

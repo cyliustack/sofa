@@ -6,18 +6,18 @@ Authors: All the contributors of SOFA
 
 ## 2-1. Perf Installation 
 ### Debian/Ubuntu
-`apt-get install perf` 
+`apt-get install perf boost-dev libconfig-dev python-matplotlib` 
 ### Arch Linux
 `pacman -S perf`
 `pacman -S boost`
 `pacman -S python-matplotlib`
 ### Fedora 25
-`dnf -y install perf boost-devel`
+`dnf -y install perf boost-devel libconfig-devel python-matplotlib`
 
 ## 2-2. Perf Configuration
 `su`  
 `echo -1 >  /proc/sys/kernel/perf_event_paranoid`    
-With the command above, you get raw access to kernel tracepoints (specifically, you can mmap the file created by perf_event_open, I don't know what the implications are).
+With the command above, we get raw access to kernel tracepoints.
 
 # 3. SOFA Build and Installation 
 1. git clone https://github.com/cyliustack/sofa
@@ -29,12 +29,7 @@ With the command above, you get raw access to kernel tracepoints (specifically, 
 ## For Case 1
 ```
 sofa ls -ah
-potato . 
-```
-## For Case 2 (Not supported yet.)
-```
-sofa --logdir=/tmp/sofalog-001 python -c "import tensorflow as tf; print(tf.__version__)"
-potato /tmp/sofalog-001
+potato  
 ```
 ## Interactive and Visualization Result Provided by Potato:  
 ![Alt text](demo.png)
