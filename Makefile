@@ -49,10 +49,10 @@ install: uninstall
 	ln -is /opt/sofa/bin/sofa /usr/local/bin/sofa
 	ln -is /opt/sofa/bin/potato /usr/local/bin/potato
 uninstall:
-	rm -r /opt/sofa
-	rm /usr/local/bin/fsa
-	rm /usr/local/bin/sofa
-	rm /usr/local/bin/potato
+	rm -rf /opt/sofa
+	rm -f /usr/local/bin/fsa
+	rm -f /usr/local/bin/sofa
+	rm -f /usr/local/bin/potato
 clean:
 	@rm $(TARGET) $(LIB_USER) *.o
 	@echo -e "$(C_BLUE)Removed all TARGET and objects$(C_NONE)"
