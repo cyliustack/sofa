@@ -37,6 +37,7 @@ run: $(TARGET)
 	perf script > perf.script
 	./$(TARGET) default.cfg perf.script
 	cp report.js potatoboard
+	cp examples/conf/default.cfg .
 	python -mwebbrowser potatoboard/index.html
 debug: $(TARGET)
 	gdb --args ./$(TARGET)

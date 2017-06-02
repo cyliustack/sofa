@@ -35,10 +35,15 @@ With the command above, we get raw access to kernel tracepoints.
 # 4. How To Use
 ## For Case 1
 ```
+make run
+```
+## For Case 2
+```
 cp examples/conf/default.cfg .
 sofa ls -ah  
 potato .    
 ```
+
 ## Interactive and Visualization Result Provided by Potato:  
 ![Alt text](demo.png)
 
