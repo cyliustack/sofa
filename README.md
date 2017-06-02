@@ -8,17 +8,17 @@ Authors: All the contributors of SOFA
 ### Debian/Ubuntu
 `apt-get install perf boost-dev libconfig-dev python-matplotlib` 
 ### Arch Linux
-`pacman -S perf`
-`pacman -S boost`
-`pacman -S python-matplotlib`
+`pacman -S perf`  
+`pacman -S boost`  
+`pacman -S python-matplotlib`  
 ### Fedora 25
 `dnf -y install perf boost-devel libconfig-devel python-matplotlib`
 ### CentOS 7
-`yum -y install centos-release-scl`
-`yum -y install devtoolset-4-gcc*`
-`In Makefile, do that CC := /opt/rh/devtoolset-4/root/bin/gcc`
-`In Makefile, do that CXX := /opt/rh/devtoolset-4/root/bin/g++`
-`yum -y install perf boost-devel libconfig-devel python-matplotlib`
+`yum -y install centos-release-scl`  
+`yum -y install devtoolset-4-gcc*`  
+`In Makefile, do that CC := /opt/rh/devtoolset-4/root/bin/gcc`  
+`In Makefile, do that CXX := /opt/rh/devtoolset-4/root/bin/g++`  
+`yum -y install perf boost-devel libconfig-devel python-matplotlib`  
 
 
 
