@@ -4,7 +4,7 @@ Authors: All the contributors of SOFA
 
 # 2. Prerequisite
 
-## 2-1. Perf Installation 
+## 2-1. Installation 
 ### Debian/Ubuntu
 `apt-get install perf boost-dev libconfig-dev python-matplotlib` 
 ### Arch Linux
@@ -19,9 +19,6 @@ Authors: All the contributors of SOFA
 `In Makefile, do that CC := /opt/rh/devtoolset-4/root/bin/gcc`  
 `In Makefile, do that CXX := /opt/rh/devtoolset-4/root/bin/g++`  
 `yum -y install perf boost-devel libconfig-devel python-matplotlib`  
-
-
-
 
 
 ## 2-2. Perf Configuration
