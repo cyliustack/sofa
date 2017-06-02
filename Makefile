@@ -36,15 +36,19 @@ run: $(TARGET)
 	perf record -a ls -la
 	perf script > perf.script
 	./$(TARGET) default.cfg perf.script
-	./potato
+	cp report.js potatoboard
+	python -mwebbrowser potatoboard/index.html
 debug: $(TARGET)
 	gdb --args ./$(TARGET)
 install: uninstall
 	mkdir -p /opt/sofa/bin
+	mkdir -p /opt/sofa/potatoboard
 	mkdir -p /opt/sofa/plugin
 	cp -i fsa /opt/sofa/bin
 	cp -i sofa /opt/sofa/bin
 	cp -i potato /opt/sofa/bin
+	cp potatoboard/app.js /opt/sofa/potatoboard
+	cp potatoboard/index.html /opt/sofa/potatoboard
 	ln -is /opt/sofa/bin/fsa /usr/local/bin/fsa
 	ln -is /opt/sofa/bin/sofa /usr/local/bin/sofa
 	ln -is /opt/sofa/bin/potato /usr/local/bin/potato

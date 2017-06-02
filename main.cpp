@@ -126,6 +126,58 @@ void TraceRecord::dump()
     printf("proc_name:%s, pid:%d, timestamp:%lf, cycles:%llu addr:%llu, function:%s\n", proc_name, pid, timestamp, cycles, addr, func_name);
 }
 
+void dump_json(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto offset)
+{
+    uint64_t count = 0, downsample = 1;
+    fprintf(pFileReport, "trace_data = [");
+
+    if (filter.tracing_mode == "full") {
+        fprintf(pFileReport, "\n{");
+
+        fprintf(pFileReport, "name: 'All',");
+
+        fprintf(pFileReport, "color: 'grey',");
+
+        fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
+
+        fprintf(pFileReport, "data: [\n");
+        for (auto trace : vec_ltr) {
+            if ((count++) % downsample == 0) {
+                int id_offset = 0;
+                std::string tracename(trace.func_name);
+                id_offset = offset;
+                fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", trace.timestamp, kf_map[tracename] + id_offset, trace.func_name);
+            }
+        }
+        fprintf(pFileReport, "]},\n");
+    } else {
+        for (auto keyword : filter.functions) {
+            fprintf(pFileReport, "\n{");
+
+            fprintf(pFileReport, "name: '%s',", keyword.c_str());
+
+            fprintf(pFileReport, "color: '%s',", filter.colormap[keyword].c_str());
+
+            fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
+
+            fprintf(pFileReport, "data: [\n");
+            for (auto trace : vec_ltr) {
+                if ((count++) % downsample == 0) {
+                    int id_offset = 0;
+                    std::string tracename(trace.func_name);
+                    if (tracename.find(keyword) != std::string::npos) {
+                        id_offset = offset;
+                        fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", trace.timestamp, kf_map[tracename] + id_offset, trace.func_name);
+                    }
+                }
+            }
+            fprintf(pFileReport, "]},\n");
+        }
+    }
+    fprintf(pFileReport, "]\n");
+}
+
+
 void dump_csv(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto offset)
 {
     uint64_t count = 0, downsample = 1;
@@ -133,6 +185,8 @@ void dump_csv(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto 
     if (filter.tracing_mode == "full") {
         bTraceAll = true;
     }
+
+    fprintf(pFileReport, "timestamp,func_id,func_name,color\n");
 
     for (std::vector<TraceRecord>::iterator it = vec_ltr.begin(); it != vec_ltr.end(); it++) {
         if ((count++) % downsample == 0) {
@@ -217,8 +271,11 @@ int main(int argc, char* argv[])
     }
 
     pFileReport = fopen("report.csv", "w");
-    fprintf(pFileReport, "timestamp,func_id,func_name,color\n");
     dump_csv(pFileReport, vec_ltr, kf_map, filter, 0);
+    fclose(pFileReport);
+
+    pFileReport = fopen("report.js", "w");
+    dump_json(pFileReport, vec_ltr, kf_map, filter, 0);
     fclose(pFileReport);
 
     return 0;
