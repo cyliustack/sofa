@@ -28,16 +28,25 @@ int test()
 class Filter {
 public:
     std::string tracing_mode;
+    std::vector<std::string> nodes;
     std::vector<std::string> functions;
     std::vector<std::string> events;
     std::map<std::string, std::string> colormap;
+    std::map<std::string, std::string> colormap4node;
+};
+
+class TraceFile {
+public:
+    std::string path;
+    std::string color;
+    FILE* pFile;
 };
 
 // This example reads the configuration file 'example.cfg' and displays
 // some of its contents.
 using namespace libconfig;
 using namespace std;
-int config(char* config_file, Filter& filter)
+int config(char* config_file, auto& vec_tracefile, auto& filter)
 {
     Config cfg;
 
@@ -76,6 +85,43 @@ int config(char* config_file, Filter& filter)
 
     // Output a list of all books in the inventory.
     try {
+        const Setting& tracefiles = root["tracefiles"];
+        int count = tracefiles.getLength();
+
+        std::cout << setw(40) << left << "TraceFile Name"
+                  << "  "
+                  << setw(40) << left << "Color"
+                  << "   "
+                  << std::endl;
+
+        for (int i = 0; i < count; ++i) {
+            const Setting& tracefile = tracefiles[i];
+            // Only output the record if all of the expected fields are present.
+            TraceFile tcfile;
+            if (!(tracefile.lookupValue("path", tcfile.path)
+                    && tracefile.lookupValue("color", tcfile.color))) {
+                continue;
+            }
+
+            //tcfile.path  = path;
+            //tcfile.color = color;
+            char str_tmp[100] = { 0 };
+            sprintf(str_tmp, "node%d", i);
+            std::string node(str_tmp);
+            filter.colormap4node[node] = tcfile.color;
+            filter.nodes.push_back(node);
+
+            vec_tracefile.push_back(tcfile);
+            std::cout << setw(40) << left << tcfile.path << "  "
+                      << setw(40) << left << tcfile.color << "  "
+                      << std::endl;
+        }
+        std::cout << std::endl;
+    } catch (const SettingNotFoundException& nfex) {
+        // Ignore.
+    }
+
+    try {
         const Setting& functions = root["symbols"]["functions"];
         int count = functions.getLength();
 
@@ -111,6 +157,7 @@ int config(char* config_file, Filter& filter)
 class TraceRecord {
 public:
     int pid;
+    std::string node;
     double timestamp;
     uint64_t cycles;
     uint64_t addr;
@@ -121,7 +168,7 @@ public:
 
 void TraceRecord::dump()
 {
-    printf("proc_name:%s, pid:%d, timestamp:%lf, cycles:%llu addr:%llu, function:%s\n", proc_name, pid, timestamp, cycles, addr, func_name);
+    printf("proc_name:%s, pid:%d, timestamp:%lf, cycles:%llu addr:%llu, function:%s node:%s\n", proc_name, pid, timestamp, cycles, addr, func_name, node.c_str());
 }
 
 void dump_json(auto* pFileReport, const auto& vec_ltr, auto& kf_map, auto& filter, auto offset)
@@ -130,24 +177,48 @@ void dump_json(auto* pFileReport, const auto& vec_ltr, auto& kf_map, auto& filte
     fprintf(pFileReport, "trace_data = [");
 
     if (filter.tracing_mode == "full") {
-        fprintf(pFileReport, "\n{");
 
-        fprintf(pFileReport, "name: 'All',");
+        for (auto& node : filter.nodes) {
+            fprintf(pFileReport, "\n{");
 
-        fprintf(pFileReport, "color: 'grey',");
+            fprintf(pFileReport, "name: '%s',", node.c_str());
 
-        fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
+            fprintf(pFileReport, "color: '%s',", filter.colormap4node[node].c_str());
 
-        fprintf(pFileReport, "data: [\n");
-        for (auto& trace : vec_ltr) {
-            if ((count++) % downsample == 0) {
-                int id_offset = 0;
-                std::string tracename(trace.func_name);
-                id_offset = offset;
-                fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", trace.timestamp, kf_map[tracename] + id_offset, trace.func_name);
+            fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
+
+            fprintf(pFileReport, "data: [\n");
+            for (auto& trace : vec_ltr) {
+                if ((count++) % downsample == 0) {
+                    int id_offset = 0;
+                    std::string tracename(trace.func_name);
+                    id_offset = offset;
+                    if (trace.node == node) {
+                        fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", trace.timestamp, kf_map[tracename] + id_offset, trace.func_name);
+                    }
+                }
             }
+            fprintf(pFileReport, "]},\n");
         }
-        fprintf(pFileReport, "]},\n");
+
+        //fprintf(pFileReport, "\n{");
+
+        //fprintf(pFileReport, "name: 'All',");
+
+        //fprintf(pFileReport, "color: 'grey',");
+
+        //fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
+
+        //fprintf(pFileReport, "data: [\n");
+        //for (auto& trace : vec_ltr) {
+        //    if ((count++) % downsample == 0) {
+        //        int id_offset = 0;
+        //        std::string tracename(trace.func_name);
+        //        id_offset = offset;
+        //        fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", trace.timestamp, kf_map[tracename] + id_offset, trace.func_name);
+        //    }
+        //}
+        //fprintf(pFileReport, "]},\n");
     } else {
         for (auto& keyword : filter.functions) {
             fprintf(pFileReport, "\n{");
@@ -221,39 +292,47 @@ int main(int argc, char* argv[])
     char mystring[6000];
     std::vector<TraceRecord> vec_ltr;
     Filter filter;
+    std::vector<TraceFile> vec_tracefile;
 
     int t = 0;
-    if (argc < 3) {
-        printf("Usage: ./fsa defaut.cfg perf.script\n");
+    if (argc < 2) {
+        printf("Usage: ./fsa defaut.cfg\n");
         return -1;
     }
 
-    config(argv[1], filter);
+    config(argv[1], vec_tracefile, filter);
 
-    pFile = fopen(argv[2], "r");
-    if (pFile == NULL) {
-        perror("Error opening file");
-    } else {
-        while (fgets(mystring, sizeof(mystring), pFile) != NULL) {
-            // e.g.  [00:57:32.541424556] (+0.000000901) paslab-cyliu
-            // e.g. std::regex rgx(".*FILE_(\\w+)_EVENT\\.DAT.*");
-            TraceRecord tr;
-            char str_tmp[2000];
-            uint64_t timestamp;
-            sscanf(mystring, "%s %d %s %lf: %d %s %x %s %s\n", tr.proc_name,
-                &tr.pid,
-                str_tmp,
-                &tr.timestamp,
-                &tr.cycles,
-                str_tmp,
-                &tr.addr,
-                tr.func_name,
-                str_tmp);
-            //ltr_tmp.kf_name = boost::core::demangle( func_name );
-            //tr.dump();
-            vec_ltr.push_back(tr);
+    int nid = 0;
+    for (auto& tracefile : vec_tracefile) {
+        pFile = fopen(tracefile.path.c_str(), "r");
+        if (pFile == NULL) {
+            perror("Error opening file");
+        } else {
+            while (fgets(mystring, sizeof(mystring), pFile) != NULL) {
+                // e.g.  [00:57:32.541424556] (+0.000000901) paslab-cyliu
+                // e.g. std::regex rgx(".*FILE_(\\w+)_EVENT\\.DAT.*");
+                TraceRecord tr;
+                char str_tmp[2000];
+                uint64_t timestamp;
+                sscanf(mystring, "%s %d %s %lf: %d %s %x %s %s\n", tr.proc_name,
+                    &tr.pid,
+                    str_tmp,
+                    &tr.timestamp,
+                    &tr.cycles,
+                    str_tmp,
+                    &tr.addr,
+                    tr.func_name,
+                    str_tmp);
+                //ltr_tmp.kf_name = boost::core::demangle( func_name );
+                sprintf(str_tmp, "node%d", nid);
+                std::string node(str_tmp);
+                tr.node = node;
+                tr.dump();
+                vec_ltr.push_back(tr);
+            }
+            nid++;
+            fclose(pFile);
         }
-        fclose(pFile);
     }
 
     std::map<std::string, int> kf_map;
@@ -263,11 +342,11 @@ int main(int argc, char* argv[])
     }
 
     int kf_id = 0;
-//    for (std::map<std::string, int>::iterator it = kf_map.begin(); it != kf_map.end(); ++it) {
-//        (*it).second = kf_id += 10;
-//    }
+    //    for (std::map<std::string, int>::iterator it = kf_map.begin(); it != kf_map.end(); ++it) {
+    //        (*it).second = kf_id += 10;
+    //    }
 
-    for (auto& kf: kf_map) {
+    for (auto& kf : kf_map) {
         kf.second = kf_id += 10;
     }
 
