@@ -1,7 +1,8 @@
 #!/bin/sh
-echo $1
-echo $2
+if [ "$1" = "" ]  || [ "$2" = "" ] ; then
+    echo "Usage: sofa-dist \"host1 host2 host3\" sample_period"
+    exit -1    
+fi
 pssh -PH "$1" "sleep 1 &&  echo "/tmp/perf-"\`hostname\`".data""
-
-pssh -PH "$1" "perf record -a -o /tmp/perf-"\`hostname\`".data sleep $2 && perf script -i /tmp/perf-"\`hostname\`".data > /tmp/perf-"\`hostname\`".script && scp /tmp/perf-"\`hostname\`".script hpc0:/tmp/sofa-dist-data/"
+#pssh -PH "$1" "perf record -a -o /tmp/perf-"\`hostname\`".data sleep $2 && perf script -i /tmp/perf-"\`hostname\`".data > /tmp/perf-"\`hostname\`".script && scp /tmp/perf-"\`hostname\`".script hpc0:/tmp/sofa-dist-data/"
 
