@@ -1,8 +1,10 @@
 #!/bin/sh
-if [ "$1" = "" ]  || [ "$2" = "" ] ; then
-    echo "Usage: sofa-dist \"host1 host2 host3\" sample_period"
+
+if [ "$1" = "" ]  || [ "$2" = "" ] || [ "$3" = "" ] ; then
+    echo "Usage: sofa-dist \"host1 host2 host3\" sample_period \"distributed_computing_command\""
     exit -1    
-fi
+fi 
 #pssh -PH "$1" "sleep 1 &&  echo "/tmp/perf-"\`hostname\`".data""
-pssh -PH "$1" "perf record -a -o /tmp/perf-"\`hostname\`".data sleep $2 && perf script --ns -i /tmp/perf-"\`hostname\`".data > /tmp/perf-"\`hostname\`".script && scp /tmp/perf-"\`hostname\`".script hpc0:/tmp/sofa/"
+pssh -PH "$1" "perf record -a -o /tmp/perf-"\`hostname\`".data sleep $2 && perf script --ns -i /tmp/perf-"\`hostname\`".data > /tmp/perf-"\`hostname\`".script && scp /tmp/perf-"\`hostname\`".script hpc0:/tmp/sofa/" &
+$3 
 
