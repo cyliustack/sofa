@@ -1,4 +1,3 @@
-#include <boost/core/demangle.hpp>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -14,16 +13,6 @@
 #include <unistd.h>
 #include <vector>
 
-int test()
-{
-    std::string name = "_ZSt4fabsf";
-    std::cout << name << std::endl;                                // prints 1XIiE
-    std::cout << boost::core::demangle(name.c_str()) << std::endl; // prints X<int>
-    name = "_ZNSt14error_categoryD2Ev@plt";
-    std::cout << name << std::endl;                                // prints 1XIiE
-    std::cout << boost::core::demangle(name.c_str()) << std::endl; // prints X<int>
-    return 0;
-}
 
 class Filter {
 public:
