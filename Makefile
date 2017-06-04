@@ -15,8 +15,8 @@ OPTIONS := -g -std=c++14
 CFLAGS := $(OPTIONS)
 CXXFLAGS := $(OPTIONS)
 LINKFLAGS := -lconfig++
-CC := gcc
-CXX := g++
+CC := /opt/rh/devtoolset-4/root/usr/bin/gcc
+CXX := /opt/rh/devtoolset-4/root/usr/bin/g++
 all	: $(TARGET) $(LIB_USER)
 $(TARGET): $(OBJS) $(LIB_USER)
 	@$(CXX) -o $@ $(OBJS) $(LIB_USER) $(LINKFLAGS)
@@ -33,7 +33,7 @@ $(LIB_USER):	$(LIB_USER_OBJS)
 	@echo -e "$(C_GREEN)CXX	$@$(C_NONE)"
 run: $(TARGET)
 	rm -f perf.data
-	perf record -a ls -la
+	perf record -a sleep 5
 	perf script > perf.script
 	./$(TARGET) default.cfg 
 	cp report.js potatoboard
