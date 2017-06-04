@@ -47,7 +47,9 @@ potato .
 ## For Case 3
 ```
 cp examples/conf/default.cfg .
-sofa-dist "node0 node1" 10 "sh examples/start-all-example.sh" 
+cp examples/start-all-example.sh .
+Modify start-all-example.sh for names of involved nodes
+sofa-dist "node0 node1" 10 "sh start-all-example.sh" 
 potato .    
 ```
 
