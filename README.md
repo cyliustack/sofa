@@ -44,6 +44,12 @@ cp examples/conf/default.cfg .
 sofa ls -ah  
 potato .    
 ```
+## For Case 3
+```
+cp examples/conf/default.cfg .
+sofa-dist "node0 node1" 10 "sh examples/start-all-example.sh" 
+potato .    
+```
 
 ## Interactive and Visualization Result Provided by Potato:  
 ![Alt text](demo.png)
