@@ -15,8 +15,8 @@ OPTIONS := -g -std=c++14
 CFLAGS := $(OPTIONS)
 CXXFLAGS := $(OPTIONS)
 LINKFLAGS := -lconfig++
-CC := /opt/rh/devtoolset-4/root/usr/bin/gcc
-CXX := /opt/rh/devtoolset-4/root/usr/bin/g++
+CC := gcc
+CXX := g++
 all	: $(TARGET) $(LIB_USER)
 $(TARGET): $(OBJS) $(LIB_USER)
 	@$(CXX) -o $@ $(OBJS) $(LIB_USER) $(LINKFLAGS)
