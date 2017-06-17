@@ -22,9 +22,10 @@ Authors: All the contributors of SOFA
 
 
 ## 2-2. Perf Configuration
-`su`  
-`echo -1 >  /proc/sys/kernel/perf_event_paranoid`    
-With the command above, we get raw access to kernel tracepoints.
+Let ormal users get raw access to kernel tracepoints.  
+`sudo sysctl -w kernel.perf_event_paranoid=-1`  
+Check the configuration result. 
+`cat cat /proc/sys/kernel/perf_event_paranoid`  
 
 # 3. SOFA Build and Installation 
 1. git clone https://github.com/cyliustack/sofa
@@ -35,21 +36,21 @@ With the command above, we get raw access to kernel tracepoints.
 # 4. How To Use
 ## For Case 1
 ```
-cp examples/conf/default.cfg .
+cp examples/conf/default-single.cfg  default.cfg
 make run
 ```
 ## For Case 2
 ```
-cp examples/conf/default.cfg .
+cp examples/conf/default-single.cfg default.cfg
 sofa ls -ah  
 potato .    
 ```
 ## For Case 3
 ```
-cp examples/conf/default.cfg .
+cp examples/conf/default-cluster.cfg default.cfg
 cp examples/start-all-example.sh .
 Modify start-all-example.sh for names of involved nodes
-sofa-dist "node0 node1" 10 "sh start-all-example.sh" 
+sofa-dist "node0 node1" 10 "sh start-all-processes-on-all-nodes.sh" 
 potato .    
 ```
 
