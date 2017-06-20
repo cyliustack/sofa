@@ -14,7 +14,7 @@ LIB_USER_OBJS :=
 OPTIONS := -g -std=c++14 
 CFLAGS := $(OPTIONS)
 CXXFLAGS := $(OPTIONS)
-LINKFLAGS := -lconfig++
+LINKFLAGS := -lconfig++ -lpcap
 CC := gcc
 CXX := g++
 all	: $(TARGET) $(LIB_USER)
