@@ -22,10 +22,10 @@ Authors: All the contributors of SOFA
 
 
 ## 2-2. Perf Configuration
-Let ormal users get raw access to kernel tracepoints:  
+Let ormal users get raw access to kernel tracepoints:  
 `sudo sysctl -w kernel.perf_event_paranoid=-1`  
-Check the configuration result:   
-`cat cat /proc/sys/kernel/perf_event_paranoid`   
+Check the configuration result:  
+`cat cat /proc/sys/kernel/perf_event_paranoid` 
 
 ## 2-2. Enable Non-root tcpdump Configuration
 `sudo addgroup sofa`   
