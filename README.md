@@ -31,8 +31,9 @@ Check the configuration result:  
 `sudo addgroup sofa`   
 `sudo usermod -a -G sofa cyliu`   
 `sudo chgrp sofa /usr/sbin/tcpdump`  
-`chmod 750 /usr/sbin/tcpdump`  
-`setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump`  
+`sudo chmod 750 /usr/sbin/tcpdump`  
+`sudo setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump`  
+Simple Test:  
 `tcpdump -w sofa.pcap`  
 `tcpdump -r sofa.pcap`  
   
