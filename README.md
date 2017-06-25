@@ -28,14 +28,14 @@ Check the configuration result:  
 `cat cat /proc/sys/kernel/perf_event_paranoid`   
 
 ## 2-2. Enable Non-root tcpdump Configuration
-`sudo addgroup sofa`
-`sudo usermod -a -G sofa cyliu` 
-`sudo chgrp sofa /usr/sbin/tcpdump`
-`chmod 750 /usr/sbin/tcpdump`   
-`setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump`
-`tcpdump -w sofa.pcap`
-`tcpdump -r sofa.pcap`
-
+`sudo addgroup sofa`   
+`sudo usermod -a -G sofa cyliu`   
+`sudo chgrp sofa /usr/sbin/tcpdump`  
+`chmod 750 /usr/sbin/tcpdump`     
+`setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump`  
+`tcpdump -w sofa.pcap`  
+`tcpdump -r sofa.pcap`  
+  
 
 # 3. SOFA Build and Installation 
 1. git clone https://github.com/cyliustack/sofa
