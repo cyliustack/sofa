@@ -43,7 +43,7 @@ rm -f perf.data
 #Communication Traces
 tcpdump -w sofa.pcap & 
 #Computation Traces
-perf record -F 1000 -a ${args} && pkill tcpdump
+perf record -F 99 -a ${args} && pkill tcpdump
 perf script > perf.script
 
 echo "script source = $(dirname $0)"
