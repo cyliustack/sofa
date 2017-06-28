@@ -28,9 +28,9 @@ Check the configuration result:
 `cat cat /proc/sys/kernel/perf_event_paranoid`  
 
 ## 2-2. Enable Non-root tcpdump Configuration
-`sudo groupadd sofa`   
-`sudo usermod -a -G sofa cyliu`   
-`sudo chgrp sofa /usr/sbin/tcpdump`  
+`sudo groupadd pcap`   
+`sudo usermod -a -G pcap cyliu`   
+`sudo chgrp pcap /usr/sbin/tcpdump`  
 `sudo chmod 750 /usr/sbin/tcpdump`  
 `sudo setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump`  
 Simple Test:  
