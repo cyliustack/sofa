@@ -38,7 +38,33 @@ public:
 class PcapFile : public TraceFile {
 };
 
-int pcap_demo(auto& filename);
+typedef struct Packet{
+    uint32_t type;
+    uint32_t type_dst;
+    uint32_t id;
+    uint32_t id_rdst;
+    uint32_t id_ldst;
+    uint32_t nid;
+    //Network Information
+    uint8_t ip_src[4];
+    uint8_t ip_dst[4];
+    uint32_t port_src;
+    uint32_t port_dst; 
+    uint32_t flag;
+    uint32_t seq;
+    uint32_t ack;
+    uint64_t insns;
+    uint32_t payload;
+    uint32_t cputime_us;
+    uint32_t nettime_us;
+    uint32_t nid_src;
+    uint32_t nid_dst;
+    uint32_t lt; 
+    double ts;
+} Packet;
+
+
+int pcap_demo(auto& packets, auto& filename);
 
 int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& filter)
 {
@@ -168,11 +194,11 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
         const Setting& stn_pcapfiles = root["pcapfiles"];
         int count = stn_pcapfiles.getLength();
 
-        std::cout << setw(40) << left << "PcapFile Name"
-                  << "  "
-                  << setw(40) << left << "Color"
-                  << "   "
-                  << std::endl;
+        //std::cout << setw(40) << left << "PcapFile Name"
+        //          << "  "
+        //          << setw(40) << left << "Color"
+        //          << "   "
+        //          << std::endl;
 
         for (int i = 0; i < count; ++i) {
             const Setting& stn_pcapfile = stn_pcapfiles[i];
@@ -186,11 +212,11 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
             //tcfile.color = color;
             char str_tmp[100] = { 0 };
             vec_pcapfile.push_back(pcapfile);
-            std::cout << setw(40) << left << pcapfile.path << "  "
-                      << setw(40) << left << pcapfile.color << "  "
-                      << std::endl;
+            //std::cout << setw(40) << left << pcapfile.path << "  "
+            //          << setw(40) << left << pcapfile.color << "  "
+            //          << std::endl;
         }
-        std::cout << std::endl;
+        //std::cout << std::endl;
     }
     catch (const SettingNotFoundException& nfex)
     {
@@ -355,6 +381,7 @@ int main(int argc, char* argv[])
     Filter filter;
     std::vector<TraceFile> vec_tracefile;
     std::vector<PcapFile> vec_pcapfile;
+    std::vector<Packet> packets;
 
     int t = 0;
     if (argc < 2) {
@@ -419,7 +446,7 @@ int main(int argc, char* argv[])
             perror("Error opening pcap file\n");
         } else {
             fclose(pFile);
-            pcap_demo(pcapfile.path);
+            pcap_demo(packets, pcapfile.path);
         }
     }
 
@@ -434,9 +461,11 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-int pcap_demo(auto& filename)
-{
 
+
+int pcap_demo(auto& packets, auto& filename)
+{
+    Packet packet;
     /*
     * Step 3 - Create an char array to hold the error.
     */
@@ -471,36 +500,66 @@ int pcap_demo(auto& filename)
     /*
     * Step 6 - Loop through packets and print them to screen
     */
-    u_int packetCount = 0;
+    uint64_t packetCount = 0;
     while (int returnValue = pcap_next_ex(pcap, &header, &data) >= 0) {
         // Print using printf. See printf reference:
         // http://www.cplusplus.com/reference/clibrary/cstdio/printf/
 
         // Show the packet number
+
         printf("Packet # %i\n", ++packetCount);
 
         // Show the size in bytes of the packet
-        printf("Packet size: %d bytes\n", header->len);
+        //printf("Packet size: %d bytes\n", header->len);
 
         // Show a warning if the length captured is different
         if (header->len != header->caplen)
             printf("Warning! Capture size different than packet size: %ld bytes\n", header->len);
 
         // Show Epoch Time
-        printf("Epoch Time: %d.%d seconds\n", header->ts.tv_sec, header->ts.tv_usec);
+        //printf("Epoch Time: %d.%d seconds\n", header->ts.tv_sec, header->ts.tv_usec);
 
         // loop through the packet and print it as hexidecimal representations of octets
         // We also have a function that does this similarly below: PrintData()
-        for (u_int i = 0; (i < header->caplen); i++) {
-            // Start printing on the next after every 16 octets
-            if ((i % 16) == 0)
-                printf("\n");
+        //for (u_int i = 0; (i < header->caplen); i++) {
+        //    // Start printing on the next after every 16 octets
+        //    if ((i % 16) == 0)
+        //        printf("\n");
 
-            // Print each octet as hex (x), make sure there is always two characters (.2).
-            printf("%.2x ", data[i]);
-        }
+        //    // Print each octet as hex (x), make sure there is always two characters (.2).
+        //    printf("%.2x ", data[i]);
+        //}
+        //getchar();
 
         // Add two lines between packets
-        printf("\n\n");
+        //printf("\n\n");
+
+        packet.id = packetCount;
+        packet.nid = 0;
+        packet.type = 0;
+        packet.nid_src = data[29];
+        packet.nid_dst = data[33];
+        packet.seq = (data[38] << 24) + (data[39] << 16) + (data[40] << 8) + data[41];
+        packet.ack = (data[42] << 24) + (data[43] << 16) + (data[44] << 8) + data[45];
+        packet.flag = data[20];
+        packet.port_src = (data[34] << 8) + data[35];
+        packet.port_dst = (data[36] << 8) + data[37];
+        packet.payload = header->len;
+        packet.ts = header->ts.tv_sec + header->ts.tv_usec / 1000000.0;
+        packet.insns = 0;
+        printf("id:%u, nid:%u, nidsrc:%u, niddst:%u, seq:%u, ack:%u, flag:%u, portsrc:%u, portdst:%u, insns:%lu, payload:%u, ts:%lf \n\n",
+            packet.id,
+            packet.nid,
+            packet.nid_src,
+            packet.nid_dst,
+            packet.seq,
+            packet.ack,
+            packet.flag,
+            packet.port_src,
+            packet.port_dst,
+            packet.insns,
+            packet.payload,
+            packet.ts);
+        packets.push_back(packet);
     }
 }
