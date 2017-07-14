@@ -32,7 +32,7 @@ rm -f perf.data
 #Communication Traces
 tcpdump -w sofa.pcap & 
 #Computation Traces
-perf record -F 99 -a ${args} && pkill tcpdump
+perf record -F 999 -a ${args} && pkill tcpdump
 perf script > perf.script
 echo "FSA Configuration File: ${configFile}"
 echo "script source = $(dirname $0)"
