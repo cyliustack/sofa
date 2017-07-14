@@ -5,23 +5,8 @@ function print_help()
     echo "    OPTIONS: None"
 }
 
-function encapsulate()
-{
-    whitespace="[[:space:]]"
-    for i in "$@"
-    do
-        if [[ $i =~ $whitespace ]]
-        then
-            i=\"$i\"
-        fi
-        # echo "$i"
-        args+="$i "
-    done
-
-    echo ${args}
-}
-
 options=""
+configFile="default.cfg"
 while [[ 1 ]]; do
     case "$1" in
         "--help" )
@@ -31,6 +16,10 @@ while [[ 1 ]]; do
         "-h" )
             print_help
             exit 0
+            ;;
+        "--config" )
+            shift 
+            configFile=$1
             ;;
         *)
             break
@@ -45,6 +34,6 @@ tcpdump -w sofa.pcap &
 #Computation Traces
 perf record -F 99 -a ${args} && pkill tcpdump
 perf script > perf.script
-
+echo "FSA Configuration File: ${configFile}"
 echo "script source = $(dirname $0)"
-$(dirname $0)/fsa default.cfg
+$(dirname $0)/fsa ${configFile}

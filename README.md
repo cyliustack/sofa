@@ -53,7 +53,7 @@ make run
 ## For Case 2
 ```
 cp examples/conf/default-single.cfg default.cfg
-sofa ls -ah  
+sofa --config default.cfg ls -ah  
 potato .    
 ```
 ## For Case 3
