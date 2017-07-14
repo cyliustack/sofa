@@ -7,5 +7,4 @@ logdir=$1
 cp /opt/sofa/potatoboard/index.html ${logdir}
 cp /opt/sofa/potatoboard/app.js ${logdir}
 cp report.js ${logdir}
-python -mwebbrowser ${logdir}/index.html
-
+pushd ${logdir}; python -m SimpleHTTPServer; popd
