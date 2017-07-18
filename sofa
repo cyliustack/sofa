@@ -1,8 +1,7 @@
 #!/bin/sh
 function print_help()
 {
-    echo "$0 [OPTIONS, ...] command [command args...]"
-    echo "    OPTIONS: None"
+    echo "sofa [--config yourconfig.cfg] command"
 }
 sudo sysctl -w kernel.perf_event_paranoid=-1
 
