@@ -4,6 +4,7 @@ function print_help()
     echo "$0 [OPTIONS, ...] command [command args...]"
     echo "    OPTIONS: None"
 }
+sudo sysctl -w kernel.perf_event_paranoid=-1
 
 options=""
 configFile="default.cfg"
@@ -32,7 +33,7 @@ rm -f perf.data
 #Communication Traces
 tcpdump -w sofa.pcap & 
 #Computation Traces
-perf record -F 999 ${args} && pkill tcpdump
+perf record -F 999 -a ${args} && pkill tcpdump
 perf script > perf.script
 echo "FSA Configuration File: ${configFile}"
 echo "script source = $(dirname $0)"
