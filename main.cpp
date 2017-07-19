@@ -4,6 +4,7 @@
 #include <iostream>
 #include <libconfig.h++>
 #include <map>
+#include <pcap.h>
 #include <regex>
 #include <stdint.h>
 #include <stdio.h>
@@ -12,7 +13,6 @@
 #include <typeinfo>
 #include <unistd.h>
 #include <vector>
-#include <pcap.h>
 
 using namespace libconfig;
 using namespace std;
@@ -38,7 +38,24 @@ public:
 class PcapFile : public TraceFile {
 };
 
-typedef struct Packet{
+class SofaTime {
+public:
+    double t_begin;
+    double t_end;
+    SofaTime()
+    {
+        t_begin = 0;
+        t_end = 0;
+    };
+
+    SofaTime(const double t_begin_in, double t_end_in)
+    {
+        t_begin = t_begin_in;
+        t_end = t_end_in;
+    };
+};
+
+typedef struct Packet {
     uint32_t type;
     uint32_t type_dst;
     uint32_t id;
@@ -49,7 +66,7 @@ typedef struct Packet{
     uint8_t ip_src[4];
     uint8_t ip_dst[4];
     uint32_t port_src;
-    uint32_t port_dst; 
+    uint32_t port_dst;
     uint32_t flag;
     uint32_t seq;
     uint32_t ack;
@@ -59,10 +76,9 @@ typedef struct Packet{
     uint32_t nettime_us;
     uint32_t nid_src;
     uint32_t nid_dst;
-    uint32_t lt; 
+    uint32_t lt;
     double ts;
 } Packet;
-
 
 int pcap_demo(auto& packets, auto& filename);
 
@@ -71,52 +87,40 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
     Config cfg;
 
     // Read the file. If there is an error, report it and exit.
-    try
-    {
+    try {
         cfg.readFile(config_file);
-    }
-    catch (const FileIOException& fioex)
-    {
+    } catch (const FileIOException& fioex) {
         std::cerr << "I/O error while reading file." << std::endl;
         return (EXIT_FAILURE);
-    }
-    catch (const ParseException& pex)
-    {
+    } catch (const ParseException& pex) {
         std::cerr << "Parse error at " << pex.getFile() << ":" << pex.getLine()
                   << " - " << pex.getError() << std::endl;
         return (EXIT_FAILURE);
     }
 
     // Get the store name.
-    try
-    {
+    try {
         std::string name = cfg.lookup("name");
         std::cout << "Topic: " << name << std::endl
                   << std::endl;
-    }
-    catch (const SettingNotFoundException& nfex)
-    {
+    } catch (const SettingNotFoundException& nfex) {
         cerr << "No 'name' setting in configuration file." << std::endl;
     }
 
     // Get the mode.
-    try
-    {
+    try {
         std::string tracing_mode = cfg.lookup("tracing_mode");
         filter.tracing_mode = tracing_mode;
         std::cout << "Tracing Mode: " << filter.tracing_mode << std::endl
                   << std::endl;
-    }
-    catch (const SettingNotFoundException& nfex)
-    {
+    } catch (const SettingNotFoundException& nfex) {
         std::cerr << "No 'mode' setting in configuration file." << std::endl;
     }
 
     const Setting& root = cfg.getRoot();
 
     // Output a list of all books in the inventory.
-    try
-    {
+    try {
         const Setting& tracefiles = root["tracefiles"];
         int count = tracefiles.getLength();
 
@@ -131,7 +135,7 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
             // Only output the record if all of the expected fields are present.
             TraceFile tcfile;
             if (!(stn_tracefile.lookupValue("path", tcfile.path)
-                  && stn_tracefile.lookupValue("color", tcfile.color))) {
+                    && stn_tracefile.lookupValue("color", tcfile.color))) {
                 continue;
             }
 
@@ -149,14 +153,11 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
                       << std::endl;
         }
         std::cout << std::endl;
-    }
-    catch (const SettingNotFoundException& nfex)
-    {
+    } catch (const SettingNotFoundException& nfex) {
         // Ignore.
     }
 
-    try
-    {
+    try {
         const Setting& functions = root["symbols"]["functions"];
         int count = functions.getLength();
 
@@ -172,7 +173,7 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
             string name;
             string color;
             if (!(function.lookupValue("name", name)
-                  && function.lookupValue("color", color))) {
+                    && function.lookupValue("color", color))) {
                 continue;
             }
             filter.functions.push_back(name);
@@ -182,15 +183,12 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
                       << std::endl;
         }
         std::cout << std::endl;
-    }
-    catch (const SettingNotFoundException& nfex)
-    {
+    } catch (const SettingNotFoundException& nfex) {
         // Ignore.
     }
 
     // Read tcpdump traces.
-    try
-    {
+    try {
         const Setting& stn_pcapfiles = root["pcapfiles"];
         int count = stn_pcapfiles.getLength();
 
@@ -204,7 +202,7 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
             const Setting& stn_pcapfile = stn_pcapfiles[i];
             PcapFile pcapfile;
             if (!(stn_pcapfile.lookupValue("path", pcapfile.path)
-                  && stn_pcapfile.lookupValue("color", pcapfile.color))) {
+                    && stn_pcapfile.lookupValue("color", pcapfile.color))) {
                 continue;
             }
 
@@ -217,27 +215,20 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
             //          << std::endl;
         }
         //std::cout << std::endl;
-    }
-    catch (const SettingNotFoundException& nfex)
-    {
+    } catch (const SettingNotFoundException& nfex) {
         // Ignore.
     }
-    
-     // Get the downsample.
-    try
-    {
+
+    // Get the downsample.
+    try {
         int downsample = cfg.lookup("downsample");
         filter.downsample = downsample;
         std::cout << "Downsample: " << filter.downsample << std::endl
                   << std::endl;
-    }
-    catch (const SettingNotFoundException& nfex)
-    {
+    } catch (const SettingNotFoundException& nfex) {
         std::cerr << "No 'downsample' setting in configuration file." << std::endl;
     }
 
-    
-    
     return 0;
 }
 
@@ -349,9 +340,9 @@ void dump_csv(auto* pFileReport, auto& traces, auto& kf_map, auto filter, auto o
             std::string tracename(trace.func_name);
             if (bTraceAll) {
                 fprintf(pFileReport, "%lf,%d,%s,%s\n", trace.timestamp,
-                        kf_map[tracename],
-                        tracename.c_str(),
-                        "grey");
+                    kf_map[tracename],
+                    tracename.c_str(),
+                    "grey");
             } else {
                 for (auto& keyword : filter.functions) {
                     //std::cout<<"Filtered function = "
@@ -362,9 +353,9 @@ void dump_csv(auto* pFileReport, auto& traces, auto& kf_map, auto filter, auto o
                     if (tracename.find(keyword) != std::string::npos) {
                         id_offset = offset;
                         fprintf(pFileReport, "%lf,%d,%s,%s\n", trace.timestamp,
-                                kf_map[tracename] + id_offset,
-                                tracename.c_str(),
-                                filter.colormap[keyword].c_str());
+                            kf_map[tracename] + id_offset,
+                            tracename.c_str(),
+                            filter.colormap[keyword].c_str());
                         break;
                     }
                 }
@@ -375,15 +366,16 @@ void dump_csv(auto* pFileReport, auto& traces, auto& kf_map, auto filter, auto o
 
 int main(int argc, char* argv[])
 {
-    FILE* pFile, *pFileReport;
+    FILE *pFile, *pFileReport;
     char mystring[6000];
 
-    //Read from trace files and store records into traces 
+    //Read from trace files and store records into traces
     std::vector<TraceFile> tracefiles;
     std::vector<TraceRecord> traces;
     Filter filter;
+    SofaTime sofa_time;
 
-    //Read from pcap files and store records into packets 
+    //Read from pcap files and store records into packets
     std::vector<PcapFile> pcapfiles;
     std::vector<Packet> packets;
 
@@ -391,6 +383,20 @@ int main(int argc, char* argv[])
     if (argc < 2) {
         printf("Usage: ./fsa defaut.cfg\n");
         return -1;
+    }
+
+    pFile = fopen("sofa_time.txt", "r");
+    if (pFile == NULL) {
+        perror("Error opening sofa_time.txt");
+        return -1;
+    } else {
+        if (fgets(mystring, sizeof(mystring), pFile) != NULL) {
+            sscanf(mystring, "%lf", &sofa_time.t_begin);
+            fclose(pFile);
+        } else {
+            perror("Nothing in sofa_time.txt");
+            return -1;
+        }
     }
 
     config(argv[1], tracefiles, pcapfiles, filter);
@@ -408,19 +414,20 @@ int main(int argc, char* argv[])
                 char str_tmp[2000];
                 uint64_t timestamp;
                 sscanf(mystring, "%s %d %s %lf: %d %s %x %s %s\n",
-                       tr.proc_name,
-                       &tr.pid,
-                       str_tmp,
-                       &tr.timestamp,
-                       &tr.cycles,
-                       str_tmp,
-                       &tr.addr,
-                       tr.func_name,
-                       str_tmp);
+                    tr.proc_name,
+                    &tr.pid,
+                    str_tmp,
+                    &tr.timestamp,
+                    &tr.cycles,
+                    str_tmp,
+                    &tr.addr,
+                    tr.func_name,
+                    str_tmp);
+                tr.timestamp += sofa_time.t_begin;
                 //ltr_tmp.kf_name = boost::core::demangle( func_name );
                 sprintf(str_tmp, "node%d", nid);
-                std::string node(str_tmp);
-                tr.node = node;
+                std::string node_name(str_tmp);
+                tr.node = node_name;
                 traces.push_back(tr);
             }
             nid++;
@@ -463,8 +470,6 @@ int main(int argc, char* argv[])
 
     return 0;
 }
-
-
 
 int pcap_demo(auto& packets, auto& filename)
 {
