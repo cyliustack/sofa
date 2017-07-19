@@ -258,7 +258,7 @@ void TraceRecord::dump()
     printf("proc_name:%s, pid:%d, timestamp:%lf, cycles:%llu addr:%llu, function:%s node:%s\n", proc_name, pid, timestamp, cycles, addr, func_name, node.c_str());
 }
 
-void dump_json(auto* pFileReport, const auto& vec_ltr, auto& kf_map, auto& filter, auto offset)
+void dump_json(auto* pFileReport, const auto& traces, auto& kf_map, auto& filter, auto offset)
 {
     uint64_t count = 0;
     fprintf(pFileReport, "trace_data = [");
@@ -272,10 +272,10 @@ void dump_json(auto* pFileReport, const auto& vec_ltr, auto& kf_map, auto& filte
 
             fprintf(pFileReport, "color: '%s',", filter.colormap4node[node].c_str());
 
-            fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
+            fprintf(pFileReport, "turboThreshold: %u, ", traces.size());
 
             fprintf(pFileReport, "data: [\n");
-            for (auto& trace : vec_ltr) {
+            for (auto& trace : traces) {
                 if ((count++) % filter.downsample == 0) {
                     int id_offset = 0;
                     std::string tracename(trace.func_name);
@@ -294,10 +294,10 @@ void dump_json(auto* pFileReport, const auto& vec_ltr, auto& kf_map, auto& filte
 
         //fprintf(pFileReport, "color: 'grey',");
 
-        //fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
+        //fprintf(pFileReport, "turboThreshold: %u, ", traces.size());
 
         //fprintf(pFileReport, "data: [\n");
-        //for (auto& trace : vec_ltr) {
+        //for (auto& trace : traces) {
         //    if ((count++) % downsample == 0) {
         //        int id_offset = 0;
         //        std::string tracename(trace.func_name);
@@ -314,10 +314,10 @@ void dump_json(auto* pFileReport, const auto& vec_ltr, auto& kf_map, auto& filte
 
             fprintf(pFileReport, "color: '%s',", filter.colormap[keyword].c_str());
 
-            fprintf(pFileReport, "turboThreshold: %u, ", vec_ltr.size());
+            fprintf(pFileReport, "turboThreshold: %u, ", traces.size());
 
             fprintf(pFileReport, "data: [\n");
-            for (auto& trace : vec_ltr) {
+            for (auto& trace : traces) {
                 if ((count++) % filter.downsample == 0) {
                     int id_offset = 0;
                     std::string tracename(trace.func_name);
@@ -333,7 +333,7 @@ void dump_json(auto* pFileReport, const auto& vec_ltr, auto& kf_map, auto& filte
     fprintf(pFileReport, "]\n");
 }
 
-void dump_csv(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto offset)
+void dump_csv(auto* pFileReport, auto& traces, auto& kf_map, auto filter, auto offset)
 {
     uint64_t count = 0, downsample = 1;
     bool bTraceAll = false;
@@ -343,7 +343,7 @@ void dump_csv(auto* pFileReport, auto& vec_ltr, auto& kf_map, auto filter, auto 
 
     fprintf(pFileReport, "timestamp,func_id,func_name,color\n");
 
-    for (auto& trace : vec_ltr) {
+    for (auto& trace : traces) {
         if ((count++) % downsample == 0) {
             int id_offset = 0;
             std::string tracename(trace.func_name);
@@ -377,10 +377,14 @@ int main(int argc, char* argv[])
 {
     FILE* pFile, *pFileReport;
     char mystring[6000];
-    std::vector<TraceRecord> vec_ltr;
+
+    //Read from trace files and store records into traces 
+    std::vector<TraceFile> tracefiles;
+    std::vector<TraceRecord> traces;
     Filter filter;
-    std::vector<TraceFile> vec_tracefile;
-    std::vector<PcapFile> vec_pcapfile;
+
+    //Read from pcap files and store records into packets 
+    std::vector<PcapFile> pcapfiles;
     std::vector<Packet> packets;
 
     int t = 0;
@@ -389,10 +393,10 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    config(argv[1], vec_tracefile, vec_pcapfile, filter);
+    config(argv[1], tracefiles, pcapfiles, filter);
 
     int nid = 0;
-    for (auto& tracefile : vec_tracefile) {
+    for (auto& tracefile : tracefiles) {
         pFile = fopen(tracefile.path.c_str(), "r");
         if (pFile == NULL) {
             perror("Error opening file");
@@ -417,8 +421,7 @@ int main(int argc, char* argv[])
                 sprintf(str_tmp, "node%d", nid);
                 std::string node(str_tmp);
                 tr.node = node;
-                tr.dump();
-                vec_ltr.push_back(tr);
+                traces.push_back(tr);
             }
             nid++;
             fclose(pFile);
@@ -426,7 +429,7 @@ int main(int argc, char* argv[])
     }
 
     std::map<std::string, int> kf_map;
-    for (const auto& trace : vec_ltr) {
+    for (const auto& trace : traces) {
         std::string key(trace.func_name);
         kf_map[key] = 1;
     }
@@ -440,7 +443,7 @@ int main(int argc, char* argv[])
         kf.second = kf_id += 10;
     }
 
-    for (auto& pcapfile : vec_pcapfile) {
+    for (auto& pcapfile : pcapfiles) {
         pFile = fopen(pcapfile.path.c_str(), "r");
         if (pFile == NULL) {
             perror("Error opening pcap file\n");
@@ -451,11 +454,11 @@ int main(int argc, char* argv[])
     }
 
     pFileReport = fopen("report.csv", "w");
-    dump_csv(pFileReport, vec_ltr, kf_map, filter, 0);
+    dump_csv(pFileReport, traces, kf_map, filter, 0);
     fclose(pFileReport);
 
     pFileReport = fopen("report.js", "w");
-    dump_json(pFileReport, vec_ltr, kf_map, filter, 0);
+    dump_json(pFileReport, traces, kf_map, filter, 0);
     fclose(pFileReport);
 
     return 0;
