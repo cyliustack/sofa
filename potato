@@ -1,4 +1,5 @@
 #!/bin/sh 
+# Potato is a pure GUI utility, like TensorBoard in TensorFlow.
 if [ "$1" = "" ] ; then
     echo "Usage: potato /path/to/your/log/diretory"
     exit -1    

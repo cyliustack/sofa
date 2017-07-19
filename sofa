@@ -1,39 +1,58 @@
-#!/bin/sh
+#!/bin/bash
+
+function collect_trace(){
+    rm -f perf.data
+    rm -f sofa.pcap
+    #Communication Traces
+    tcpdump -w sofa.pcap & 
+    #Computation Traces
+    date +%s > sofa_time.txt
+    perf record -F 999 -a ${args} && pkill tcpdump
+    perf script > perf.script
+}
+
+function generate_report(){
+    echo "FSA Configuration File: ${configFile}"
+    echo "script source = $(dirname $0)"
+    $(dirname $0)/fsa ${configFile}
+}
+
 function print_help()
 {
     echo "sofa [--config yourconfig.cfg] command"
 }
-sudo sysctl -w kernel.perf_event_paranoid=-1
 
-options=""
-configFile="default.cfg"
-while [[ 1 ]]; do
-    case "$1" in
-        "--help" )
-            print_help
-            exit 0
-            ;;
-        "-h" )
-            print_help
-            exit 0
-            ;;
-        "--config" )
-            shift 
-            configFile=$1
-            ;;
-        *)
-            break
-            ;;
-    esac
-    shift 1 # Remove the fisrt argument
-done
 args=$*
-rm -f perf.data
-#Communication Traces
-tcpdump -w sofa.pcap & 
-#Computation Traces
-perf record -F 999 -a ${args} && pkill tcpdump
-perf script > perf.script
-echo "FSA Configuration File: ${configFile}"
-echo "script source = $(dirname $0)"
-$(dirname $0)/fsa ${configFile}
+configFile="default.cfg"
+function parse_argument()
+{
+    while [[ 1 ]]; do
+        case "$1" in
+            "--help" )
+                print_help
+                exit 0
+                ;;
+            "-h" )
+                print_help
+                exit 0
+                ;;
+            "--only-report" )
+                generate_report
+                exit 0 
+                ;;
+            "--config" )
+                shift 
+                configFile=$1
+                ;;
+            *)
+                break
+                ;;
+        esac
+        shift 1 # Remove the fisrt argument
+    done
+}
+
+##### Main() ##### 
+parse_argument
+collect_trace
+generate_report
