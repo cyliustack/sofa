@@ -1,3 +1,4 @@
+#include "ppacket.hpp"
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -13,7 +14,6 @@
 #include <typeinfo>
 #include <unistd.h>
 #include <vector>
-
 using namespace libconfig;
 using namespace std;
 
@@ -21,7 +21,7 @@ class Filter {
 public:
     std::string tracing_mode;
     std::vector<std::string> nodes;
-    std::vector<std::string> functions;
+    std::vector<std::string> keywords;
     std::vector<std::string> events;
     std::map<std::string, std::string> colormap;
     std::map<std::string, std::string> colormap4node;
@@ -33,9 +33,6 @@ public:
     std::string path;
     std::string color;
     FILE* pFile;
-};
-
-class PcapFile : public TraceFile {
 };
 
 class SofaTime {
@@ -55,34 +52,7 @@ public:
     };
 };
 
-typedef struct Packet {
-    uint32_t type;
-    uint32_t type_dst;
-    uint32_t id;
-    uint32_t id_rdst;
-    uint32_t id_ldst;
-    uint32_t nid;
-    //Network Information
-    uint8_t ip_src[4];
-    uint8_t ip_dst[4];
-    uint32_t port_src;
-    uint32_t port_dst;
-    uint32_t flag;
-    uint32_t seq;
-    uint32_t ack;
-    uint64_t insns;
-    uint32_t payload;
-    uint32_t cputime_us;
-    uint32_t nettime_us;
-    uint32_t nid_src;
-    uint32_t nid_dst;
-    uint32_t lt;
-    double ts;
-} Packet;
-
-int pcap_demo(auto& packets, auto& filename);
-
-int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& filter)
+int config(char* config_file, auto& tracefiles, auto& pcapfiles, auto& filter)
 {
     Config cfg;
 
@@ -121,8 +91,8 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
 
     // Output a list of all books in the inventory.
     try {
-        const Setting& tracefiles = root["tracefiles"];
-        int count = tracefiles.getLength();
+        const Setting& config_tracefiles = root["tracefiles"];
+        int count = config_tracefiles.getLength();
 
         std::cout << setw(40) << left << "TraceFile Name"
                   << "  "
@@ -131,11 +101,11 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
                   << std::endl;
 
         for (int i = 0; i < count; ++i) {
-            const Setting& stn_tracefile = tracefiles[i];
+            const Setting& config_tracefile = config_tracefiles[i];
             // Only output the record if all of the expected fields are present.
             TraceFile tcfile;
-            if (!(stn_tracefile.lookupValue("path", tcfile.path)
-                    && stn_tracefile.lookupValue("color", tcfile.color))) {
+            if (!(config_tracefile.lookupValue("path", tcfile.path)
+                    && config_tracefile.lookupValue("color", tcfile.color))) {
                 continue;
             }
 
@@ -147,7 +117,7 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
             filter.colormap4node[node] = tcfile.color;
             filter.nodes.push_back(node);
 
-            vec_tracefile.push_back(tcfile);
+            tracefiles.push_back(tcfile);
             std::cout << setw(40) << left << tcfile.path << "  "
                       << setw(40) << left << tcfile.color << "  "
                       << std::endl;
@@ -158,8 +128,8 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
     }
 
     try {
-        const Setting& functions = root["symbols"]["functions"];
-        int count = functions.getLength();
+        const Setting& keywords = root["symbols"]["keywords"];
+        int count = keywords.getLength();
 
         std::cout << setw(40) << left << "Traced Symbols"
                   << "  "
@@ -168,15 +138,15 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
                   << std::endl;
 
         for (int i = 0; i < count; ++i) {
-            const Setting& function = functions[i];
+            const Setting& keyword = keywords[i];
             // Only output the record if all of the expected fields are present.
             string name;
             string color;
-            if (!(function.lookupValue("name", name)
-                    && function.lookupValue("color", color))) {
+            if (!(keyword.lookupValue("name", name)
+                    && keyword.lookupValue("color", color))) {
                 continue;
             }
-            filter.functions.push_back(name);
+            filter.keywords.push_back(name);
             filter.colormap[name] = color;
             std::cout << setw(40) << left << name << "  "
                       << setw(40) << left << color << "  "
@@ -209,7 +179,7 @@ int config(char* config_file, auto& vec_tracefile, auto& vec_pcapfile, auto& fil
             //tcfile.path  = path;
             //tcfile.color = color;
             char str_tmp[100] = { 0 };
-            vec_pcapfile.push_back(pcapfile);
+            pcapfiles.push_back(pcapfile);
             //std::cout << setw(40) << left << pcapfile.path << "  "
             //          << setw(40) << left << pcapfile.color << "  "
             //          << std::endl;
@@ -256,70 +226,46 @@ void dump_json(auto* pFileReport, const auto& traces, auto& kf_map, auto& filter
 
     if (filter.tracing_mode == "full") {
 
-        for (auto& node : filter.nodes) {
-            fprintf(pFileReport, "\n{");
+        fprintf(pFileReport, "\n{");
 
-            fprintf(pFileReport, "name: '%s',", node.c_str());
+        fprintf(pFileReport, "name: '%s',", "others");
 
-            fprintf(pFileReport, "color: '%s',", filter.colormap4node[node].c_str());
+        fprintf(pFileReport, "color: '%s',", "grey");
 
-            fprintf(pFileReport, "turboThreshold: %u, ", traces.size());
+        fprintf(pFileReport, "turboThreshold: %u, ", traces.size());
 
-            fprintf(pFileReport, "data: [\n");
-            for (auto& trace : traces) {
-                if ((count++) % filter.downsample == 0) {
-                    int id_offset = 0;
-                    std::string tracename(trace.func_name);
+        fprintf(pFileReport, "data: [\n");
+        for (auto& trace : traces) {
+            if ((count++) % filter.downsample == 0) {
+                int id_offset = 0;
+                std::string tracename(trace.func_name);
+                fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", trace.timestamp, kf_map[tracename] + id_offset, trace.func_name);
+            }
+        }
+        fprintf(pFileReport, "]},\n");
+    }
+
+    for (auto& keyword : filter.keywords) {
+        fprintf(pFileReport, "\n{");
+
+        fprintf(pFileReport, "name: '%s',", keyword.c_str());
+
+        fprintf(pFileReport, "color: '%s',", filter.colormap[keyword].c_str());
+
+        fprintf(pFileReport, "turboThreshold: %u, ", traces.size());
+
+        fprintf(pFileReport, "data: [\n");
+        for (auto& trace : traces) {
+            if ((count++) % filter.downsample == 0) {
+                int id_offset = 0;
+                std::string tracename(trace.func_name);
+                if (tracename.find(keyword) != std::string::npos) {
                     id_offset = offset;
-                    if (trace.node == node) {
-                        fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", trace.timestamp, kf_map[tracename] + id_offset, trace.func_name);
-                    }
+                    fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", trace.timestamp, kf_map[tracename] + id_offset, trace.func_name);
                 }
             }
-            fprintf(pFileReport, "]},\n");
         }
-
-        //fprintf(pFileReport, "\n{");
-
-        //fprintf(pFileReport, "name: 'All',");
-
-        //fprintf(pFileReport, "color: 'grey',");
-
-        //fprintf(pFileReport, "turboThreshold: %u, ", traces.size());
-
-        //fprintf(pFileReport, "data: [\n");
-        //for (auto& trace : traces) {
-        //    if ((count++) % downsample == 0) {
-        //        int id_offset = 0;
-        //        std::string tracename(trace.func_name);
-        //        id_offset = offset;
-        //        fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", trace.timestamp, kf_map[tracename] + id_offset, trace.func_name);
-        //    }
-        //}
-        //fprintf(pFileReport, "]},\n");
-    } else {
-        for (auto& keyword : filter.functions) {
-            fprintf(pFileReport, "\n{");
-
-            fprintf(pFileReport, "name: '%s',", keyword.c_str());
-
-            fprintf(pFileReport, "color: '%s',", filter.colormap[keyword].c_str());
-
-            fprintf(pFileReport, "turboThreshold: %u, ", traces.size());
-
-            fprintf(pFileReport, "data: [\n");
-            for (auto& trace : traces) {
-                if ((count++) % filter.downsample == 0) {
-                    int id_offset = 0;
-                    std::string tracename(trace.func_name);
-                    if (tracename.find(keyword) != std::string::npos) {
-                        id_offset = offset;
-                        fprintf(pFileReport, "{ x: %lf, y: %d, name: \"%s\"},\n", trace.timestamp, kf_map[tracename] + id_offset, trace.func_name);
-                    }
-                }
-            }
-            fprintf(pFileReport, "]},\n");
-        }
+        fprintf(pFileReport, "]},\n");
     }
     fprintf(pFileReport, "]\n");
 }
@@ -344,7 +290,7 @@ void dump_csv(auto* pFileReport, auto& traces, auto& kf_map, auto filter, auto o
                     tracename.c_str(),
                     "grey");
             } else {
-                for (auto& keyword : filter.functions) {
+                for (auto& keyword : filter.keywords) {
                     //std::cout<<"Filtered function = "
                     //          << keyword
                     //          << " with color "
@@ -402,14 +348,14 @@ int main(int argc, char* argv[])
     config(argv[1], tracefiles, pcapfiles, filter);
 
     int nid = 0;
+    bool bGetFirstRecord = false;
+    double timestamp_perf_begin = 0;
     for (auto& tracefile : tracefiles) {
         pFile = fopen(tracefile.path.c_str(), "r");
         if (pFile == NULL) {
             perror("Error opening file");
         } else {
             while (fgets(mystring, sizeof(mystring), pFile) != NULL) {
-                // e.g.  [00:57:32.541424556] (+0.000000901) paslab-cyliu
-                // e.g. std::regex rgx(".*FILE_(\\w+)_EVENT\\.DAT.*");
                 TraceRecord tr;
                 char str_tmp[2000];
                 uint64_t timestamp;
@@ -423,7 +369,11 @@ int main(int argc, char* argv[])
                     &tr.addr,
                     tr.func_name,
                     str_tmp);
-                tr.timestamp += sofa_time.t_begin;
+                if (!bGetFirstRecord) {
+                    timestamp_perf_begin = tr.timestamp;
+                    bGetFirstRecord = true;
+                }
+                tr.timestamp = (tr.timestamp - timestamp_perf_begin) + sofa_time.t_begin;
                 //ltr_tmp.kf_name = boost::core::demangle( func_name );
                 sprintf(str_tmp, "node%d", nid);
                 std::string node_name(str_tmp);
@@ -432,6 +382,18 @@ int main(int argc, char* argv[])
             }
             nid++;
             fclose(pFile);
+        }
+    }
+
+    for (auto& pcapfile : pcapfiles) {
+        pcapfile.parse_from_file();
+        for (auto& packet : pcapfile.packets) {
+            TraceRecord tr;
+            tr.timestamp = packet.timestamp;
+            //ltr_tmp.kf_name = boost::core::demangle( func_name );
+            sprintf(tr.func_name, "network_event:%d", packet.payload);
+            tr.node = "node1";
+            traces.push_back(tr);
         }
     }
 
@@ -450,16 +412,6 @@ int main(int argc, char* argv[])
         kf.second = kf_id += 10;
     }
 
-    for (auto& pcapfile : pcapfiles) {
-        pFile = fopen(pcapfile.path.c_str(), "r");
-        if (pFile == NULL) {
-            perror("Error opening pcap file\n");
-        } else {
-            fclose(pFile);
-            pcap_demo(packets, pcapfile.path);
-        }
-    }
-
     pFileReport = fopen("report.csv", "w");
     dump_csv(pFileReport, traces, kf_map, filter, 0);
     fclose(pFileReport);
@@ -469,105 +421,4 @@ int main(int argc, char* argv[])
     fclose(pFileReport);
 
     return 0;
-}
-
-int pcap_demo(auto& packets, auto& filename)
-{
-    Packet packet;
-    /*
-    * Step 3 - Create an char array to hold the error.
-    */
-
-    // Note: errbuf in pcap_open functions is assumed to be able to hold at least PCAP_ERRBUF_SIZE chars
-    //       PCAP_ERRBUF_SIZE is defined as 256.
-    // http://www.winpcap.org/docs/docs_40_2/html/group__wpcap__def.html
-    char errbuff[PCAP_ERRBUF_SIZE];
-
-    /*
-    * Step 4 - Open the file and store result in pointer to pcap_t
-    */
-
-    // Use pcap_open_offline
-    // http://www.winpcap.org/docs/docs_41b5/html/group__wpcapfunc.html#g91078168a13de8848df2b7b83d1f5b69
-    pcap_t* pcap = pcap_open_offline(filename.c_str(), errbuff);
-
-    /*
-    * Step 5 - Create a header and a data object
-    */
-
-    // Create a header object:
-    // http://www.winpcap.org/docs/docs_40_2/html/structpcap__pkthdr.html
-    struct pcap_pkthdr* header;
-
-    // Create a character array using a u_char
-    // u_char is defined here:
-    // C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\Include\WinSock2.h
-    // typedef unsigned char   u_char;
-    const u_char* data;
-
-    /*
-    * Step 6 - Loop through packets and print them to screen
-    */
-    uint64_t packetCount = 0;
-    while (int returnValue = pcap_next_ex(pcap, &header, &data) >= 0) {
-        // Print using printf. See printf reference:
-        // http://www.cplusplus.com/reference/clibrary/cstdio/printf/
-
-        // Show the packet number
-
-        printf("Packet # %i\n", ++packetCount);
-
-        // Show the size in bytes of the packet
-        //printf("Packet size: %d bytes\n", header->len);
-
-        // Show a warning if the length captured is different
-        if (header->len != header->caplen)
-            printf("Warning! Capture size different than packet size: %ld bytes\n", header->len);
-
-        // Show Epoch Time
-        //printf("Epoch Time: %d.%d seconds\n", header->ts.tv_sec, header->ts.tv_usec);
-
-        // loop through the packet and print it as hexidecimal representations of octets
-        // We also have a function that does this similarly below: PrintData()
-        //for (u_int i = 0; (i < header->caplen); i++) {
-        //    // Start printing on the next after every 16 octets
-        //    if ((i % 16) == 0)
-        //        printf("\n");
-
-        //    // Print each octet as hex (x), make sure there is always two characters (.2).
-        //    printf("%.2x ", data[i]);
-        //}
-        //getchar();
-
-        // Add two lines between packets
-        //printf("\n\n");
-
-        packet.id = packetCount;
-        packet.nid = 0;
-        packet.type = 0;
-        packet.nid_src = data[29];
-        packet.nid_dst = data[33];
-        packet.seq = (data[38] << 24) + (data[39] << 16) + (data[40] << 8) + data[41];
-        packet.ack = (data[42] << 24) + (data[43] << 16) + (data[44] << 8) + data[45];
-        packet.flag = data[20];
-        packet.port_src = (data[34] << 8) + data[35];
-        packet.port_dst = (data[36] << 8) + data[37];
-        packet.payload = header->len;
-        packet.ts = header->ts.tv_sec + header->ts.tv_usec / 1000000.0;
-        packet.insns = 0;
-        printf("id:%u, nid:%u, nidsrc:%u, niddst:%u, seq:%u, ack:%u, flag:%u, portsrc:%u, portdst:%u, insns:%lu, payload:%u, ts:%lf \n\n",
-            packet.id,
-            packet.nid,
-            packet.nid_src,
-            packet.nid_dst,
-            packet.seq,
-            packet.ack,
-            packet.flag,
-            packet.port_src,
-            packet.port_dst,
-            packet.insns,
-            packet.payload,
-            packet.ts);
-        packets.push_back(packet);
-    }
 }
