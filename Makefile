@@ -12,11 +12,12 @@ OBJS := main.o
 LIB_USER := 
 LIB_USER_OBJS :=  
 OPTIONS := -g -std=c++14 
-CFLAGS := $(OPTIONS)
-CXXFLAGS := $(OPTIONS)
+CFLAGS := $(OPTIONS) $(DEPFLAGS)
+CXXFLAGS := $(OPTIONS) $(DEPFLAGS)
 LINKFLAGS := -lconfig++ -lpcap
 CC := gcc
 CXX := g++
+
 all	: $(TARGET) $(LIB_USER)
 $(TARGET): $(OBJS) $(LIB_USER)
 	@$(CXX) -o $@ $(OBJS) $(LIB_USER) $(LINKFLAGS)
@@ -25,12 +26,14 @@ $(TARGET): $(OBJS) $(LIB_USER)
 $(LIB_USER):	$(LIB_USER_OBJS)
 	@ar -rcs $@ $^
 	@echo -e "$(C_GREEN)LINK	$@	by	$^$(C_NONE)"
-%.o	:	%.c
+%.o	: %.c
 	@$(CC) -c -fPIC $(CFLAGS) $< -o $@
 	@echo -e "$(C_GREEN)CC	$@$(C_NONE)"
-%.o	:	%.cpp
+	@$(POSTCOMPILE)
+%.o	: %.cpp
 	@$(CXX) -c -fPIC $(CXXFLAGS) $< -o $@
 	@echo -e "$(C_GREEN)CXX	$@$(C_NONE)"
+	@$(POSTCOMPILE)	
 run: $(TARGET)
 	rm -f perf.data
 	perf record -a sleep 5
@@ -60,3 +63,10 @@ uninstall:
 clean:
 	@rm $(TARGET) $(LIB_USER) *.o
 	@echo -e "$(C_BLUE)Removed all TARGET and objects$(C_NONE)"
+
+depend: .depend
+
+.depend: $(wildcard *.cpp)
+	rm -f ./.depend
+	$(CC) $(CFLAGS) -MM $^ -MF  ./.depend
+include .depend
