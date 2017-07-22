@@ -70,7 +70,7 @@ function parse_argument()
                 print_help
                 exit 0
                 ;;
-            "--only-report" )
+            "--report" )
                 generate_report
                 exit 0 
                 ;;
@@ -88,5 +88,5 @@ function parse_argument()
 
 ##### Main() ##### 
 parse_argument
-collect_trace
-generate_report
+#collect_trace
+#generate_report
