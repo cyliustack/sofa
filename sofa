@@ -28,6 +28,7 @@ print_warning() {
 
 
 function collect_trace(){
+    args=$*
     if [[ "$(cat /proc/sys/kernel/perf_event_paranoid)" == "-1" ]]; then 
         rm -f perf.data
         rm -f sofa.pcap
@@ -56,11 +57,14 @@ function print_help()
     echo "sofa [--config yourconfig.cfg] command"
 }
 
-args=$*
-configFile="default.cfg"
-function parse_argument()
+function main()
 {
-    while [[ 1 ]]; do
+    #args=$*
+    configFile="default.cfg"
+    print_info "SOFA: Function Swarm Analyzer"
+    until [ $# -eq 0 ]
+    do
+        echo "第一个参数为: $1 参数个数为: $#"
         case "$1" in
             "--help" )
                 print_help
@@ -75,18 +79,18 @@ function parse_argument()
                 exit 0 
                 ;;
             "--config" )
-                shift 
+                shift
                 configFile=$1
                 ;;
             *)
-                break
+                print_info "COMMAND$*"
+                collect_trace $*
+                generate_report
                 ;;
         esac
-        shift 1 # Remove the fisrt argument
+        shift
     done
 }
 
 ##### Main() ##### 
-parse_argument
-#collect_trace
-#generate_report
+main $*
