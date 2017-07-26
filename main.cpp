@@ -94,12 +94,6 @@ int config(char* config_file, auto& tracefiles, auto& pcapfiles, auto& filter)
         const Setting& config_tracefiles = root["tracefiles"];
         int count = config_tracefiles.getLength();
 
-        std::cout << setw(40) << left << "TraceFile Name"
-                  << "  "
-                  << setw(40) << left << "Color"
-                  << "   "
-                  << std::endl;
-
         for (int i = 0; i < count; ++i) {
             const Setting& config_tracefile = config_tracefiles[i];
             // Only output the record if all of the expected fields are present.
@@ -118,9 +112,6 @@ int config(char* config_file, auto& tracefiles, auto& pcapfiles, auto& filter)
             filter.nodes.push_back(node);
 
             tracefiles.push_back(tcfile);
-            std::cout << setw(40) << left << tcfile.path << "  "
-                      << setw(40) << left << tcfile.color << "  "
-                      << std::endl;
         }
         std::cout << std::endl;
     } catch (const SettingNotFoundException& nfex) {
@@ -386,14 +377,15 @@ int main(int argc, char* argv[])
     }
 
     for (auto& pcapfile : pcapfiles) {
-        pcapfile.parse_from_file();
-        for (auto& packet : pcapfile.packets) {
-            TraceRecord tr;
-            tr.timestamp = packet.timestamp;
-            //ltr_tmp.kf_name = boost::core::demangle( func_name );
-            sprintf(tr.func_name, "network_event:%d", packet.payload);
-            tr.node = "node1";
-            traces.push_back(tr);
+        if (pcapfile.parse_from_file()) {
+            for (auto& packet : pcapfile.packets) {
+                TraceRecord tr;
+                tr.timestamp = packet.timestamp;
+                //ltr_tmp.kf_name = boost::core::demangle( func_name );
+                sprintf(tr.func_name, "network_event:%d", packet.payload);
+                tr.node = "node1";
+                traces.push_back(tr);
+            }
         }
     }
 

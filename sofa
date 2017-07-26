@@ -47,8 +47,8 @@ function collect_trace(){
 }
 
 function generate_report(){
-    echo "FSA Configuration File: ${configFile}"
-    echo "script source = $(dirname $0)"
+    print_info "FSA Configuration File: ${configFile}"
+    print_info "script source = $(dirname $0)"
     $(dirname $0)/fsa ${configFile}
 }
 
@@ -64,7 +64,6 @@ function main()
     print_info "SOFA: Function Swarm Analyzer"
     until [ $# -eq 0 ]
     do
-        echo "第一个参数为: $1 参数个数为: $#"
         case "$1" in
             "--help" )
                 print_help
@@ -83,9 +82,10 @@ function main()
                 configFile=$1
                 ;;
             *)
-                print_info "COMMAND$*"
+                print_info "Traced Command: $*"
                 collect_trace $*
                 generate_report
+                exit 0
                 ;;
         esac
         shift
