@@ -1,3 +1,6 @@
+/***
+Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
+***/
 #ifndef _INC_PPACKET_
 #define _INC_PPACKET_
 #include <iostream>

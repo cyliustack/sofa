@@ -1,3 +1,6 @@
+# Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
+
+
 C_NONE=$(shell echo -e "\033[0m")
 C_RED=$(shell echo -e "\033[31m")
 C_GREEN=$(shell echo -e "\033[32m")

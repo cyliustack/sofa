@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
+
+
 C_NONE="\033[0m"
 C_CYAN="\033[36m"
 C_RED="\033[31m"

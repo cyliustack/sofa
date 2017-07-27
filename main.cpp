@@ -1,3 +1,6 @@
+/***
+Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
+***/
 #include "ppacket.hpp"
 #include <cstdlib>
 #include <iomanip>
