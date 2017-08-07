@@ -6,7 +6,7 @@ Authors: All the contributors of SOFA
 
 ## 2-1. Installation 
 ### Debian/Ubuntu
-`apt-get install perf boost-dev libconfig-dev python-matplotlib` 
+`apt-get install perf boost-dev libconfig-dev libconfig++-dev linux-tools-common` 
 ### Arch Linux
 `pacman -S perf`  
 `pacman -S boost`  
