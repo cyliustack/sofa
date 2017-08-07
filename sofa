@@ -1,7 +1,6 @@
 #!/bin/bash
 # Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
 
-
 C_NONE="\033[0m"
 C_CYAN="\033[36m"
 C_RED="\033[31m"
@@ -31,16 +30,20 @@ print_warning() {
 
 
 function collect_trace(){
+    traced_storage=sdb
     args=$*
     if [[ "$(cat /proc/sys/kernel/perf_event_paranoid)" == "-1" ]]; then 
         rm -f perf.data
         rm -f sofa.pcap
-        #Communication Traces
+        #Network Traces
         tcpdump -w sofa.pcap & 
+        #Storage Traces
+        #sudo blktrace -d /dev/${traced_storage} & 
         #Computation Traces
         date +%s > sofa_time.txt
-        perf record -F 999 -a ${args} && pkill tcpdump
+        perf record -F 999 -a ${args} && pkill tcpdump && pkill blktrace 
         perf script > perf.script
+        #blkparse ${traced_storage} > blk.trace 
     else
         print_info "$(sysctl kernel.perf_event_paranoid)"
         print_error "PerfEvent is not avaiable, please try the command below:"
@@ -60,6 +63,17 @@ function print_help()
     echo "sofa [--config yourconfig.cfg] command"
 }
 
+function sofa_dist(){
+    print_info "SOFA-dist: Distributed Function Swarm Analyzer"
+    if [ "$1" = "" ]  || [ "$2" = "" ] || [ "$3" = "" ] ; then
+        echo "Usage: sofa-dist \"host1 host2 host3\" sample_period \"distributed_computing_command\""
+        exit -1    
+    fi 
+    #pssh -PH "$1" "sleep 1 &&  echo "/tmp/perf-"\`hostname\`".data""
+    pssh -PH "$1" "perf record -F 999 -a -o /tmp/perf-"\`hostname\`".data sleep $2 && perf script --ns -i /tmp/perf-"\`hostname\`".data > /tmp/perf-"\`hostname\`".script && scp /tmp/perf-"\`hostname\`".script $(hostname):/tmp/sofa/" &
+    $3
+}
+
 function main()
 {
     #args=$*
@@ -76,8 +90,13 @@ function main()
                 print_help
                 exit 0
                 ;;
-            "--report" )
+            "report" )
                 generate_report
+                exit 0 
+                ;;
+            "dist" )
+                shift
+                sofa_dist $* 
                 exit 0 
                 ;;
             "--config" )

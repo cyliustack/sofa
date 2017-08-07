@@ -25,7 +25,7 @@ Authors: All the contributors of SOFA
 Let ormal users get raw access to kernel tracepoints:  
 `sudo sysctl -w kernel.perf_event_paranoid=-1`  
 Check the configuration result:  
-`cat cat /proc/sys/kernel/perf_event_paranoid`  
+`cat /proc/sys/kernel/perf_event_paranoid`  
 
 ## 2-2. Enable Non-root tcpdump Configuration
 `sudo groupadd pcap`   
