@@ -5,20 +5,19 @@ Authors: All the contributors of SOFA
 # 2. Prerequisite
 
 ## 2-1. Installation 
-### Debian/Ubuntu
-`apt-get install perf boost-dev libconfig-dev libconfig++-dev linux-tools-common` 
+### Ubuntu-16.04
+`apt-get install boost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common linux-tools-4.8.0-58-generic linux-cloud-tools-4.8.0-58-generic  linux-tools-generic linux-cloud-tools-generic ` 
 ### Arch Linux
 `pacman -S perf`  
 `pacman -S boost`  
-`pacman -S python-matplotlib`  
 ### Fedora 25
-`dnf -y install perf boost-devel libconfig-devel python-matplotlib`
+`dnf -y install perf boost-devel libconfig-devel libpcap-devel`
 ### CentOS 7
 `yum -y install centos-release-scl`  
 `yum -y install devtoolset-4-gcc*`  
 `In Makefile, do that CC := /opt/rh/devtoolset-4/root/bin/gcc`  
 `In Makefile, do that CXX := /opt/rh/devtoolset-4/root/bin/g++`  
-`yum -y install perf boost-devel libconfig-devel python-matplotlib`  
+`yum -y install perf boost-devel libconfig-devel libpcap-devel`  
 
 
 ## 2-2. Perf Configuration

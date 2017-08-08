@@ -38,12 +38,9 @@ $(LIB_USER):	$(LIB_USER_OBJS)
 	@echo -e "$(C_GREEN)CXX	$@$(C_NONE)"
 	@$(POSTCOMPILE)	
 run: $(TARGET)
-	rm -f perf.data
-	perf record -a sleep 5
-	perf script > perf.script
-	./$(TARGET) default.cfg 
-	cp report.js potatoboard
-	python -mwebbrowser potatoboard/index.html
+	@rm -f perf.data
+	@./sofa sleep 3 	
+	@./potato .
 debug: $(TARGET)
 	gdb --args ./$(TARGET)
 install: uninstall
@@ -66,6 +63,10 @@ uninstall:
 clean:
 	@rm $(TARGET) $(LIB_USER) *.o
 	@echo -e "$(C_BLUE)Removed all TARGET and objects$(C_NONE)"
+clean_data:
+	@rm  report.csv report.js sofa_time.txt
+	@echo -e "$(C_BLUE)Removed all generated data$(C_NONE)"
+
 
 depend: .depend
 

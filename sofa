@@ -32,6 +32,14 @@ print_warning() {
 function collect_trace(){
     traced_storage=sdb
     args=$*
+
+    if [[ "$(cat /proc/sys/kernel/kptr_restrict)" != "0" ]]; then 
+        print_info "$(sysctl kernel.kptr_restrict)"
+        print_error "/proc/kallsyms permission is restricted, please try the command below:"
+        print_error "sudo sysctl -w kernel.kptr_restrict=0"
+	exit -1
+    fi
+    
     if [[ "$(cat /proc/sys/kernel/perf_event_paranoid)" == "-1" ]]; then 
         rm -f perf.data
         rm -f sofa.pcap
@@ -48,19 +56,18 @@ function collect_trace(){
         print_info "$(sysctl kernel.perf_event_paranoid)"
         print_error "PerfEvent is not avaiable, please try the command below:"
         print_error "sudo sysctl -w kernel.perf_event_paranoid=-1"
-        exit -1       
+        exit -1 
     fi 
 }
 
 function generate_report(){
     print_info "FSA Configuration File: ${configFile}"
-    print_info "script source = $(dirname $0)"
     $(dirname $0)/fsa ${configFile}
 }
 
 function print_help()
 {
-    echo "sofa [--config yourconfig.cfg] command"
+    echo "sofa [help|record|dist|report] [--config yourconfig.cfg] command"
 }
 
 function sofa_dist(){
@@ -76,13 +83,23 @@ function sofa_dist(){
 
 function main()
 {
+    if [[ "$*" == "" ]]; then
+	print_help
+	exit -1
+    fi
+
     #args=$*
     configFile="default.cfg"
     print_info "SOFA: Function Swarm Analyzer"
+    
     until [ $# -eq 0 ]
     do
         case "$1" in
-            "--help" )
+            "help" )
+                print_help
+                exit 0
+                ;;
+	    "--help" )
                 print_help
                 exit 0
                 ;;
@@ -103,6 +120,18 @@ function main()
                 shift
                 configFile=$1
                 ;;
+            "record" )
+                shift
+		print_info "Traced Command: $*"
+		if [[ "$*" == "" ]]; then
+			print_help
+			exit -1
+		else
+                	collect_trace $*
+                	generate_report
+                	exit 0
+		fi
+		;;
             *)
                 print_info "Traced Command: $*"
                 collect_trace $*
