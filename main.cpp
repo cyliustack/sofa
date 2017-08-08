@@ -29,6 +29,7 @@ public:
     std::map<std::string, std::string> colormap;
     std::map<std::string, std::string> colormap4node;
     int downsample;
+    double network_timestamp_offset;
 };
 
 class TraceFile {
@@ -89,6 +90,17 @@ int config(char* config_file, auto& tracefiles, auto& pcapfiles, auto& filter)
     } catch (const SettingNotFoundException& nfex) {
         std::cerr << "No 'mode' setting in configuration file." << std::endl;
     }
+
+    // Get network_timestamp_offset.
+    try {
+        double network_timestamp_offset = cfg.lookup("network_timestamp_offset");
+        filter.network_timestamp_offset = network_timestamp_offset;
+        std::cout << "network_timestamp_offset: " << filter.network_timestamp_offset << std::endl << std::endl;
+    } catch (const SettingNotFoundException& nfex) {
+        std::cerr << "No 'network_timestamp_offset' setting in configuration file." << std::endl;
+    }
+
+
 
     const Setting& root = cfg.getRoot();
 
@@ -383,7 +395,7 @@ int main(int argc, char* argv[])
         if (pcapfile.parse_from_file()) {
             for (auto& packet : pcapfile.packets) {
                 TraceRecord tr;
-                tr.timestamp = packet.timestamp-0.5;
+                tr.timestamp = packet.timestamp-filter.network_timestamp_offset;
                 //ltr_tmp.kf_name = boost::core::demangle( func_name );
                 sprintf(tr.func_name, "%d:network_event", packet.payload);
                 tr.node = "node1";
