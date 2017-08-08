@@ -6,7 +6,7 @@ Authors: All the contributors of SOFA
 
 ## 2-1. Installation 
 ### Ubuntu-16.04
-`apt-get install boost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common linux-tools-4.8.0-58-generic linux-cloud-tools-4.8.0-58-generic  linux-tools-generic linux-cloud-tools-generic ` 
+`sudo apt-get install libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)  linux-tools-generic linux-cloud-tools-generic ` 
 ### Arch Linux
 `pacman -S perf`  
 `pacman -S boost`  
