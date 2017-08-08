@@ -4,7 +4,7 @@ Highcharts.chart('container', {
         zoomType: 'xy'
     },
     title: {
-        text: 'Tmie Versus Executing Functions'
+        text: 'Time Versus Functions and Events'
     },
     subtitle: {
       text: '  '
