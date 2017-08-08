@@ -383,9 +383,9 @@ int main(int argc, char* argv[])
         if (pcapfile.parse_from_file()) {
             for (auto& packet : pcapfile.packets) {
                 TraceRecord tr;
-                tr.timestamp = packet.timestamp;
+                tr.timestamp = packet.timestamp-0.5;
                 //ltr_tmp.kf_name = boost::core::demangle( func_name );
-                sprintf(tr.func_name, "network_event:%d", packet.payload);
+                sprintf(tr.func_name, "%d:network_event", packet.payload);
                 tr.node = "node1";
                 traces.push_back(tr);
             }

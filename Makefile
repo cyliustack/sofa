@@ -63,8 +63,8 @@ uninstall:
 clean:
 	@rm $(TARGET) $(LIB_USER) *.o
 	@echo -e "$(C_BLUE)Removed all TARGET and objects$(C_NONE)"
-clean_data:
-	@rm  report.csv report.js sofa_time.txt
+cleandata:
+	@rm  perf.data perf.script *.pcap *.html *.csv *.js sofa_time.txt
 	@echo -e "$(C_BLUE)Removed all generated data$(C_NONE)"
 
 
