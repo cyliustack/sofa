@@ -35,15 +35,18 @@ Check the configuration result:
 Simple Test:  
 `tcpdump -w sofa.pcap`  
 `tcpdump -r sofa.pcap`  
-  
+ 
+# 3. Build Dependent Third-party Library
+`wget http://bitbucket.org/eigen/eigen/get/3.3.4.tar.gz`
+`tar -xvf 3.3.4.tar.gz && cd eigen-eigen-5a0156e40feb && mkdir build && cd build && cmake .. && make && sudo make install` 
 
-# 3. SOFA Build and Installation 
+# 4. SOFA Build and Installation 
 1. git clone https://github.com/cyliustack/sofa
 2. cd sofa 
 3. make 
 4. sudo make install
 
-# 4. How To Use
+# 5. How To Use
 ## For Case 1
 ```
 cp examples/conf/default-single.cfg  default.cfg

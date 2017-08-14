@@ -14,9 +14,10 @@ TARGET := fsa
 OBJS := main.o
 LIB_USER := 
 LIB_USER_OBJS :=  
+INCFLAGS := -I/usr/local/include/eigen3
 OPTIONS := -g -std=c++14 
 CFLAGS := $(OPTIONS) $(DEPFLAGS)
-CXXFLAGS := $(OPTIONS) $(DEPFLAGS)
+CXXFLAGS := $(OPTIONS) $(DEPFLAGS) $(INCFLAGS)
 LINKFLAGS := -lconfig++ -lpcap
 CC := gcc
 CXX := g++

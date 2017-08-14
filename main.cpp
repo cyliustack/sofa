@@ -20,6 +20,22 @@ Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
 using namespace libconfig;
 using namespace std;
 
+
+#include <iostream>
+#include <Eigen/Dense>
+using Eigen::MatrixXd;
+
+int test_eigen()
+{
+  MatrixXd m(2,2);
+  m(0,0) = 3;
+  m(1,0) = 2.5;
+  m(0,1) = -1;
+  m(1,1) = m(1,0) + m(0,1);
+  std::cout << m << std::endl;
+}
+
+
 class Filter {
 public:
     std::string tracing_mode;
@@ -308,6 +324,8 @@ int main(int argc, char* argv[])
 {
     FILE *pFile, *pFileReport;
     char mystring[6000];
+
+    //test_eigen();
 
     //Read from trace files and store records into traces
     std::vector<TraceFile> tracefiles;
