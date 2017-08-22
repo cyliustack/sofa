@@ -49,18 +49,18 @@ Simple Test:
 # 5. How To Use
 ## For Case 1
 ```
-cp examples/conf/default-single.cfg  default.cfg
+cp examples/conf/default-single.cfg  .
 make run
 ```
 ## For Case 2
 ```
-cp examples/conf/default-single.cfg default.cfg
+cp examples/conf/default-single.cfg .
 sofa --config default.cfg ls -ah  
 potato .    
 ```
 ## For Case 3
 ```
-cp examples/conf/default-cluster.cfg default.cfg
+cp examples/conf/default-cluster.cfg .
 cp examples/start-all-example.sh .
 Modify start-all-example.sh for names of involved nodes
 sofa-dist "node0 node1" 10 "sh start-all-processes-on-all-nodes.sh" 
