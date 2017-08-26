@@ -49,7 +49,7 @@ function collect_trace(){
         #sudo blktrace -d /dev/${traced_storage} & 
         #Computation Traces
         date +%s > sofa_time.txt
-        perf record -F 99 -a -- ${args} 
+        perf record -F 999 -a -- ${args} 
         perf script > perf.script
 	pkill  tcpdump
 	#blkparse ${traced_storage} > blk.trace 
