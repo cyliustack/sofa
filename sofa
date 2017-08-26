@@ -44,14 +44,15 @@ function collect_trace(){
         rm -f perf.data
         rm -f sofa.pcap
         #Network Traces
-        tcpdump -w sofa.pcap & 
+        tcpdump -i eno1 -w sofa.pcap & 
         #Storage Traces
         #sudo blktrace -d /dev/${traced_storage} & 
         #Computation Traces
         date +%s > sofa_time.txt
-        perf record -F 999 -a ${args} && pkill tcpdump && pkill blktrace 
+        perf record -F 99 -a -- ${args} 
         perf script > perf.script
-        #blkparse ${traced_storage} > blk.trace 
+	pkill  tcpdump
+	#blkparse ${traced_storage} > blk.trace 
     else
         print_info "$(sysctl kernel.perf_event_paranoid)"
         print_error "PerfEvent is not avaiable, please try the command below:"
@@ -77,7 +78,7 @@ function sofa_dist(){
         exit -1    
     fi 
     #pssh -PH "$1" "sleep 1 &&  echo "/tmp/perf-"\`hostname\`".data""
-    pssh -PH "$1" "perf record -F 999 -a -o /tmp/perf-"\`hostname\`".data sleep $2 && perf script --ns -i /tmp/perf-"\`hostname\`".data > /tmp/perf-"\`hostname\`".script && scp /tmp/perf-"\`hostname\`".script $(hostname):/tmp/sofa/" &
+    pssh -PH "$1" "perf record -F 99 -a -o /tmp/perf-"\`hostname\`".data sleep $2 && perf script --ns -i /tmp/perf-"\`hostname\`".data > /tmp/perf-"\`hostname\`".script && scp /tmp/perf-"\`hostname\`".script $(hostname):/tmp/sofa/" &
     $3
 }
 
@@ -133,9 +134,7 @@ function main()
 		fi
 		;;
             *)
-                print_info "Traced Command: $*"
-                collect_trace $*
-                generate_report
+                print_help
                 exit 0
                 ;;
         esac
