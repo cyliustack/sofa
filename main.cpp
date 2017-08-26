@@ -415,7 +415,7 @@ int main(int argc, char* argv[])
                 TraceRecord tr;
                 tr.timestamp = packet.timestamp-filter.network_timestamp_offset;
                 //ltr_tmp.kf_name = boost::core::demangle( func_name );
-                sprintf(tr.func_name, "%d:network_event", packet.payload);
+                sprintf(tr.func_name, "pcap:%d->%d:%d", packet.nid_src, packet.nid_dst, packet.payload);
                 tr.node = "node1";
                 traces.push_back(tr);
             }
