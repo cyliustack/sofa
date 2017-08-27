@@ -44,7 +44,7 @@ function collect_trace(){
         rm -f perf.data
         rm -f sofa.pcap
         #Network Traces
-        tcpdump -i eno1 -w sofa.pcap & 
+        tcpdump -i any -v tcp -w sofa.pcap & 
         #Storage Traces
         #sudo blktrace -d /dev/${traced_storage} & 
         #Computation Traces
