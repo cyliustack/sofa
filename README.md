@@ -5,13 +5,7 @@ Authors: All the contributors of SOFA
 # 2. Prerequisite
 
 ## 2-1. Installation 
-### Ubuntu-16.04
-`sudo apt-get install libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)  linux-tools-generic linux-cloud-tools-generic ` 
-### Arch Linux
-`pacman -S perf`  
-`pacman -S boost`  
-### Fedora 25
-`dnf -y install perf boost-devel libconfig-devel libpcap-devel`
+`./tools/prerequisite.sh`
 ### CentOS 7
 `yum -y install centos-release-scl`  
 `yum -y install devtoolset-4-gcc*`  
