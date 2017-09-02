@@ -409,15 +409,18 @@ int main(int argc, char* argv[])
         }
     }
 
+    uint64_t count=0;
     for (auto& pcapfile : pcapfiles) {
         if (pcapfile.parse_from_file()) {
             for (auto& packet : pcapfile.packets) {
-                TraceRecord tr;
-                tr.timestamp = packet.timestamp-filter.network_timestamp_offset;
-                //ltr_tmp.kf_name = boost::core::demangle( func_name );
-                sprintf(tr.func_name, "pcap:%d->%d:%d", packet.nid_src, packet.nid_dst, packet.payload);
-                tr.node = "node1";
-                traces.push_back(tr);
+                if ((count++) % filter.downsample == 0) {
+                    TraceRecord tr;
+                    tr.timestamp = packet.timestamp-filter.network_timestamp_offset;
+                    //ltr_tmp.kf_name = boost::core::demangle( func_name );
+                    sprintf(tr.func_name, "pcap:%d->%d:%d", packet.nid_src, packet.nid_dst, packet.payload);
+                    tr.node = "node1";
+                    traces.push_back(tr);
+                }
             }
         }
     }
