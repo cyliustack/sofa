@@ -1,5 +1,4 @@
 #!/bin/bash
-# 3. Build Dependent Third-party Library
 
 if [ -f /etc/os-release ]; then
     # freedesktop.org and systemd
@@ -35,19 +34,26 @@ fi
 echo $OS
 echo $ARCH
 echo $VERSION
+
+os_found=true
+
 if [[ $OS == "Ubuntu" ]]; then
 	echo "This Ubuntu "
-	sudo apt-get install libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)  linux-tools-generic linux-cloud-tools-generic cmake
-	wget http://bitbucket.org/eigen/eigen/get/3.3.4.tar.gz
-	tar -xvf 3.3.4.tar.gz && cd eigen-eigen-5a0156e40feb && mkdir -p build && cd build && cmake .. && make && sudo make install 
-
+	sudo apt-get install libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)  linux-tools-generic linux-cloud-tools-generic cmake	
 elif [[ $OS == "Centos" ]]; then
 	echo "This Centos "
 elif [[ $OS == "Fedora" ]]; then
 	echo "This Fedora "
+    sudo dnf -y install perf boost-devel libconfig-devel libpcap-devel cmake
 else
-	echo "Oops, Cannot identify your OS version!"
+	os_found=false
 fi
 
-
-
+if [[ $os_found == true ]]; then
+    wget http://bitbucket.org/eigen/eigen/get/3.3.4.tar.gz
+	tar -xvf 3.3.4.tar.gz && cd eigen-eigen-5a0156e40feb && mkdir -p build && cd build && cmake .. && make && sudo make install 
+    cd ../.. 
+    rm -rf eigen-eigen-5a0156e40feb
+else
+   echo "Oops, Cannot identify your OS version!"
+fi
