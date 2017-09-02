@@ -63,6 +63,7 @@ function collect_trace(){
 
 function generate_report(){
     print_info "FSA Configuration File: ${configFile}"
+    perf script > perf.script
     $(dirname $0)/fsa ${configFile}
 }
 
