@@ -43,16 +43,11 @@ function collect_trace(){
     if [[ "$(cat /proc/sys/kernel/perf_event_paranoid)" == "-1" ]]; then 
         rm -f perf.data
         rm -f sofa.pcap
-        #Network Traces
         tcpdump -i any -v tcp -w sofa.pcap & 
-        #Storage Traces
-        #sudo blktrace -d /dev/${traced_storage} & 
-        #Computation Traces
         date +%s > sofa_time.txt
-        perf record -F 999 -a -- ${args} 
+        perf record -F 99 -a -- ${args} 
         perf script > perf.script
-	pkill  tcpdump
-	#blkparse ${traced_storage} > blk.trace 
+        pkill  tcpdump
     else
         print_info "$(sysctl kernel.perf_event_paranoid)"
         print_error "PerfEvent is not avaiable, please try the command below:"
