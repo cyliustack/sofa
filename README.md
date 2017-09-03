@@ -5,7 +5,9 @@ Authors: All the contributors of SOFA
 # 2. Prerequisite
 
 ## 2-1. Installation 
-`./tools/prerequisite.sh`
+`./tools/prerequisite.sh`  
+`./tools/empower-tcpdump.sh $(whoami)`  
+
 ### CentOS 7
 `yum -y install centos-release-scl`  
 `yum -y install devtoolset-4-gcc*`  
