@@ -38,10 +38,11 @@ echo $VERSION
 os_found=true
 
 if [[ $OS == "Ubuntu" ]]; then
-	echo "This Ubuntu "
+	echo "This is Ubuntu "
 	sudo apt-get install libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)  linux-tools-generic linux-cloud-tools-generic cmake	
-elif [[ $OS == "Centos" ]]; then
-	echo "This Centos "
+elif [[ $OS == "CentOS Linux" ]]; then
+    echo "This is CentOS"
+    sudo yum install cmake libpcap-devel libconfig-devel boost-devel
 elif [[ $OS == "Fedora" ]]; then
 	echo "This Fedora "
     sudo dnf -y install perf boost-devel libconfig-devel libpcap-devel cmake
