@@ -1,11 +1,10 @@
-#!/bin/python
 import csv
 import matplotlib
 import numpy as np
 import hashlib
 import sys
 
-matplotlib.use("Qt4Agg")
+#matplotlib.use("Qt4Agg")
 from matplotlib import pyplot as plt
 
 class Trace:
