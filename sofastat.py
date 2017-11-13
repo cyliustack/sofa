@@ -2,6 +2,21 @@
 from scapy.all import *
 import sqlite3
 import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import csv
+import cxxfilt
+print 'Number of arguments:', len(sys.argv), 'arguments.'
+print 'Argument List:', str(sys.argv) 
+filein = []
+if len(sys.argv) < 2:
+    print("Usage: sofastat.py test.nvp")
+    quit();
+else:
+    filein = sys.argv[1]
+
+
+
 
 # rdpcap comes from scapy and loads in our pcap file
 packets = rdpcap('sofa.pcap')
@@ -24,29 +39,76 @@ for i in range(0,len(lines)):
 	func_name = fields[7]
 	x.append([count, timestamp, func_name]) 
 	#print("x = (%d, %s, %s)" % (count, timestamp, func_name))
-print x
+print(x)
 
-print("Read data.nvprof...")
-sqlite_file = 'mm_2262.nvprof'
+print("Read nvprof traces ...")
+sqlite_file = filein
+#sqlite_file = 'mm_2262.nvp'
 #sqlite_file = 'vgg16_bs64_gpux8_119832.nvprof'
 db = sqlite3.connect(sqlite_file)
 cursor = db.cursor()
 cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
 tables = cursor.fetchall()
 i=0;
-for table_name in tables:
+ftable=[];
+for table_name in tables: 
     i=i+1
-    table_name = table_name[0]
-    table = pd.read_sql_query("SELECT * from %s" % table_name, db)
-    table.to_csv(table_name + '.csv', index_label='index')
-    print("table-%d name: %s" % (i,table_name) )
+    tname = table_name[0]
+    table = pd.read_sql_query("SELECT * from %s" % tname, db)
+    print("table-%d = %s, count=%d" % (i,tname,len(table.index)) )
+    if len(table.index) > 0:
+        table.to_csv(tname + '.csv', index_label='index')
+    if tname == "StringTable":
+        ftable=table
+#        print("StringTable Content:")
+#        for record in table:
+#            ftable['Name']=record[1]
+#            print("record = %s" % (record)) 
 
-cursor.execute("SELECT start,end FROM CUPTI_ACTIVITY_KIND_KERNEL")
+
+cursor.execute("SELECT start,end,name,staticSharedMemory,dynamicSharedMemory,localMemoryPerThread,localMemoryTotal FROM CUPTI_ACTIVITY_KIND_KERNEL")
 records = cursor.fetchall()
-
 i=0
-for record in records:
-    print("record-%d: %s, duration = %d" % (i,record, record[1]-record[0]) )
+begin = []
+end = []
+event = []
+t_base = 0
 
-
-
+with open('gputrace.csv', 'w') as csvfile:
+    fieldnames = ['begin', "duration", "event","staticSharedMemory","dynamicSharedMemory","localMemoryPerThread","localMemoryTotal"]
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    for record in records:
+        i = i + 1
+        if i == 1:
+            t_base = record[0]
+        if ( i % 10 ) == 0 :
+            print(record)
+            t_begin = record[0] - t_base
+            t_end = record[1]- t_base
+            duration = t_end - t_begin
+            begin = np.append(begin, t_begin )
+            end = np.append(end, t_end )
+            func_name = cxxfilt.demangle( ("%s" % ftable.loc[ftable._id_==record[2],'value'])) 
+            event_id = record[2]
+            print("event id and its name = %d %s" % (event_id,func_name)) 
+            event = np.append(event, event_id)
+            print("record-%d: %s at %d, duration = %d" % (i,record, t_begin, t_end-t_begin) )
+            print("ID-%d = %s" % ( record[2], func_name ))
+            writer.writerow({'begin': t_begin, 'duration': duration, 'event': event_id, 'staticSharedMemory':record[3], 'dynamicSharedMemory':record[4], 'localMemoryPerThread':record[5], 'localMemoryTotal':record[6] })
+    
+#for record in records:
+#    i = i + 1
+#    if i == 1:
+#        t_base = record[0]/1000
+#    if ( i % 10 ) == 0 :
+#        print(record)
+#        end = np.append(end, t_end )
+#        func_name = ftable.loc[ftable._id_==record[2],'value']
+#        event = np.append(event, func_name)
+#        print("record-%d: %s at %d, duration = %d" % (i,record, t_begin, t_end-t_begin) )
+#        print("ID-%d = %s" % ( record[2], func_name ))
+#        print("t_base = %d" % t_base) 
+#plt.barh(range(len(begin)),  end-begin, left=begin)
+#plt.yticks(range(len(begin)), event)
+#plt.show()
