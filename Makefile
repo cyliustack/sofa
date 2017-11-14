@@ -19,8 +19,6 @@ OPTIONS := -g -std=c++14
 CFLAGS := $(OPTIONS) $(DEPFLAGS)
 CXXFLAGS := $(OPTIONS) $(DEPFLAGS) $(INCFLAGS)
 LINKFLAGS := -lconfig++ -lpcap
-CC := gcc
-CXX := g++
 
 all	: $(TARGET) $(LIB_USER)
 $(TARGET): $(OBJS) $(LIB_USER)

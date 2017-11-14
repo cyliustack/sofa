@@ -39,13 +39,13 @@ os_found=true
 
 if [[ $OS == "Ubuntu" ]]; then
 	echo "This is Ubuntu "
-	sudo apt-get install libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)  linux-tools-generic linux-cloud-tools-generic cmake	
+	sudo apt-get install libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common linux-tools-$(uname -r) linux-cloud-tools-$(uname -r)  linux-tools-generic linux-cloud-tools-generic cmake python-pip python-dev	
 elif [[ $OS == "CentOS Linux" ]]; then
     echo "This is CentOS"
-    sudo yum install perf cmake libpcap-devel libconfig-devel boost-devel
+    sudo yum install perf cmake libpcap-devel libconfig-devel boost-devel install centos-release-scl devtoolset-4-gcc* python-pip python-devel
 elif [[ $OS == "Fedora" ]]; then
 	echo "This Fedora "
-    sudo dnf -y install perf boost-devel libconfig-devel libpcap-devel cmake
+    sudo dnf -y install perf boost-devel libconfig-devel libpcap-devel cmake python-pip python-devel
 else
 	os_found=false
 fi
@@ -54,7 +54,12 @@ if [[ $os_found == true ]]; then
     wget http://bitbucket.org/eigen/eigen/get/3.3.4.tar.gz
 	tar -xvf 3.3.4.tar.gz && cd eigen-eigen-5a0156e40feb && mkdir -p build && cd build && cmake .. && make && sudo make install 
     cd ../.. 
+    rm 3.3.4.tar.gz
     rm -rf eigen-eigen-5a0156e40feb
 else
    echo "Oops, Cannot identify your OS version!"
 fi
+sudo pip install --upgrade pip
+sudo pip install cxxfilt scapy pandas 
+
+
