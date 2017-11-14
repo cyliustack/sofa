@@ -66,7 +66,7 @@ for table_name in tables:
 #            print("record = %s" % (record)) 
 
 
-cursor.execute("SELECT start,end,name,staticSharedMemory,dynamicSharedMemory,localMemoryPerThread,localMemoryTotal FROM CUPTI_ACTIVITY_KIND_KERNEL")
+cursor.execute("SELECT start,end,name,staticSharedMemory,dynamicSharedMemory,localMemoryPerThread,localMemoryTotal FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
 records = cursor.fetchall()
 i=0
 begin = []
@@ -96,6 +96,32 @@ with open('gputrace.csv', 'w') as csvfile:
             print("record-%d: %s at %d, duration = %d" % (i,record, t_begin, t_end-t_begin) )
             print("ID-%d = %s" % ( record[2], func_name ))
             writer.writerow({'begin': t_begin, 'duration': duration, 'event': event_id, 'staticSharedMemory':record[3], 'dynamicSharedMemory':record[4], 'localMemoryPerThread':record[5], 'localMemoryTotal':record[6] })
+
+#index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
+cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
+records = cursor.fetchall()
+i=0
+begin = []
+end = []
+event = []
+t_base = 0
+with open('gputrace2.csv', 'w') as csvfile:
+    fieldnames = ['begin', "duration", "bytes", "copyKind", "deviceId", "srcKind","dstKind","streamId"]
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    for record in records:
+        i = i + 1
+        if i == 1:
+            t_base = record[0]
+        if ( i % 1 ) == 0 :
+            print(record)
+            t_begin = record[0] - t_base
+            t_end = record[1]- t_base
+            duration = t_end - t_begin
+            writer.writerow({'begin': t_begin, 'duration': duration, 'bytes': record[2], 'copyKind':record[3], 'deviceId':record[4], 'srcKind':record[5], 'dstKind':record[6], 'streamId':record[7] })
+ 
+
+
     
 #for record in records:
 #    i = i + 1
