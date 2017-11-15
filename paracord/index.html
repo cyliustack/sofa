@@ -1,9 +1,32 @@
 <!DOCTYPE html>
+<html>
 <meta charset="utf-8">
-<style>
 
-svg {
-  font: 10px sans-serif;
+<!-- Example based on http://bl.ocks.org/mbostock/3887118 -->
+<!-- Tooltip example from http://www.d3noob.org/2013/01/adding-tooltips-to-d3js-graph.html -->
+<!-- Coding style based on http://gist.github.com/mbostock/5977197 -->
+
+<style>
+body {
+  font: 11px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.dot {
+  stroke: #000;
+}
+
+.tooltip {
+  position: absolute;
+  width: 200px;
+  height: 28px;
+  pointer-events: none;
 }
 
 .background path {
@@ -35,10 +58,39 @@ svg {
   cursor: move;
 }
 
+
 </style>
 <body>
-<script src="//d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
 <script>
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+/* 
+ * value accessor - returns the value to encode for a given data object.
+ * scale - maps value to a visual display encoding, such as a pixel position.
+ * map function - maps from data value to display value
+ * axis - sets up axis
+ */ 
+
+// setup x 
+var xValue = function(d) { return d.begin;}, // data -> value
+    xScale = d3.scale.linear().range([0, width]), // value -> display
+    xMap = function(d) { return xScale(xValue(d));}, // data -> display
+    xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+
+// setup y
+var yValue = function(d) { return d["bytes (g)"];}, // data -> value
+    yScale = d3.scale.linear().range([height, 0]), // value -> display
+    yMap = function(d) { return yScale(yValue(d));}, // data -> display
+    yAxis = d3.svg.axis().scale(yScale).orient("left");
+
+// setup fill color
+var cValue = function(d) { return d.Manufacturer;},
+    color = d3.scale.category10();
+
 
 var margin = {top: 30, right: 10, bottom: 10, left: 10},
     width = 960 - margin.left - margin.right,
@@ -53,7 +105,7 @@ var line = d3.svg.line(),
     background,
     foreground;
 
-var svg = d3.select("body").append("svg")
+var svg3 = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
@@ -69,15 +121,16 @@ d3.csv("gputrace.csv", function(error, cars) {
   }));
 
   // Add grey background lines for context.
-  background = svg.append("g")
+  background = svg3.append("g")
       .attr("class", "background")
     .selectAll("path")
       .data(cars)
     .enter().append("path")
       .attr("d", path);
 
+
   // Add blue foreground lines for focus.
-  foreground = svg.append("g")
+  foreground = svg3.append("g")
       .attr("class", "foreground")
     .selectAll("path")
       .data(cars)
@@ -85,7 +138,7 @@ d3.csv("gputrace.csv", function(error, cars) {
       .attr("d", path);
 
   // Add a group element for each dimension.
-  var g = svg.selectAll(".dimension")
+  var g = svg3.selectAll(".dimension")
       .data(dimensions)
     .enter().append("g")
       .attr("class", "dimension")
@@ -123,6 +176,7 @@ d3.csv("gputrace.csv", function(error, cars) {
       .style("text-anchor", "middle")
       .attr("y", -9)
       .text(function(d) { return d; });
+
 
   // Add and store a brush for each axis.
   g.append("g")
@@ -165,4 +219,5 @@ function brush() {
 }
 
 </script>
-
+</body>
+</html>

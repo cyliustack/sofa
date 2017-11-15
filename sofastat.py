@@ -2,7 +2,6 @@
 from scapy.all import *
 import sqlite3
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
 import csv
 import cxxfilt
@@ -66,7 +65,21 @@ for table_name in tables:
 #            print("record = %s" % (record)) 
 
 
-cursor.execute("SELECT start,end,name,staticSharedMemory,dynamicSharedMemory,localMemoryPerThread,localMemoryTotal FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
+class GPUTrace:
+    fieldnames = ['time(ms)', "event", "duration(ms)","copyKind", "data(bytes)", "streamId"]
+    time=0
+    event=0
+    copyKind=0
+    streamId=0
+    duration=0
+    size=0
+    def info(self):
+	    return 'hello world'
+
+gputrace = GPUTrace()
+
+
+cursor.execute("SELECT start,end,name,streamId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
 records = cursor.fetchall()
 i=0
 begin = []
@@ -74,9 +87,8 @@ end = []
 event = []
 t_base = 0
 
-with open('gputrace.csv', 'w') as csvfile:
-    fieldnames = ['begin', "duration", "event","staticSharedMemory","dynamicSharedMemory","localMemoryPerThread","localMemoryTotal"]
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+with open('gputrace.csv', 'w') as csvfile: 
+    writer = csv.DictWriter(csvfile, fieldnames=gputrace.fieldnames)
     writer.writeheader()
     for record in records:
         i = i + 1
@@ -91,11 +103,17 @@ with open('gputrace.csv', 'w') as csvfile:
             end = np.append(end, t_end )
             func_name = cxxfilt.demangle( ("%s" % ftable.loc[ftable._id_==record[2],'value'])) 
             event_id = record[2]
+            gputrace.time=t_begin/1000000 #from ns to ms
+            gputrace.event=record[2]
+            gputrace.copyKind=-1
+            gputrace.streamId=record[3]
+            gputrace.duration=duration/1000000 # from ns to ms
+            gputrace.data=0
             print("event id and its name = %d %s" % (event_id,func_name)) 
             event = np.append(event, event_id)
             print("record-%d: %s at %d, duration = %d" % (i,record, t_begin, t_end-t_begin) )
             print("ID-%d = %s" % ( record[2], func_name ))
-            writer.writerow({'begin': t_begin, 'duration': duration, 'event': event_id, 'staticSharedMemory':record[3], 'dynamicSharedMemory':record[4], 'localMemoryPerThread':record[5], 'localMemoryTotal':record[6] })
+            writer.writerow({'time(ms)': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'streamId':gputrace.streamId, 'duration(ms)':gputrace.duration, 'data(bytes)': gputrace.data })
 
 #index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
 cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
@@ -105,21 +123,54 @@ begin = []
 end = []
 event = []
 t_base = 0
-with open('gputrace2.csv', 'w') as csvfile:
-    fieldnames = ['begin', "duration", "bytes", "copyKind", "deviceId", "srcKind","dstKind","streamId"]
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+with open('gputrace.csv', 'a') as csvfile:
+    writer = csv.DictWriter(csvfile, fieldnames=gputrace.fieldnames)
     writer.writeheader()
     for record in records:
         i = i + 1
         if i == 1:
             t_base = record[0]
-        if ( i % 1 ) == 0 :
-            print(record)
+        if ( i % 10 ) == 0 :
             t_begin = record[0] - t_base
             t_end = record[1]- t_base
             duration = t_end - t_begin
-            writer.writerow({'begin': t_begin, 'duration': duration, 'bytes': record[2], 'copyKind':record[3], 'deviceId':record[4], 'srcKind':record[5], 'dstKind':record[6], 'streamId':record[7] })
+            begin = np.append(begin, t_begin )
+            end = np.append(end, t_end )
+            event_id = record[2]
+            gputrace.time=t_begin/1000000 #from ns to ms
+            gputrace.event=record[4] # deviceId
+            gputrace.copyKind=record[3]
+            gputrace.streamId=record[7]
+            gputrace.duration=duration/1000000 # from ns to ms
+            gputrace.data=record[2]
+            writer.writerow({'time(ms)': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'streamId':gputrace.streamId, 'duration(ms)':gputrace.duration, 'data(bytes)': gputrace.data })
+            print(record)
+            #writer.writerow({'begin': t_begin, 'duration': duration, 'bytes': record[2], 'copyKind':record[3], 'deviceId':record[4], 'srcKind':record[5], 'dstKind':record[6], 'streamId':record[7] })
  
+
+#cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")
+#records = cursor.fetchall()
+#i=0
+#begin = []
+#end = []
+#event = []
+#t_base = 0
+#with open('gputrace_memcpy2.csv', 'w') as csvfile:
+#    fieldnames = ['begin', "duration", "bytes", "copyKind", "deviceId", "srcKind","dstKind","streamId"]
+#    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+#    writer.writeheader()
+#    for record in records:
+#        i = i + 1
+#        if i == 1:
+#            t_base = record[0]
+#        if ( i % 1 ) == 0 :
+#            print(record)
+#            t_begin = record[0] - t_base
+#            t_end = record[1]- t_base
+#            duration = t_end - t_begin
+#            writer.writerow({'begin': t_begin, 'duration': duration, 'bytes': record[2], 'copyKind':record[3], 'deviceId':record[4], 'srcKind':record[5], 'dstKind':record[6], 'streamId':record[7] })
+# 
+
 
 
     
