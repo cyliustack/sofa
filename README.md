@@ -9,7 +9,7 @@ Authors: All the contributors of SOFA
 `cd sofa`  
 `./tools/prerequisite.sh`   
 `./tools/empower-tcpdump.sh $(whoami)`  
-`Please re-login to apply changes!`
+`Please re-login to apply changes!`  
 Simple Test:  
 `tcpdump -w sofa.pcap`  
 `tcpdump -r sofa.pcap`  
