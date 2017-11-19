@@ -1,6 +1,8 @@
 #!/bin/bash
 # Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
 
+logdir=sofalog
+
 C_NONE="\033[0m"
 C_CYAN="\033[36m"
 C_RED="\033[31m"
@@ -41,12 +43,14 @@ function collect_trace(){
     fi
     
     if [[ "$(cat /proc/sys/kernel/perf_event_paranoid)" == "-1" ]]; then 
-        rm -f perf.data
-        rm -f sofa.pcap
-        tcpdump -i any -v tcp -w sofa.pcap & 
-        date +%s > sofa_time.txt
-        perf record -F 99 -a -- ${args} 
-        perf script > perf.script
+        mkdir -p ${logdir}
+        rm -f ${logdir}/perf.data 2> /dev/null
+        rm -f ${logdir}/sofa.pcap 2> /dev/null
+        tcpdump -i any -v tcp -w ${logdir}/sofa.pcap & 
+        date +%s > ${logdir}/sofa_time.txt
+        nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvp perf record -o ${logdir}/perf.data -F 99 -a -- ${args} 
+        perf script -i ${logdir}/perf.data > ${logdir}/perf.script
+        mv ${logdir}/gputrace*.nvp ${logdir}/gputrace.nvp 
         pkill  tcpdump
     else
         print_info "$(sysctl kernel.perf_event_paranoid)"
@@ -56,15 +60,28 @@ function collect_trace(){
     fi 
 }
 
-function generate_report(){
+function sofa_stat(){
     print_info "FSA Configuration File: ${configFile}"
-    perf script > perf.script
-    $(dirname $0)/fsa ${configFile}
+    perf script -i ${logdir}/perf.data > ${logdir}/perf.script
+    sofastat.py ${logdir}
+    logdir=${logdir}
+    cp /opt/sofa/sofaboard/paracord.html ${logdir}
+    cp /opt/sofa/sofaboard/index.html ${logdir}
+    cp /opt/sofa/sofaboard/app.js ${logdir}
+}
+
+
+function sofa_report(){
+    logdir=${logdir}
+    cp /opt/sofa/sofaboard/paracord.html ${logdir}
+    cp /opt/sofa/sofaboard/index.html ${logdir}
+    cp /opt/sofa/sofaboard/app.js ${logdir}
+    pushd ${logdir}; python -m SimpleHTTPServer; popd
 }
 
 function print_help()
 {
-    echo "sofa [help|record|dist|report] [--config yourconfig.cfg] command"
+    echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|record|dist|report] command"
 }
 
 function sofa_dist(){
@@ -74,7 +91,7 @@ function sofa_dist(){
         exit -1    
     fi 
     #pssh -PH "$1" "sleep 1 &&  echo "/tmp/perf-"\`hostname\`".data""
-    pssh -PH "$1" "perf record -F 99 -a -o /tmp/perf-"\`hostname\`".data sleep $2 && perf script --ns -i /tmp/perf-"\`hostname\`".data > /tmp/perf-"\`hostname\`".script && scp /tmp/perf-"\`hostname\`".script $(hostname):/tmp/sofa/" &
+    pssh -PH "$1" "perf record -F 99 -a -o /tmp/perf-"\`hostname\`".data sleep $2 && perf script --ns -i /tmp/perf-"\`hostname\`".data > /tmp/perf-"\`hostname\`".script && scp /tmp/perf-"\`hostname\`".script $(hostname):${logdir}/" &
     $3
 }
 
@@ -104,14 +121,23 @@ function main()
                 print_help
                 exit 0
                 ;;
+            "stat" )
+                sofa_stat
+                exit 0 
+                ;;
             "report" )
-                generate_report
+                sofa_stat
+                sofa_report
                 exit 0 
                 ;;
             "dist" )
                 shift
                 sofa_dist $* 
                 exit 0 
+                ;;
+            "--logdir" )
+                shift
+                logdir=$1
                 ;;
             "--config" )
                 shift
@@ -125,7 +151,6 @@ function main()
 			exit -1
 		else
                 	collect_trace $*
-                	generate_report
                 	exit 0
 		fi
 		;;
