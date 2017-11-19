@@ -5,9 +5,9 @@ Authors: All the contributors of SOFA
 # 2. Installation 
 
 ## 2-1. Prerequisite
-`git clone https://github.com/cyliustack/sofa`
-`cd sofa` 
-`./tools/prerequisite.sh`  
+`git clone https://github.com/cyliustack/sofa`  
+`cd sofa`  
+`./tools/prerequisite.sh`   
 `./tools/empower-tcpdump.sh $(whoami)`  
 `Please re-login to apply changes!`
 Simple Test:  
