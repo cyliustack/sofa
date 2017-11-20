@@ -20,7 +20,7 @@ else:
     filein = logdir+"gputrace.nvp"
     
 class CPUTrace:
-    fieldnames = ['time', "event", "duration(ms)","copyKind", "data_B", "streamId"]
+    fieldnames = ['time', "event", "duration","copyKind", "data_B", "streamId"]
     time=0
     event=0
     copyKind=0
@@ -83,10 +83,11 @@ for table_name in tables:
 
 
 class GPUTrace:
-    fieldnames = ['time', "event", "duration(ms)","copyKind", "data_B", "streamId"]
+    fieldnames = ['time', "event", "duration","copyKind", "deviceId", "data_B", "streamId"]
     time=0
     event=0
     copyKind=0
+    deviceId=0
     streamId=0
     duration=0
     size=0
@@ -96,7 +97,7 @@ class GPUTrace:
 gputrace = GPUTrace()
 
 
-cursor.execute("SELECT start,end,name,streamId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
+cursor.execute("SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
 records = cursor.fetchall()
 i=0
 begin = []
@@ -112,24 +113,26 @@ with open(logdir+'gputrace.csv', 'w') as csvfile:
             t_base = record[0]
         if ( i % 10 ) == 0 :
             print(record)
-            t_begin = (record[0] -t_base)
-            t_end = (record[1]- t_base)
+            t_begin = (record[0] -t_base)/1e9 + t_glb_base
+            t_end = (record[1]- t_base)/1e9 + t_glb_base
             duration = t_end - t_begin
             begin = np.append(begin, t_begin )
             end = np.append(end, t_end )
             func_name = cxxfilt.demangle( ("%s" % ftable.loc[ftable._id_==record[2],'value'])) 
             event_id = record[2]
-            gputrace.time=t_begin/1000000
+            gputrace.time=t_begin
             gputrace.event=record[2]
             gputrace.copyKind=-1
+            gputrace.deviceId=record[4]
             gputrace.streamId=record[3]
-            gputrace.duration=duration/1000000 
+            gputrace.duration=duration
             gputrace.data=0
             print("event id and its name = %d %s" % (event_id,func_name)) 
             event = np.append(event, event_id)
-            print("record-%d: %s at %d, duration = %d" % (i,record, t_begin, t_end-t_begin) )
+            print("record-%d: %s at %lf, duration = %lf" % (i,record, t_begin, t_end-t_begin) )
             print("ID-%d = %s" % ( record[2], func_name ))
-            writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'streamId':gputrace.streamId, 'duration(ms)':gputrace.duration, 'data_B': gputrace.data })
+            writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'deviceId':gputrace.deviceId, 'streamId':gputrace.streamId, 'duration':gputrace.duration, 'data_B': gputrace.data })
+
 
 #index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
 cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
@@ -146,18 +149,19 @@ with open(logdir+'gputrace.csv', 'a') as csvfile:
         if i == 1:
             t_base = record[0]
         if ( i % 10 ) == 0 :
-            t_begin = record[0] - t_base
-            t_end = record[1]- t_base
+            t_begin = (record[0] - t_base)/1e9 + t_glb_base
+            t_end = (record[1]- t_base)/1e9 + t_glb_base
             duration = t_end - t_begin
             begin = np.append(begin, t_begin )
             end = np.append(end, t_end )
-            gputrace.time=t_begin/1000000 #from ns to ms
-            gputrace.event=record[4] # deviceId
+            gputrace.time=t_begin
+            gputrace.event=-1 
             gputrace.copyKind=record[3]
+            gputrace.deviceId=record[4]
             gputrace.streamId=record[7]
-            gputrace.duration=duration/1000000 # from ns to ms
+            gputrace.duration=duration
             gputrace.data=record[2]
-            writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'streamId':gputrace.streamId, 'duration(ms)':gputrace.duration, 'data_B': gputrace.data })
+            writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'deviceId':gputrace.deviceId, 'streamId':gputrace.streamId, 'duration':gputrace.duration, 'data_B': gputrace.data })
             print(record)
 
 cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")
@@ -174,18 +178,19 @@ with open(logdir+'gputrace.csv', 'a') as csvfile:
         if i == 1:
             t_base = record[0]
         if ( i % 10 ) == 0 :
-            t_begin = record[0] - t_base
-            t_end = record[1]- t_base
+            t_begin = (record[0] - t_base)/1e9 + t_glb_base
+            t_end = (record[1]- t_base)/1e9 + t_glb_base
             duration = t_end - t_begin
             begin = np.append(begin, t_begin )
             end = np.append(end, t_end )
-            gputrace.time=t_begin/1000000 #from ns to ms
-            gputrace.event=record[4] # deviceId
+            gputrace.time=t_begin
+            gputrace.event=-1
             gputrace.copyKind=record[3]
+            gputrace.deviceId=record[4]
             gputrace.streamId=record[7]
-            gputrace.duration=duration/1000000 # from ns to ms
+            gputrace.duration=duration
             gputrace.data=record[2]
-            writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'streamId':gputrace.streamId, 'duration(ms)':gputrace.duration, 'data_B': gputrace.data })
+            writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'deviceId':gputrace.deviceId, 'streamId':gputrace.streamId, 'duration':gputrace.duration, 'data_B': gputrace.data })
             print(record)
 
 
