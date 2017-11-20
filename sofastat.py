@@ -16,8 +16,8 @@ if len(sys.argv) < 2:
     print("Usage: sofastat.py /path/to/logdir")
     quit();
 else:
-    logdir = sys.argv[1]
-    filein = logdir+"/gputrace.nvp"
+    logdir = sys.argv[1] + "/"
+    filein = logdir+"gputrace.nvp"
     
 class CPUTrace:
     fieldnames = ['time', "event", "duration(ms)","copyKind", "data_B", "streamId"]
@@ -31,19 +31,19 @@ class CPUTrace:
 	    return 'hello world'
 cputrace = CPUTrace()
 
-with open(logdir+'/sofa_time.txt') as f:
+with open(logdir+'sofa_time.txt') as f:
     t_glb_base = float(f.readlines()[0])
     print t_glb_base
 
 # rdpcap comes from scapy and loads in our pcap file
-packets = rdpcap(logdir+'/sofa.pcap')
+packets = rdpcap(logdir+'sofa.pcap')
 for i in range(0,len(packets)):
 	src = packets[i][IP].src
 	dst = packets[i][IP].dst
 	payload = packets[i].len
 	print("%d [%d] src:%s dst:%s len:%d " % ( t_glb_base, i, src, dst, payload))
 
-with open(logdir+'/perf.script') as f:
+with open(logdir+'perf.script') as f:
     lines = f.readlines()
     count = 0
     x = []
@@ -73,7 +73,7 @@ for table_name in tables:
     table = pd.read_sql_query("SELECT * from %s" % tname, db)
     print("table-%d = %s, count=%d" % (i,tname,len(table.index)) )
     if len(table.index) > 0:
-        table.to_csv(logdir + "/" + tname + '.csv', index_label='index')
+        table.to_csv(logdir + tname + '.csv', index_label='index')
     if tname == "StringTable":
         ftable=table
 #        print("StringTable Content:")
@@ -110,28 +110,26 @@ with open(logdir+'gputrace.csv', 'w') as csvfile:
         i = i + 1
         if i == 1:
             t_base = record[0]
-        t_begin = (record[0] - t_base)/1000000000 + t_glb_base
-        t_end = (record[1]- t_base)/1000000000 + t_glb_base
         if ( i % 10 ) == 0 :
             print(record)
+            t_begin = (record[0] -t_base)
+            t_end = (record[1]- t_base)
             duration = t_end - t_begin
             begin = np.append(begin, t_begin )
             end = np.append(end, t_end )
             func_name = cxxfilt.demangle( ("%s" % ftable.loc[ftable._id_==record[2],'value'])) 
             event_id = record[2]
-            gputrace.time=t_begin
+            gputrace.time=t_begin/1000000
             gputrace.event=record[2]
             gputrace.copyKind=-1
             gputrace.streamId=record[3]
-            gputrace.duration=duration 
+            gputrace.duration=duration/1000000 
             gputrace.data=0
             print("event id and its name = %d %s" % (event_id,func_name)) 
             event = np.append(event, event_id)
             print("record-%d: %s at %d, duration = %d" % (i,record, t_begin, t_end-t_begin) )
             print("ID-%d = %s" % ( record[2], func_name ))
             writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'streamId':gputrace.streamId, 'duration(ms)':gputrace.duration, 'data_B': gputrace.data })
-quit()
-
 
 #index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
 cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
@@ -141,7 +139,7 @@ begin = []
 end = []
 event = []
 t_base = 0
-with open(logdir+'/gputrace.csv', 'a') as csvfile:
+with open(logdir+'gputrace.csv', 'a') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=gputrace.fieldnames)
     for record in records:
         i = i + 1
@@ -167,7 +165,7 @@ records = cursor.fetchall()
 begin = []
 end = []
 event = []
-with open(logdir+'/gputrace.csv', 'a') as csvfile:
+with open(logdir+'gputrace.csv', 'a') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=gputrace.fieldnames)
     t_base = 0
     i=0
