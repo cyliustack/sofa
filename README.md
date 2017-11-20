@@ -5,6 +5,7 @@ Authors: All the contributors of SOFA
 # 2. Installation 
 
 ## 2-1. Prerequisite
+`Be a sudoer even though "sudo" is not required after installation.`
 `git clone https://github.com/cyliustack/sofa`  
 `cd sofa`  
 `./tools/prerequisite.sh`   
