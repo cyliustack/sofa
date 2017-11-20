@@ -126,7 +126,6 @@ function main()
                 exit 0 
                 ;;
             "report" )
-                sofa_stat
                 sofa_report
                 exit 0 
                 ;;
