@@ -16,7 +16,7 @@ Simple Test:
 `tcpdump -r sofa.pcap`  
 
 ## 2-2. SOFA Installation 
-`sudo ./sofa-install.sh`
+`sudo ./install.sh`
 
 # 3. Quick Start 
 

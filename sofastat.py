@@ -20,45 +20,76 @@ else:
     filein = logdir+"gputrace.nvp"
     
 class CPUTrace:
-    fieldnames = ['time', "event", "duration","copyKind", "data_B", "streamId"]
+    fieldnames = ['time', "event", "duration", "deviceId", "pid", "tid", "data", "pkt_src", "pkt_dst"]
     time=0
-    event=0
-    copyKind=0
-    streamId=0
     duration=0
-    size=0
+    event=-1
+    vaddr=-1
+    deviceId=-1
+    pid=-1
+    tid=-1
+    data=0
+    pkt_src=-1
+    pkt_dst=-1
     def info(self):
 	    return 'hello world'
-cputrace = CPUTrace()
 
 with open(logdir+'sofa_time.txt') as f:
     t_glb_base = float(f.readlines()[0])
     print t_glb_base
 
-# rdpcap comes from scapy and loads in our pcap file
-packets = rdpcap(logdir+'sofa.pcap')
-for i in range(0,len(packets)):
-	src = packets[i][IP].src
-	dst = packets[i][IP].dst
-	payload = packets[i].len
-	print("%d [%d] src:%s dst:%s len:%d " % ( t_glb_base, i, src, dst, payload))
+iptable=[]
 
-with open(logdir+'perf.script') as f:
-    lines = f.readlines()
-    count = 0
-    x = []
+
+cputrace = CPUTrace()
+with open(logdir+'cputrace.csv', 'w') as csvfile: 
+    writer = csv.DictWriter(csvfile, fieldnames=cputrace.fieldnames)
+    writer.writeheader()
+    packets = rdpcap(logdir+'sofa.pcap')
     t_base = 0
-    for i in range(0,len(lines)):
-        count = count + 1
-        fields = lines[i].split()
-        t = float(fields[3].split(':')[0])
+    for i in range(0,len(packets)):
+        time = packets[i][IP].time
         if i == 0:
-            t_base = t 
-        t = t - t_base + t_glb_base
-        func_name = fields[7]
-        x.append([count, t, func_name])
-        print("x = (%d, %f, %s)" % (count, t, func_name))
+            t_base = time
+        if ( i % 1 ) == 0 :
+            t_begin = (time - t_base) + t_glb_base
+            t_end = (time - t_base) + t_glb_base
+            duration = t_end - t_begin
+            cputrace.time = t_begin
+            cputrace.pkt_src = packets[i][IP].src.split('.')[3]
+    	    cputrace.pkt_dst = packets[i][IP].dst.split('.')[3]
+    	    cputrace.data = packets[i].len
+            writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
+            print("%lf [%d] src:%s dst:%s len:%d " % ( cputrace.time, i, cputrace.pkt_src, cputrace.pkt_dst, cputrace.data))
 
+cputrace = CPUTrace()
+with open(logdir+'cputrace.csv', 'a') as csvfile: 
+    writer = csv.DictWriter(csvfile, fieldnames=cputrace.fieldnames)
+    #9424/9424  [006] 18170.649588:          1  ffffffff8106315a native_write_msr_safe
+    with open(logdir+'perf.script') as f:
+        lines = f.readlines()
+        t_base = 0
+        for i in range(0,len(lines)):
+            fields = lines[i].split()
+            time = float(fields[2].split(':')[0])
+            if i == 0:
+                t_base = time 
+            func_name = fields[5]
+            if ( i % 1 ) == 0 :
+                t_begin = time - t_base  + t_glb_base
+                t_end = time - t_base + t_glb_base
+                duration = t_end - t_begin
+                cputrace.time=t_begin
+                cputrace.pid = fields[0].split('/')[0]
+                cputrace.tid = fields[0].split('/')[1]
+                cputrace.vaddr=int("0x"+fields[4],16)%1000000
+                cputrace.event=cputrace.vaddr
+                cputrace.deviceId=int(fields[1].split('[')[1].split(']')[0])
+                print("device id = %d" % cputrace.deviceId)
+                cputrace.duration=int(fields[3])*(1.0/3e9)
+                cputrace.data=0
+                writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
+quit()
 print("Read nvprof traces ...")
 sqlite_file = filein
 db = sqlite3.connect(sqlite_file)
@@ -76,11 +107,6 @@ for table_name in tables:
         table.to_csv(logdir + tname + '.csv', index_label='index')
     if tname == "StringTable":
         ftable=table
-#        print("StringTable Content:")
-#        for record in table:
-#            ftable['Name']=record[1]
-#            print("record = %s" % (record)) 
-
 
 class GPUTrace:
     fieldnames = ['time', "event", "duration","copyKind", "deviceId", "data_B", "streamId"]
@@ -95,7 +121,6 @@ class GPUTrace:
 	    return 'hello world'
 
 gputrace = GPUTrace()
-
 
 cursor.execute("SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
 records = cursor.fetchall()

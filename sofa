@@ -49,7 +49,7 @@ function collect_trace(){
         tcpdump -i any -v tcp -w ${logdir}/sofa.pcap & 
         date +%s > ${logdir}/sofa_time.txt
         nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvp perf record -o ${logdir}/perf.data -F 99 -a -- ${args} 
-        perf script -i ${logdir}/perf.data > ${logdir}/perf.script
+        perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period  > ${logdir}/perf.script
         mv ${logdir}/gputrace*.nvp ${logdir}/gputrace.nvp 
         pkill  tcpdump
     else
@@ -62,7 +62,7 @@ function collect_trace(){
 
 function sofa_stat(){
     print_info "FSA Configuration File: ${configFile}"
-    perf script -i ${logdir}/perf.data > ${logdir}/perf.script
+    perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period > ${logdir}/perf.script
     sofastat.py ${logdir}
     logdir=${logdir}
     cp /opt/sofa/sofaboard/paracord.html ${logdir}

@@ -62,134 +62,138 @@ body {
 </style>
 <body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
-
+<!-- Begin of Parallel Coordinates for CPU Traces -->
 <script>
-var margin = {top: 20, right: 20, bottom: 30, left: 40},
+var margin = {top: 30, right: 10, bottom: 10, left: 10},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
 
-/* 
- * value accessor - returns the value to encode for a given data object.
- * scale - maps value to a visual display encoding, such as a pixel position.
- * map function - maps from data value to display value
- * axis - sets up axis
- */ 
+var x = d3.scale.ordinal().rangePoints([0, width], 1),
+    y = {},
+    dragging = {};
 
-// setup x 
-var xValue = function(d) { return d.time_ms;}, // data -> value
-    xScale = d3.scale.linear().range([0, width]), // value -> display
-    xMap = function(d) { return xScale(xValue(d));}, // data -> display
-    xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+var line = d3.svg.line(),
+    axis = d3.svg.axis().orient("left"),
+    background,
+    foreground;
 
-// setup y
-var yValue = function(d) { return d["event"];}, // data -> value
-    yScale = d3.scale.linear().range([height, 0]), // value -> display
-    yMap = function(d) { return yScale(yValue(d));}, // data -> display
-    yAxis = d3.svg.axis().scale(yScale).orient("left");
-
-// setup fill color
-var cValue = function(d) { return d.Manufacturer;},
-    color = d3.scale.category10();
-
-// add the graph canvas to the body of the webpage
-var svg = d3.select("body").append("svg")
+var svg_cpu = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-// add the tooltip area to the webpage
-var tooltip = d3.select("body").append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
+d3.csv("cputrace.csv", function(error, cars) {
 
-// load data
-d3.csv("gputrace.csv", function(error, data) {
+  // Extract the list of dimensions and create a scale for each.
+  x.domain(dimensions = d3.keys(cars[0]).filter(function(d) {
+    return d != "name" && (y[d] = d3.scale.linear()
+        .domain(d3.extent(cars, function(p) { return +p[d]; }))
+        .range([height, 0]));
+  }));
 
-  // change string (from CSV) into number format
-  data.forEach(function(d) {
-    d.time_ms = +d.time_ms;
-    d["streamId"] = +d["streamId"];
-//    console.log(d);
-  });
+  // Add grey background lines for context.
+  background = svg_cpu.append("g")
+      .attr("class", "background")
+    .selectAll("path")
+      .data(cars)
+    .enter().append("path")
+      .attr("d", path);
 
-  // don't want dots overlapping axis, so add in buffer to data domain
-  xScale.domain([d3.min(data, xValue)-1, d3.max(data, xValue)+1]);
-  yScale.domain([d3.min(data, yValue)-1, d3.max(data, yValue)+1]);
 
-  // x-axis
-  svg.append("g")
-      .attr("class", "x axis")
-      .attr("transform", "translate(0," + height + ")")
-      .call(xAxis)
-    .append("text")
-      .attr("class", "label")
-      .attr("x", width)
-      .attr("y", -6)
-      .style("text-anchor", "end")
-      .text("Time (s)");
+  // Add blue foreground lines for focus.
+  foreground = svg_cpu.append("g")
+      .attr("class", "foreground")
+    .selectAll("path")
+      .data(cars)
+    .enter().append("path")
+      .attr("d", path);
 
-  // y-axis
-  svg.append("g")
-      .attr("class", "y axis")
-      .call(yAxis)
-    .append("text")
-      .attr("class", "label")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
-      .style("text-anchor", "end")
-      .text("Event ID");
-
-  // draw dots
-  svg.selectAll(".dot")
-      .data(data)
-    .enter().append("circle")
-      .attr("class", "dot")
-      .attr("r", 3.5)
-      .attr("cx", xMap)
-      .attr("cy", yMap)
-      .style("fill", function(d) { return color(cValue(d));}) 
-      .on("mouseover", function(d) {
-          tooltip.transition()
-               .duration(200)
-               .style("opacity", .9);
-          tooltip.html(d["Cereal Name"] + "<br/> (" + xValue(d) 
-	        + ", " + yValue(d) + ")")
-               .style("left", (d3.event.pageX + 5) + "px")
-               .style("top", (d3.event.pageY - 28) + "px");
-      })
-      .on("mouseout", function(d) {
-          tooltip.transition()
-               .duration(500)
-               .style("opacity", 0);
-      });
-
-  // draw legend
-  var legend = svg.selectAll(".legend")
-      .data(color.domain())
+  // Add a group element for each dimension.
+  var g = svg_cpu.selectAll(".dimension")
+      .data(dimensions)
     .enter().append("g")
-      .attr("class", "legend")
-      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+      .attr("class", "dimension")
+      .attr("transform", function(d) { return "translate(" + x(d) + ")"; })
+      .call(d3.behavior.drag()
+        .origin(function(d) { return {x: x(d)}; })
+        .on("dragstart", function(d) {
+          dragging[d] = x(d);
+          background.attr("visibility", "hidden");
+        })
+        .on("drag", function(d) {
+          dragging[d] = Math.min(width, Math.max(0, d3.event.x));
+          foreground.attr("d", path);
+          dimensions.sort(function(a, b) { return position(a) - position(b); });
+          x.domain(dimensions);
+          g.attr("transform", function(d) { return "translate(" + position(d) + ")"; })
+        })
+        .on("dragend", function(d) {
+          delete dragging[d];
+          transition(d3.select(this)).attr("transform", "translate(" + x(d) + ")");
+          transition(foreground).attr("d", path);
+          background
+              .attr("d", path)
+            .transition()
+              .delay(500)
+              .duration(0)
+              .attr("visibility", null);
+        }));
 
-  // draw legend colored rectangles
-  legend.append("rect")
-      .attr("x", width - 18)
-      .attr("width", 18)
-      .attr("height", 18)
-      .style("fill", color);
+  // Add an axis and title.
+  g.append("g")
+      .attr("class", "axis")
+      .each(function(d) { d3.select(this).call(axis.scale(y[d])); })
+    .append("text")
+      .style("text-anchor", "middle")
+      .attr("y", -9)
+      .text(function(d) { return d; });
 
-  // draw legend text
-  legend.append("text")
-      .attr("x", width - 24)
-      .attr("y", 9)
-      .attr("dy", ".35em")
-      .style("text-anchor", "end")
-      .text(function(d) { return d;})
+
+  // Add and store a brush for each axis.
+  g.append("g")
+      .attr("class", "brush")
+      .each(function(d) {
+        d3.select(this).call(y[d].brush = d3.svg.brush().y(y[d]).on("brushstart", brushstart).on("brush", brush));
+      })
+    .selectAll("rect")
+      .attr("x", -8)
+      .attr("width", 16);
 });
 
+function position(d) {
+  var v = dragging[d];
+  return v == null ? x(d) : v;
+}
 
+function transition(g) {
+  return g.transition().duration(500);
+}
 
+// Returns the path for a given data point.
+function path(d) {
+  return line(dimensions.map(function(p) { return [position(p), y[p](d[p])]; }));
+}
+
+function brushstart() {
+  d3.event.sourceEvent.stopPropagation();
+}
+
+// Handles a brush event, toggling the display of foreground lines.
+function brush() {
+  var actives = dimensions.filter(function(p) { return !y[p].brush.empty(); }),
+      extents = actives.map(function(p) { return y[p].brush.extent(); });
+  foreground.style("display", function(d) {
+    return actives.every(function(p, i) {
+      return extents[i][0] <= d[p] && d[p] <= extents[i][1];
+    }) ? null : "none";
+  });
+}
+
+</script>
+
+<!-- Begin of Parallel Coordinates for GPU Traces -->
+<script>
 var margin = {top: 30, right: 10, bottom: 10, left: 10},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
