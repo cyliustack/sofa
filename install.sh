@@ -16,11 +16,17 @@ case $i in
         print_help
         exit 0
     ;;
-    *)
-          # unknown option
+    *)  
+        # unknown option
     ;;
 esac
 done
+
+if [[ $1 == "" ]]; then
+    echo "Try './install.sh {-h|--help}' for more information."
+    exit 0
+fi
+
 
 if [[ ${PREFIX} == "" ]]; then
     print_help
