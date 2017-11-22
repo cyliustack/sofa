@@ -45,8 +45,8 @@ rm -rf ${PREFIX}
 mkdir -p ${PREFIX}/bin
 mkdir -p ${PREFIX}/sofaboard
 mkdir -p ${PREFIX}/plugin
-cp -i sofa                      ${PREFIX}/bin
-cp -i sofastat.py               ${PREFIX}/bin
+cp -f sofa                      ${PREFIX}/bin
+cp -f sofastat.py               ${PREFIX}/bin
 cp -f sofaboard/index.html      ${PREFIX}/sofaboard
 cp -f sofaboard/gpu-report.html ${PREFIX}/sofaboard
 echo "export PATH=$PATH:${PREFIX}/bin" > tools/activate.sh
