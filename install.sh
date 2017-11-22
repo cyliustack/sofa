@@ -1,17 +1,13 @@
 #!/bin/bash	
 
 print_help(){
-    echo "Usage: ./install.sh --prefix=/path/to/directory/of/sofa"
+    echo "Usage: ./install.sh /path/to/directory/of/sofa"
 }
 
 
 for i in "$@"
 do
 case $i in
-    -e=*|--prefix=*)
-        PREFIX="${i#*=}"
-        shift # past argument=value
-    ;;
     -h|--help)
         print_help
         exit 0
@@ -22,6 +18,7 @@ case $i in
 esac
 done
 
+PREFIX=$1
 
 if [[ ${PREFIX} == "" ]]; then
     print_help

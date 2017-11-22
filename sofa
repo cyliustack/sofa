@@ -32,6 +32,7 @@ print_warning() {
 
 
 function collect_trace(){
+    echo "SOFA_HOME = ${SOFA_HOME}"
     traced_storage=sdb
     args=$*
 
@@ -61,6 +62,7 @@ function collect_trace(){
 }
 
 function sofa_stat(){
+    echo "SOFA_HOME = ${SOFA_HOME}"
     print_info "FSA Configuration File: ${configFile}"
     perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period > ${logdir}/perf.script
     ${SOFA_HOME}/sofastat.py ${logdir}
@@ -71,6 +73,7 @@ function sofa_stat(){
 
 
 function sofa_report(){
+    echo "SOFA_HOME = ${SOFA_HOME}"
     logdir=${logdir}
     cp /opt/sofa/sofaboard/paracord.html ${logdir}
     cp /opt/sofa/sofaboard/index.html ${logdir}

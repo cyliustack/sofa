@@ -1,2 +1,4 @@
 perf.data
 perf.script
+tools/activate.sh
+sofalog
