@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
-
+SOFA_HOME=$(dirname "$0")
 logdir=sofalog
 
 C_NONE="\033[0m"
@@ -80,6 +80,7 @@ function sofa_report(){
 
 function print_help()
 {
+    echo "SOFA_HOME = ${SOFA_HOME}"
     echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|record|dist|report] command"
 }
 

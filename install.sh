@@ -42,8 +42,6 @@ echo " Installation directory is ${PREFIX}"
 
 set -x
 rm -rf ${PREFIX}
-rm -f /usr/local/bin/sofastat.py
-rm -f /usr/local/bin/sofa
 mkdir -p ${PREFIX}/bin
 mkdir -p ${PREFIX}/sofaboard
 mkdir -p ${PREFIX}/plugin
@@ -51,6 +49,6 @@ cp -i sofa                      ${PREFIX}/bin
 cp -i sofastat.py               ${PREFIX}/bin
 cp -f sofaboard/index.html      ${PREFIX}/sofaboard
 cp -f sofaboard/gpu-report.html ${PREFIX}/sofaboard
-ln -is ${PREFIX}/bin/sofa           /usr/local/bin/sofa
-ln -is ${PREFIX}/bin/sofastat.py    /usr/local/bin/sofastat.py
-
+echo "export PATH=$PATH:${PREFIX}/bin" > tools/activate.sh
+set +x
+echo "Please try 'source tools/activate.sh' to enjoy sofa!"
