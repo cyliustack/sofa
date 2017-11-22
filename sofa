@@ -63,7 +63,7 @@ function collect_trace(){
 function sofa_stat(){
     print_info "FSA Configuration File: ${configFile}"
     perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period > ${logdir}/perf.script
-    sofastat.py ${logdir}
+    ${SOFA_HOME}/sofastat.py ${logdir}
     logdir=${logdir}
     cp /opt/sofa/sofaboard/gpu-report.html ${logdir}
     cp /opt/sofa/sofaboard/index.html ${logdir}
