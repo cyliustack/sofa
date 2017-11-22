@@ -1,7 +1,7 @@
 #!/bin/bash	
 
 print_help(){
-    echo "Usage: ./install.sh --prefix=/directory/to/install"
+    echo "Usage: ./install.sh --prefix=/path/to/directory/of/sofa"
 }
 
 
@@ -22,22 +22,17 @@ case $i in
 esac
 done
 
-if [[ $1 == "" ]]; then
-    echo "Try './install.sh {-h|--help}' for more information."
-    exit 0
-fi
-
 
 if [[ ${PREFIX} == "" ]]; then
     print_help
     read -p "Use default path /opt/sofa ?(Y/n) " -n 1 -r
     if [[ $REPLY =~ ^[Yy]$ ]]
-    then
+    then        
         PREFIX=/opt/sofa 
         echo ""   
     else
         echo ""
-        echo "Goodbye." 
+        echo "Try './install.sh {-h|--help}' for more information."
         exit -1 
     fi 
     
