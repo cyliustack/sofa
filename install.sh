@@ -1,10 +1,20 @@
 #!/bin/bash	
+
+print_help(){
+    echo "Usage: ./install.sh --prefix=/directory/to/install"
+}
+
+
 for i in "$@"
 do
 case $i in
     -e=*|--prefix=*)
-    PREFIX="${i#*=}"
-    shift # past argument=value
+        PREFIX="${i#*=}"
+        shift # past argument=value
+    ;;
+    -h|--help)
+        print_help
+        exit 0
     ;;
     *)
           # unknown option
@@ -13,7 +23,7 @@ esac
 done
 
 if [[ ${PREFIX} == "" ]]; then
-    echo "Usage: ./install.sh --prefix=/directory/to/install"
+    print_help
     read -p "Use default path /opt/sofa ?(Y/n) " -n 1 -r
     if [[ $REPLY =~ ^[Yy]$ ]]
     then
