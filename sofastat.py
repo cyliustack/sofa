@@ -85,11 +85,10 @@ with open(logdir+'cputrace.csv', 'a') as csvfile:
                 cputrace.vaddr=int("0x"+fields[4],16)%1000000
                 cputrace.event=cputrace.vaddr
                 cputrace.deviceId=int(fields[1].split('[')[1].split(']')[0])
-                print("device id = %d" % cputrace.deviceId)
                 cputrace.duration=int(fields[3])*(1.0/3e9)
                 cputrace.data=0
                 writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
-quit()
+
 print("Read nvprof traces ...")
 sqlite_file = filein
 db = sqlite3.connect(sqlite_file)
@@ -136,8 +135,7 @@ with open(logdir+'gputrace.csv', 'w') as csvfile:
         i = i + 1
         if i == 1:
             t_base = record[0]
-        if ( i % 10 ) == 0 :
-            print(record)
+        if ( i % 1 ) == 0 :
             t_begin = (record[0] -t_base)/1e9 + t_glb_base
             t_end = (record[1]- t_base)/1e9 + t_glb_base
             duration = t_end - t_begin
@@ -155,7 +153,6 @@ with open(logdir+'gputrace.csv', 'w') as csvfile:
             print("event id and its name = %d %s" % (event_id,func_name)) 
             event = np.append(event, event_id)
             print("record-%d: %s at %lf, duration = %lf" % (i,record, t_begin, t_end-t_begin) )
-            print("ID-%d = %s" % ( record[2], func_name ))
             writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'deviceId':gputrace.deviceId, 'streamId':gputrace.streamId, 'duration':gputrace.duration, 'data_B': gputrace.data })
 
 
@@ -187,7 +184,6 @@ with open(logdir+'gputrace.csv', 'a') as csvfile:
             gputrace.duration=duration
             gputrace.data=record[2]
             writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'deviceId':gputrace.deviceId, 'streamId':gputrace.streamId, 'duration':gputrace.duration, 'data_B': gputrace.data })
-            print(record)
 
 cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")
 records = cursor.fetchall()
@@ -216,7 +212,6 @@ with open(logdir+'gputrace.csv', 'a') as csvfile:
             gputrace.duration=duration
             gputrace.data=record[2]
             writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'deviceId':gputrace.deviceId, 'streamId':gputrace.streamId, 'duration':gputrace.duration, 'data_B': gputrace.data })
-            print(record)
 
 
 #cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")

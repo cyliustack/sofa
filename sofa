@@ -65,9 +65,8 @@ function sofa_stat(){
     perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period > ${logdir}/perf.script
     sofastat.py ${logdir}
     logdir=${logdir}
-    cp /opt/sofa/sofaboard/paracord.html ${logdir}
+    cp /opt/sofa/sofaboard/gpu-report.html ${logdir}
     cp /opt/sofa/sofaboard/index.html ${logdir}
-    cp /opt/sofa/sofaboard/app.js ${logdir}
 }
 
 
