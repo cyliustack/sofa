@@ -46,6 +46,6 @@ cp -f sofa                      ${PREFIX}/bin
 cp -f sofastat.py               ${PREFIX}/bin
 cp -f sofaboard/index.html      ${PREFIX}/sofaboard
 cp -f sofaboard/gpu-report.html ${PREFIX}/sofaboard
-echo "export PATH=\$PATH:${PREFIX}/bin" > tools/activate.sh
+echo "export PATH=\$PATH:${SOFA_HOME}/bin" > tools/activate.sh
 set +x
 echo "Please try 'source tools/activate.sh' to enjoy sofa!"
