@@ -19,3 +19,5 @@ else:
 df = pd.read_csv(filein)
 print "Data Traffic for each Device (MB)";
 print df.groupby("deviceId")["data_B"].sum()/1000000
+print "Data Traffic for each CopyKind (MB)";
+print df.groupby("copyKind")["data_B"].sum()/1000000
