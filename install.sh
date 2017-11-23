@@ -36,7 +36,6 @@ if [[ ${PREFIX} == "" ]]; then
 fi
 
 echo " Installation directory is ${PREFIX}"
-
 set -x
 rm -rf ${PREFIX}
 mkdir -p ${PREFIX}/bin
@@ -47,6 +46,6 @@ cp -f sofa-preproc.py           ${PREFIX}/bin
 cp -f sofa-analyze.py            ${PREFIX}/bin
 cp -f sofaboard/index.html      ${PREFIX}/sofaboard
 cp -f sofaboard/gpu-report.html ${PREFIX}/sofaboard
-echo "export PATH=\$PATH:${SOFA_HOME}/bin" > tools/activate.sh
+echo "export PATH=\$PATH:${PREFIX}/bin" > tools/activate.sh
 set +x
 echo "Please try 'source tools/activate.sh' to enjoy sofa!"
