@@ -66,12 +66,20 @@ function sofa_report(){
     echo "SOFA_HOME = ${SOFA_HOME}"
     print_info "FSA Configuration File: ${configFile}"
     perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period > ${logdir}/perf.script
-    sofastat.py ${logdir}
+    sofa-preproc.py ${logdir}
+    sofa-report.py ${logdir}
+
+}
+
+function sofa_analyze_cl(){
+    echo "SOFA_HOME = ${SOFA_HOME}"
+    sofa-report.py ${logdir}
 }
 
 
-function sofa_analyze(){
+function sofa_analyze_gui(){
     echo "SOFA_HOME = ${SOFA_HOME}"
+    sofa-report.py ${logdir}
     cp ${SOFA_HOME}/sofaboard/gpu-report.html ${logdir}
     cp ${SOFA_HOME}/sofaboard/index.html ${logdir}
     pushd ${logdir}; python -m SimpleHTTPServer; popd
@@ -80,7 +88,7 @@ function sofa_analyze(){
 function print_help()
 {
     echo "SOFA_HOME = ${SOFA_HOME}"
-    echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|record|report|analyze] command"
+    echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|record|report|analyze|analyze-cl|analyze-gui] command"
 }
 
 function sofa_dist(){
@@ -135,8 +143,12 @@ function main()
                 sofa_report
                 exit 0 
                 ;;
-            "analyze" )
-                sofa_analyze
+            "analyze-cl" )
+                sofa_analyze_cl
+                exit 0 
+                ;;
+            "analyze"|"analyze-gui" )
+                sofa_analyze_gui
                 exit 0 
                 ;;
 # TODO: Support distributed analysis 

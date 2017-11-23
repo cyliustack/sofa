@@ -13,7 +13,7 @@ logdir = []
 filein = []
 
 if len(sys.argv) < 2:
-    print("Usage: sofastat.py /path/to/logdir")
+    print("Usage: sofa-preproc.py /path/to/logdir")
     quit();
 else:
     logdir = sys.argv[1] + "/"
@@ -128,6 +128,7 @@ begin = []
 end = []
 event = []
 t_base = 0
+gputraces = []
 with open(logdir+'gputrace.csv', 'w') as csvfile: 
     writer = csv.DictWriter(csvfile, fieldnames=gputrace.fieldnames)
     writer.writeheader()
@@ -154,7 +155,6 @@ with open(logdir+'gputrace.csv', 'w') as csvfile:
             event = np.append(event, event_id)
             print("record-%d: %s at %lf, duration = %lf" % (i,record, t_begin, t_end-t_begin) )
             writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'deviceId':gputrace.deviceId, 'streamId':gputrace.streamId, 'duration':gputrace.duration, 'data_B': gputrace.data })
-
 
 #index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
 cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")

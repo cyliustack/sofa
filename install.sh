@@ -43,7 +43,8 @@ mkdir -p ${PREFIX}/bin
 mkdir -p ${PREFIX}/sofaboard
 mkdir -p ${PREFIX}/plugin
 cp -f sofa                      ${PREFIX}/bin
-cp -f sofastat.py               ${PREFIX}/bin
+cp -f sofa-preproc.py           ${PREFIX}/bin
+cp -f sofa-report.py            ${PREFIX}/bin
 cp -f sofaboard/index.html      ${PREFIX}/sofaboard
 cp -f sofaboard/gpu-report.html ${PREFIX}/sofaboard
 echo "export PATH=\$PATH:${SOFA_HOME}/bin" > tools/activate.sh
