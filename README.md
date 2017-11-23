@@ -28,9 +28,8 @@ Simple Test:
 
  
 
-## Interactive and Visualization Result Provided by Potato:  
+## Interactive and Visualization Result:  
 ![Alt text](./figures/demo1.png)
-![Alt text](./figures/demo2.png)
 ![Alt text](./figures/demo3.png)
 ![Alt text](./figures/demo4.png)
 
