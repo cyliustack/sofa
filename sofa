@@ -61,30 +61,25 @@ function collect_trace(){
     fi 
 }
 
-function sofa_stat(){
+function sofa_report(){
     echo "SOFA_HOME = ${SOFA_HOME}"
     print_info "FSA Configuration File: ${configFile}"
     perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period > ${logdir}/perf.script
     ${SOFA_HOME}/sofastat.py ${logdir}
-    logdir=${logdir}
-    cp /opt/sofa/sofaboard/gpu-report.html ${logdir}
-    cp /opt/sofa/sofaboard/index.html ${logdir}
 }
 
 
-function sofa_report(){
+function sofa_analyze(){
     echo "SOFA_HOME = ${SOFA_HOME}"
-    logdir=${logdir}
     cp /opt/sofa/sofaboard/paracord.html ${logdir}
     cp /opt/sofa/sofaboard/index.html ${logdir}
-    cp /opt/sofa/sofaboard/app.js ${logdir}
     pushd ${logdir}; python -m SimpleHTTPServer; popd
 }
 
 function print_help()
 {
     echo "SOFA_HOME = ${SOFA_HOME}"
-    echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|record|dist|report] command"
+    echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|record|report|analyze] command"
 }
 
 function sofa_dist(){
@@ -124,19 +119,31 @@ function main()
                 print_help
                 exit 0
                 ;;
-            "stat" )
-                sofa_stat
-                exit 0 
-                ;;
+            "record" )
+                shift
+                print_info "Traced Command: $*"
+		        if [[ "$*" == "" ]]; then
+		        	print_help
+		        	exit -1
+		        else
+                        	collect_trace $*
+                        	exit 0
+		        fi
+		        ;;
             "report" )
                 sofa_report
                 exit 0 
                 ;;
-            "dist" )
-                shift
-                sofa_dist $* 
+            "analyze" )
+                sofa_analyze
                 exit 0 
                 ;;
+# TODO: Support distributed analysis 
+#            "dist" )
+#                shift
+#                sofa_dist $* 
+#                exit 0 
+#                ;;
             "--logdir" )
                 shift
                 logdir=$1
@@ -145,17 +152,6 @@ function main()
                 shift
                 configFile=$1
                 ;;
-            "record" )
-                shift
-		print_info "Traced Command: $*"
-		if [[ "$*" == "" ]]; then
-			print_help
-			exit -1
-		else
-                	collect_trace $*
-                	exit 0
-		fi
-		;;
             *)
                 print_help
                 exit 0

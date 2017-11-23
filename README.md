@@ -23,8 +23,8 @@ Simple Test:
 
 ## 3-1. Hello World 
 `sofa record ping google.com.tw -c 3`  
-`sofa stat`  
 `sofa report`  
+`[optional] sofa analyze`  
 
  
 
