@@ -17,6 +17,7 @@ Simple Test:
 
 ## 2-2. SOFA Installation 
 `sudo ./install.sh`
+`source tools/activate.sh`
 
 # 3. Quick Start 
 
