@@ -24,12 +24,13 @@ Simple Test:
 ## 3-1. Hello World 
 `sofa record ping google.com.tw -c 3`  
 `sofa report`  
-`[optional] sofa analyze`  
+`sofa analyze`  
 
  
 
 ## Interactive and Visualization Result Provided by Potato:  
 ![Alt text](./figures/demo1.png)
+![Alt text](./figures/demo2.png)
 ![Alt text](./figures/demo3.png)
 ![Alt text](./figures/demo4.png)
 
