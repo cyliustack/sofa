@@ -50,4 +50,4 @@ cp -f sofaboard/gpu-report.html     ${PREFIX}/sofaboard
 cp -f tools/activate.sh   ${PREFIX}/tools
 echo "export PATH=\$PATH:${PREFIX}/bin" > tools/activate.sh
 set +x
-echo "Please try 'source tools/activate.sh' to enjoy sofa!"
+echo "Please try 'source ${PREFIX}/tools/activate.sh' to enjoy sofa!"
