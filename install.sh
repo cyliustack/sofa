@@ -41,11 +41,13 @@ rm -rf ${PREFIX}
 mkdir -p ${PREFIX}/bin
 mkdir -p ${PREFIX}/sofaboard
 mkdir -p ${PREFIX}/plugin
+mkdir -p ${PREFIX}/tools
 cp -f sofa                      ${PREFIX}/bin
 cp -f sofa-preproc.py           ${PREFIX}/bin
-cp -f sofa-analyze.py            ${PREFIX}/bin
-cp -f sofaboard/index.html      ${PREFIX}/sofaboard
-cp -f sofaboard/gpu-report.html ${PREFIX}/sofaboard
+cp -f sofa-analyze.py           ${PREFIX}/bin
+cp -f sofaboard/index.html          ${PREFIX}/sofaboard
+cp -f sofaboard/gpu-report.html     ${PREFIX}/sofaboard
+cp -f tools/activate.sh   ${PREFIX}/tools
 echo "export PATH=\$PATH:${PREFIX}/bin" > tools/activate.sh
 set +x
 echo "Please try 'source tools/activate.sh' to enjoy sofa!"
