@@ -60,7 +60,7 @@ with open(logdir+'cputrace.csv', 'w') as csvfile:
     	    cputrace.pkt_dst = packets[i][IP].dst.split('.')[3]
     	    cputrace.data = packets[i].len
             writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
-            print("%lf [%d] src:%s dst:%s len:%d " % ( cputrace.time, i, cputrace.pkt_src, cputrace.pkt_dst, cputrace.data))
+            #print("%lf [%d] src:%s dst:%s len:%d " % ( cputrace.time, i, cputrace.pkt_src, cputrace.pkt_dst, cputrace.data))
 
 cputrace = CPUTrace()
 with open(logdir+'cputrace.csv', 'a') as csvfile: 
@@ -101,7 +101,7 @@ for table_name in tables:
     i=i+1
     tname = table_name[0]
     table = pd.read_sql_query("SELECT * from %s" % tname, db)
-    print("table-%d = %s, count=%d" % (i,tname,len(table.index)) )
+    #print("table-%d = %s, count=%d" % (i,tname,len(table.index)) )
     if len(table.index) > 0:
         table.to_csv(logdir + tname + '.csv', index_label='index')
     if tname == "StringTable":
@@ -151,9 +151,9 @@ with open(logdir+'gputrace.csv', 'w') as csvfile:
             gputrace.streamId=record[3]
             gputrace.duration=duration
             gputrace.data=0
-            print("event id and its name = %d %s" % (event_id,func_name)) 
+            #print("event id and its name = %d %s" % (event_id,func_name)) 
             event = np.append(event, event_id)
-            print("record-%d: %s at %lf, duration = %lf" % (i,record, t_begin, t_end-t_begin) )
+            #print("record-%d: %s at %lf, duration = %lf" % (i,record, t_begin, t_end-t_begin) )
             writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'deviceId':gputrace.deviceId, 'streamId':gputrace.streamId, 'duration':gputrace.duration, 'data_B': gputrace.data })
 
 #index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
