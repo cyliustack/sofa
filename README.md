@@ -5,7 +5,6 @@ Authors: All the contributors of SOFA
 # 2. Installation 
 
 ## 2-1. Prerequisite
-`Be a sudoer even though "sudo" is not required after installation.`
 `git clone https://github.com/cyliustack/sofa`  
 `cd sofa`  
 `./tools/prerequisite.sh`   
@@ -16,8 +15,8 @@ Simple Test:
 `tcpdump -r sofa.pcap`  
 
 ## 2-2. SOFA Installation 
-`sudo ./install.sh`
-`source tools/activate.sh`
+`./install.sh /your/installation/path/to/sofa`
+`source /path/to/sofa/tools/activate.sh`
 
 # 3. Quick Start 
 
