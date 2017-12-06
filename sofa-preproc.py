@@ -63,20 +63,21 @@ with open(logdir+'cputrace.csv', 'w') as csvfile:
     packets = rdpcap(logdir+'sofa.pcap')
     t_base = 0
     for i in range(0,len(packets)):
-        time = packets[i][IP].time
-        if i == 0:
-            t_base = time
-        if ( i % 1 ) == 0 :
-            t_begin = (time - t_base) + t_glb_base
-            t_end = (time - t_base) + t_glb_base
-            duration = t_end - t_begin
-            cputrace.time = t_begin
-            cputrace.pkt_src = packets[i][IP].src.split('.')[3]
-    	    cputrace.pkt_dst = packets[i][IP].dst.split('.')[3]
-    	    cputrace.data = packets[i].len
-            writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
-            #print("%lf [%d] src:%s dst:%s len:%d " % ( cputrace.time, i, cputrace.pkt_src, cputrace.pkt_dst, cputrace.data))
-
+        try:
+            time = packets[i][IP].time
+            if i == 0:
+                t_base = time
+            if ( i % 1 ) == 0 :
+                t_begin = (time - t_base) + t_glb_base
+                t_end = (time - t_base) + t_glb_base
+                duration = t_end - t_begin
+                cputrace.time = t_begin
+                cputrace.pkt_src = packets[i][IP].src.split('.')[3]
+                cputrace.pkt_dst = packets[i][IP].dst.split('.')[3]
+                cputrace.data = packets[i].len
+                writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
+        except:
+            print_warning("Skip packet-%d"%(i))
 cputrace = CPUTrace()
 with open(logdir+'cputrace.csv', 'a') as csvfile: 
     writer = csv.DictWriter(csvfile, fieldnames=cputrace.fieldnames)
@@ -142,6 +143,7 @@ try:
 except sqlite3.OperationalError:
     print_warning("Cannot find CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
     quit()
+
 records = cursor.fetchall()
 i=0
 begin = []
@@ -256,9 +258,6 @@ with open(logdir+'gputrace.csv', 'a') as csvfile:
 #            duration = t_end - t_begin
 #            writer.writerow({'begin': t_begin, 'duration': duration, 'bytes': record[2], 'copyKind':record[3], 'deviceId':record[4], 'srcKind':record[5], 'dstKind':record[6], 'streamId':record[7] })
 # 
-
-
-
     
 #for record in records:
 #    i = i + 1
