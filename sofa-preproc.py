@@ -88,7 +88,7 @@ with open(logdir+'cputrace.csv', 'a') as csvfile:
                 cputrace.duration=int(fields[3])*(1.0/3e9)
                 cputrace.data=0
                 writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
-
+    csvfile.close()
 print("Read nvprof traces ...")
 sqlite_file = filein
 db = sqlite3.connect(sqlite_file)
@@ -155,7 +155,7 @@ with open(logdir+'gputrace.csv', 'w') as csvfile:
             event = np.append(event, event_id)
             #print("record-%d: %s at %lf, duration = %lf" % (i,record, t_begin, t_end-t_begin) )
             writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'deviceId':gputrace.deviceId, 'streamId':gputrace.streamId, 'duration':gputrace.duration, 'data_B': gputrace.data })
-
+    csvfile.close()
 #index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
 cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
 records = cursor.fetchall()
