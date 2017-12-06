@@ -7,13 +7,28 @@ import csv
 import cxxfilt
 import json
 
-print 'Number of arguments:', len(sys.argv), 'arguments.'
-print 'Argument List:', str(sys.argv) 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def print_warning(content):
+    print(bcolors.WARNING+"[WARNING] "+content+bcolors.ENDC)
+
+def print_info(content):
+    print(bcolors.OKGREEN+"[INFO] "+content+bcolors.ENDC)
+    
+print('Argument List: %s', str(sys.argv)) 
 logdir = []
 filein = []
 
 if len(sys.argv) < 2:
-    print("Usage: sofa-preproc.py /path/to/logdir")
+    print_info("Usage: sofa-preproc.py /path/to/logdir")
     quit();
 else:
     logdir = sys.argv[1] + "/"
@@ -88,7 +103,8 @@ with open(logdir+'cputrace.csv', 'a') as csvfile:
                 cputrace.duration=int(fields[3])*(1.0/3e9)
                 cputrace.data=0
                 writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
-    csvfile.close()
+
+
 print("Read nvprof traces ...")
 sqlite_file = filein
 db = sqlite3.connect(sqlite_file)
@@ -121,7 +137,11 @@ class GPUTrace:
 
 gputrace = GPUTrace()
 
-cursor.execute("SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
+try:
+    cursor.execute("SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
+except sqlite3.OperationalError:
+    print_warning("Cannot find CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
+    quit()
 records = cursor.fetchall()
 i=0
 begin = []
@@ -155,7 +175,7 @@ with open(logdir+'gputrace.csv', 'w') as csvfile:
             event = np.append(event, event_id)
             #print("record-%d: %s at %lf, duration = %lf" % (i,record, t_begin, t_end-t_begin) )
             writer.writerow({'time': gputrace.time, 'event': gputrace.event, 'copyKind': gputrace.copyKind, 'deviceId':gputrace.deviceId, 'streamId':gputrace.streamId, 'duration':gputrace.duration, 'data_B': gputrace.data })
-    csvfile.close()
+
 #index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
 cursor.execute("SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
 records = cursor.fetchall()

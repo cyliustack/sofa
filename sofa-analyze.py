@@ -5,19 +5,40 @@ import numpy as np
 import csv
 import random
 from operator import itemgetter, attrgetter
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def print_warning(content):
+    print(bcolors.WARNING+"[WARNING] "+content+bcolors.ENDC)
+def print_info(content):
+    print(bcolors.OKGREEN+"[INFO] "+content+bcolors.ENDC)
+
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 logdir = []
 filein = []
 
 if len(sys.argv) < 2:
-    print("Ustimestamp: sofa-report.py /path/to/logdir")
+    print_info("Usage: sofa-report.py /path/to/logdir")
     quit()
 else:
     logdir = sys.argv[1] + "/"
     filein = logdir + "gputrace.csv"
+try:
+    df = pd.read_csv(filein)
+except IOError:
+    print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
+    quit()
 
-df = pd.read_csv(filein)
+    
 print("Data Traffic for each Device (MB)")
 print(df.groupby("deviceId")["data_B"].sum() / 1000000)
 
