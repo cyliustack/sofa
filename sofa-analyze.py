@@ -15,11 +15,36 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+    DATA = '\033[5;30;47m'
+    TITLE = '\033[7;34;47m'
 
+def print_title(content):
+    print(bcolors.TITLE+content+bcolors.ENDC)
 def print_warning(content):
     print(bcolors.WARNING+"[WARNING] "+content+bcolors.ENDC)
 def print_info(content):
     print(bcolors.OKGREEN+"[INFO] "+content+bcolors.ENDC)
+def print_data(content):
+    print(bcolors.DATA)
+    print(content)
+    print(bcolors.ENDC)
+
+# print_format_table() refers to https://stackoverflow.com/posts/21786287/revisions
+def print_format_table():
+    """
+    prints table of formatted text format options
+    """
+    for style in range(8):
+        for fg in range(30,38):
+            s1 = ''
+            for bg in range(40,48):
+                format = ';'.join([str(style), str(fg), str(bg)])
+                s1 += '\x1b[%sm %s \x1b[0m' % (format, format)
+            print(s1)
+        print('\n')
+
+#print_format_table()
+
 
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
@@ -38,31 +63,45 @@ except IOError:
     print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
     quit()
 
-    
-print("Data Traffic for each Device (MB)")
-print(df.groupby("deviceId")["data_B"].sum() / 1000000)
+print_title("Task Time (IO included) for each Device (s)")
+grouped_df = df.groupby("deviceId")["duration"]
+total_tasktime = 0
+for key, item in grouped_df:
+    print("[%d]: %lf" % (key,grouped_df.get_group(key).sum()))
+    total_tasktime = total_tasktime + grouped_df.get_group(key).sum()
+n_devices = len(grouped_df)
+avg_tasktime = total_tasktime / n_devices
+theory_overlaptime = avg_tasktime * (n_devices*(n_devices-1)/2)
 
-print("Execution Time for each Device (MB)")
-print(df.groupby("deviceId")["duration"].sum())
+print_title("Data Traffic (bidirection) for each Device (MB)")
+grouped_df = df.groupby("deviceId")["data_B"]
+for key, item in grouped_df:
+    print("[%d]: %lf" % (key,grouped_df.get_group(key).sum()/1000000.0))
 
-print("Data Traffic for each CopyKind (MB)")
-data_copyKind = df.groupby("copyKind")["data_B"].sum() / 1000000
-print(data_copyKind)
+cktable={-1:"KER",1:"H2D",2:"D2H",8:"D2D",10:"P2P"}
 
-print("Data Traffic Overhead for each CopyKind")
-durations_copyKind = df.groupby("copyKind")["duration"].sum()
-print(durations_copyKind)
+print_title("Data Traffic for each CopyKind (MB)")
+data_copyKind = grouped_df = df.groupby("copyKind")["data_B"]
+for key, item in grouped_df:
+    print("[%s]: %lf" % (cktable[key],grouped_df.get_group(key).sum()/1000000.0))
 
-print("Overhead brought from Each Stream")
-stream_durations = df.groupby("streamId")["duration"].sum()
-print(stream_durations)
+print_title("Data Communication (bidirection) Time for each CopyKind (s)")
+durations_copyKind = grouped_df = df.groupby("copyKind")["duration"]
+for key, item in grouped_df:
+    print("[%s]: %lf" % (cktable[key],grouped_df.get_group(key).sum()))
 
-print("Avertimestampd Achieved Bandwidth for each CopyKind: (GB/s)")
-bw = data_copyKind / durations_copyKind / 1000
-print(bw)
+print_title("Task Time spent on Each Stream (s)")
+grouped_df = df.groupby("streamId")["duration"]
+for key, item in grouped_df:
+    print("[%d]: %lf" % (key,grouped_df.get_group(key).sum()))
 
-print("Overlapness for All Events (s)")
 
+print_title("Averaged Achieved Bandwidth for each CopyKind: (GB/s)")
+bw = (data_copyKind.sum()/1000000) / durations_copyKind.sum() / 1000
+for i in range(len(bw)):
+    print("[%s]: %.3lf"%(cktable[bw.keys()[i]],bw.iloc[i]))
+
+print_title("Overlapness for All Events (s)")
 # Assume pa<pb, pc<pd:
 def overlap(pa, pb, pc, pd):
     if pb - pc >= 0 and pd - pa >=0:   
@@ -113,4 +152,5 @@ for e in events:
                 overlaptime = overlaptime + overlap(es.timestamp,es.timestamp+es.duration, e.timestamp-e.duration,e.timestamp)
         #print("pop out %d" % e.name)
         event_stack = [es for es in event_stack if es.name != e.name]
-print("overlapped time of Events: %lf" % (overlaptime))
+print("Measured Overlapped time of Events: %lf" % (overlaptime))
+print("Theoritical overlapped time of Events: %lf" % (theory_overlaptime))
