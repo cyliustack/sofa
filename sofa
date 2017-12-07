@@ -50,8 +50,7 @@ function collect_trace(){
         rm -f ${logdir}/sofa.pcap 2> /dev/null
         tcpdump -i any -v tcp -w ${logdir}/sofa.pcap & 
         date +%s > ${logdir}/sofa_time.txt
-        nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvp
-        perf record -o ${logdir}/perf.data -F 99 -a -- ${args} 
+        nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvp perf record -o ${logdir}/perf.data -F 99 -a -- ${args} 
         perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period  > ${logdir}/perf.script
         rm ${logdir}/gputrace.nvp
         mv ${logdir}/gputrace*.nvp ${logdir}/gputrace.nvp 
