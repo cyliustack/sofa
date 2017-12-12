@@ -67,12 +67,11 @@ function collect_trace(){
     fi 
 }
 
-function sofa_report(){
+function sofa_preprocess(){
     echo "SOFA_HOME = ${SOFA_HOME}"
     print_info "FSA Configuration File: ${configFile}"
     perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period > ${logdir}/perf.script
-    ${SOFA_BIN}/sofa-preproc.py ${logdir}
-    ${SOFA_BIN}/sofa-analyze.py ${logdir}
+    ${SOFA_BIN}/sofa-preprocess.py ${logdir}
 }
 
 function sofa_apply_plugin(){
@@ -87,6 +86,7 @@ function sofa_analyze(){
     ${SOFA_BIN}/sofa-analyze.py ${logdir}
     sofa_apply_plugin
     cp ${SOFA_HOME}/sofaboard/gpu-report.html ${logdir}
+    cp ${SOFA_HOME}/sofaboard/timeline.js ${logdir}
     cp ${SOFA_HOME}/sofaboard/index.html ${logdir}
     pushd ${logdir}; python -m SimpleHTTPServer; popd
 }
@@ -94,11 +94,11 @@ function sofa_analyze(){
 function print_help()
 {
     echo "SOFA_HOME = ${SOFA_HOME}"
-    echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|record|report|analyze] command"
+    echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|record|report|analyze|preprocess] command"
 }
 
 function sofa_dist(){
-    print_info "SOFA-dist: Distributed Function Swarm Analyzer"
+    print_info "SOFA-dist: Distributed Function Swarm reportr"
     if [ "$1" = "" ]  || [ "$2" = "" ] || [ "$3" = "" ] ; then
         echo "Usage: sofa-dist \"host1 host2 host3\" sample_period \"distributed_computing_command\""
         exit -1    
@@ -117,7 +117,7 @@ function main()
 
     #args=$*
     configFile="default.cfg"
-    print_info "SOFA: Function Swarm Analyzer"
+    print_info "SOFA: Function Swarms Analysis"
     
     until [ $# -eq 0 ]
     do
@@ -141,12 +141,17 @@ function main()
 		        	print_help
 		        	exit -1
 		        else
-                        	collect_trace $*
-                        	exit 0
-		        fi
+                    collect_trace $*
+                    exit 0
+                fi
 		        ;;
+            "preprocess" )
+                sofa_preprocess
+                exit 0 
+                ;;
             "report" )
-                sofa_report
+                sofa_preprocess
+                sofa_analyze
                 exit 0 
                 ;;
             "analyze" )

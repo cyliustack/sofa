@@ -59,5 +59,3 @@ Highcharts.chart('container', {
     },
     series: trace_data
 });
-
-

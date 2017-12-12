@@ -23,9 +23,7 @@ Simple Test:
 ## 3-1. Hello World 
 `sofa record ping google.com.tw -c 3`  
 `sofa report`  
-`sofa analyze`  
-
- 
+`[optional] sofa analyze` 
 
 ## Interactive and Visualization Result:  
 ![Alt text](./figures/demo1.png)

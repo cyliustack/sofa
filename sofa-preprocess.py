@@ -39,6 +39,7 @@ class CPUTrace:
     time=0
     duration=0
     event=-1
+    name="none"
     vaddr=-1
     deviceId=-1
     pid=-1
@@ -56,12 +57,16 @@ with open(logdir+'sofa_time.txt') as f:
 iptable=[]
 
 
+series = []
 cputrace = CPUTrace()
 with open(logdir+'cputrace.csv', 'w') as csvfile: 
     writer = csv.DictWriter(csvfile, fieldnames=cputrace.fieldnames)
     writer.writeheader()
     packets = rdpcap(logdir+'sofa.pcap')
     t_base = 0
+    traces = []
+    sid = 0
+    symbols = []
     for i in range(0,len(packets)):
         try:
             time = packets[i][IP].time
@@ -75,13 +80,18 @@ with open(logdir+'cputrace.csv', 'w') as csvfile:
                 cputrace.pkt_src = packets[i][IP].src.split('.')[3]
                 cputrace.pkt_dst = packets[i][IP].dst.split('.')[3]
                 cputrace.data = packets[i].len
+                cputrace.name = "%s->%s:%d" % (cputrace.pkt_src, cputrace.pkt_dst, cputrace.data)  
+                cputrace.event = cputrace.data
+                traces.append({"x":cputrace.time, "y":cputrace.event, "name":cputrace.name})
                 writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
-        except:
-            print_warning("Skip packet-%d"%(i))
-cputrace = CPUTrace()
-with open(logdir+'cputrace.csv', 'a') as csvfile: 
+        except Exception as e:
+            print(e)
+    series.append( {"name": 'Network', "color": 'rgba(3, 183, 183, .5)', "data":traces })
+
+with open(logdir+'cputrace.csv','a') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=cputrace.fieldnames)
-    #9424/9424  [006] 18170.649588:          1  ffffffff8106315a native_write_msr_safe
+    traces = []
+    #0/0     [001] 15880.413677:   10101010  ffffffff816ab576 native_safe_halt1
     with open(logdir+'perf.script') as f:
         lines = f.readlines()
         t_base = 0
@@ -96,15 +106,23 @@ with open(logdir+'cputrace.csv', 'a') as csvfile:
                 t_end = time - t_base + t_glb_base
                 duration = t_end - t_begin
                 cputrace.time=t_begin
-                cputrace.pid = fields[0].split('/')[0]
-                cputrace.tid = fields[0].split('/')[1]
+                cputrace.pid = int(fields[0].split('/')[0])
+                cputrace.tid = int(fields[0].split('/')[1])
                 cputrace.vaddr=int("0x"+fields[4],16)%1000000
-                cputrace.event=cputrace.vaddr
+                cputrace.event= cputrace.tid #cputrace.vaddr
                 cputrace.deviceId=int(fields[1].split('[')[1].split(']')[0])
                 cputrace.duration=int(fields[3])*(1.0/3e9)
                 cputrace.data=0
+                cputrace.name = fields[5]
+                traces.append({"x":cputrace.time, "y":cputrace.event, "name":cputrace.name})
                 writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
-
+    
+    series.append({"name": 'CPU', "color": 'rgba(223, 83, 83, .5)', "data":traces })
+      
+with open(logdir+'report.js', 'w') as jsonfile: 
+    jsonfile.write("trace_data = ")
+    json.dump(series, jsonfile)
+    jsonfile.write("\n")   
 
 print("Read nvprof traces ...")
 sqlite_file = filein
