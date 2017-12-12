@@ -26,8 +26,9 @@ Simple Test:
 ### Usage2: Performance statistics and visualized analysis
 `sofa record ping google.com.tw -c 3`  
 `sofa report`  
-### Usage3: After preprocessing traces, frequently apply different analyses on traces.
-`sofa analyze`  
+### Usage3: Once finishing preprocessing traces, frequently apply different analyses on traces.
+`sofa preprocess [Do it once.]`    
+`sofa analyze    [Do it as many times as you would like to.]`
 
 
 
