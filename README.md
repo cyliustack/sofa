@@ -21,9 +21,15 @@ Simple Test:
 # 3. Quick Start 
 
 ## 3-1. Hello World 
+### Usage1: Basic performance statistics
+`sofa stat ping google.com.tw -c 3`  
+### Usage2: Performance statistics and visualized analysis
 `sofa record ping google.com.tw -c 3`  
 `sofa report`  
-`[optional] sofa analyze` 
+### Usage3: After preprocessing traces, frequently apply different analyses on traces.
+`sofa analyze`  
+
+
 
 ## Interactive and Visualization Result:  
 ![Alt text](./figures/demo1.png)

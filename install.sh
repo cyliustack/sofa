@@ -43,7 +43,7 @@ mkdir -p ${PREFIX}/sofaboard
 mkdir -p ${PREFIX}/plugin
 mkdir -p ${PREFIX}/tools
 cp -f sofa                      ${PREFIX}/bin
-cp -f sofa-preproc.py           ${PREFIX}/bin
+cp -f sofa-preprocess.py           ${PREFIX}/bin
 cp -f sofa-analyze.py           ${PREFIX}/bin
 cp -f sofaboard/index.html          ${PREFIX}/sofaboard
 cp -f sofaboard/timeline.js          ${PREFIX}/sofaboard

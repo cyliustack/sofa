@@ -21,7 +21,8 @@ Highcharts.chart('container', {
     yAxis: {
         title: {
             text: 'Function (ID)'
-        }
+        },
+        type: "logarithmic"
     },
     legend: {
         layout: 'vertical',

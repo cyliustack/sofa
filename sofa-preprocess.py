@@ -58,13 +58,16 @@ iptable=[]
 
 
 series = []
+net_traces = []
+cpu_traces = []
+
 cputrace = CPUTrace()
 with open(logdir+'cputrace.csv', 'w') as csvfile: 
     writer = csv.DictWriter(csvfile, fieldnames=cputrace.fieldnames)
     writer.writeheader()
     packets = rdpcap(logdir+'sofa.pcap')
     t_base = 0
-    traces = []
+    net_traces = []
     sid = 0
     symbols = []
     for i in range(0,len(packets)):
@@ -81,16 +84,16 @@ with open(logdir+'cputrace.csv', 'w') as csvfile:
                 cputrace.pkt_dst = packets[i][IP].dst.split('.')[3]
                 cputrace.data = packets[i].len
                 cputrace.name = "%s->%s:%d" % (cputrace.pkt_src, cputrace.pkt_dst, cputrace.data)  
-                cputrace.event = cputrace.data
-                traces.append({"x":cputrace.time, "y":cputrace.event, "name":cputrace.name})
+                cputrace.event = cputrace.data*100+17
+                net_traces.append({"x": cputrace.time,  "y":cputrace.event, "name":cputrace.name})
                 writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
         except Exception as e:
             print(e)
-    series.append( {"name": 'Network', "color": 'rgba(3, 183, 183, .5)', "data":traces })
+    series.append( {"name": 'Network', "color": 'rgba(3, 183, 183, .5)', "data":net_traces })
+    print("Number of network traces: %d"%(len(net_traces)))
 
 with open(logdir+'cputrace.csv','a') as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames=cputrace.fieldnames)
-    traces = []
     #0/0     [001] 15880.413677:   10101010  ffffffff816ab576 native_safe_halt1
     with open(logdir+'perf.script') as f:
         lines = f.readlines()
@@ -108,17 +111,22 @@ with open(logdir+'cputrace.csv','a') as csvfile:
                 cputrace.time=t_begin
                 cputrace.pid = int(fields[0].split('/')[0])
                 cputrace.tid = int(fields[0].split('/')[1])
-                cputrace.vaddr=int("0x"+fields[4],16)%1000000
-                cputrace.event= cputrace.tid #cputrace.vaddr
+                cputrace.vaddr=int("0x"+fields[4],16)%1000000 
                 cputrace.deviceId=int(fields[1].split('[')[1].split(']')[0])
-                cputrace.duration=int(fields[3])*(1.0/3e9)
+                cputrace.duration=float(fields[3])/3e9
                 cputrace.data=0
-                cputrace.name = fields[5]
-                traces.append({"x":cputrace.time, "y":cputrace.event, "name":cputrace.name})
+                cputrace.name = fields[5].replace("[","_").replace("]","_")
+                print(cputrace.name)
+                cputrace.event= cputrace.vaddr
+                #cpu_traces.append([cputrace.time,  cputrace.event, cputrace.name])
+                cpu_traces.append({"x": cputrace.time, "y":cputrace.event, "name":cputrace.name})
                 writer.writerow({'time': cputrace.time, 'event':cputrace.event, 'pid':cputrace.pid, 'tid':cputrace.tid, 'deviceId':cputrace.deviceId, 'duration':cputrace.duration, 'data': cputrace.data, 'pkt_src':cputrace.pkt_src, 'pkt_dst':cputrace.pkt_dst })
     
-    series.append({"name": 'CPU', "color": 'rgba(223, 83, 83, .5)', "data":traces })
-      
+    series.append({"name": 'CPU', "color": 'rgba(223, 83, 83, .5)', "data":cpu_traces })
+    print("Number of CPU traces: %d"%(len(cpu_traces)))
+
+
+print(" length of series: %d"%(len(series)))
 with open(logdir+'report.js', 'w') as jsonfile: 
     jsonfile.write("trace_data = ")
     json.dump(series, jsonfile)

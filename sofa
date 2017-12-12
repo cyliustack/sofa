@@ -2,7 +2,7 @@
 # Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
 SOFA_BIN=$(dirname "$0")
 SOFA_HOME="`echo "$SOFA_BIN" | rev | cut -d/ -f2- | rev`"
-logdir=sofalog
+logdir=./sofalog
 
 C_NONE="\033[0m"
 C_CYAN="\033[36m"
@@ -69,7 +69,7 @@ function collect_trace(){
 
 function sofa_preprocess(){
     echo "SOFA_HOME = ${SOFA_HOME}"
-    print_info "FSA Configuration File: ${configFile}"
+    print_info "Configuration File: ${configFile}"
     perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period > ${logdir}/perf.script
     ${SOFA_BIN}/sofa-preprocess.py ${logdir}
 }
@@ -85,28 +85,24 @@ function sofa_analyze(){
     echo "SOFA_HOME = ${SOFA_HOME}"
     ${SOFA_BIN}/sofa-analyze.py ${logdir}
     sofa_apply_plugin
+}
+
+function sofa_visualize(){
+    echo "SOFA_HOME = ${SOFA_HOME}"
     cp ${SOFA_HOME}/sofaboard/gpu-report.html ${logdir}
     cp ${SOFA_HOME}/sofaboard/timeline.js ${logdir}
     cp ${SOFA_HOME}/sofaboard/index.html ${logdir}
     pushd ${logdir}; python -m SimpleHTTPServer; popd
 }
 
+
+
 function print_help()
 {
     echo "SOFA_HOME = ${SOFA_HOME}"
-    echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|record|report|analyze|preprocess] command"
+    echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|stat|record|report|analyze|preprocess] command"
 }
 
-function sofa_dist(){
-    print_info "SOFA-dist: Distributed Function Swarm reportr"
-    if [ "$1" = "" ]  || [ "$2" = "" ] || [ "$3" = "" ] ; then
-        echo "Usage: sofa-dist \"host1 host2 host3\" sample_period \"distributed_computing_command\""
-        exit -1    
-    fi 
-    #pssh -PH "$1" "sleep 1 &&  echo "/tmp/perf-"\`hostname\`".data""
-    pssh -PH "$1" "perf record -F 99 -a -o /tmp/perf-"\`hostname\`".data sleep $2 && perf script --ns -i /tmp/perf-"\`hostname\`".data > /tmp/perf-"\`hostname\`".script && scp /tmp/perf-"\`hostname\`".script $(hostname):${logdir}/" &
-    $3
-}
 
 function main()
 {
@@ -138,13 +134,13 @@ function main()
                 shift
                 print_info "Traced Command: $*"
 		        if [[ "$*" == "" ]]; then
-		        	print_help
-		        	exit -1
+			        print_help
+		            exit -1
 		        else
                     collect_trace $*
                     exit 0
                 fi
-		        ;;
+		;;
             "preprocess" )
                 sofa_preprocess
                 exit 0 
@@ -152,10 +148,28 @@ function main()
             "report" )
                 sofa_preprocess
                 sofa_analyze
+                sofa_visualize
                 exit 0 
+                ;;
+            "stat" )
+                shift
+                print_info "Traced Command: $*"
+		        if [[ "$*" == "" ]]; then
+			        print_help
+		            exit -1
+		        else
+                    collect_trace $*
+                    sofa_preprocess
+                    sofa_analyze
+                    exit 0
+                fi
                 ;;
             "analyze" )
                 sofa_analyze
+                exit 0 
+                ;;
+            "visualize" )
+                sofa_visualize
                 exit 0 
                 ;;
 # TODO: Support distributed analysis 
