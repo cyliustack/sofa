@@ -116,7 +116,7 @@ with open(logdir+'cputrace.csv','a') as csvfile:
                 cputrace.duration=float(fields[3])/3e9
                 cputrace.data=0
                 cputrace.name = fields[5].replace("[","_").replace("]","_")
-                print(cputrace.name)
+                #print(cputrace.name)
                 cputrace.event= cputrace.vaddr
                 #cpu_traces.append([cputrace.time,  cputrace.event, cputrace.name])
                 cpu_traces.append({"x": cputrace.time, "y":cputrace.event, "name":cputrace.name})

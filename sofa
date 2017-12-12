@@ -51,11 +51,11 @@ function collect_trace(){
         tcpdump -i any -v tcp -w ${logdir}/sofa.pcap & 
         date +%s > ${logdir}/sofa_time.txt
         if [[ $(command -v nvprof) ]]; then  
-            nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvp perf record -o ${logdir}/perf.data -F 99 -a -- ${args} 
+            nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvp perf record -o ${logdir}/perf.data -F 999 -a -- ${args} 
             rm ${logdir}/gputrace.nvp
             mv ${logdir}/gputrace*.nvp ${logdir}/gputrace.nvp 
         else
-            perf record -o ${logdir}/perf.data -F 99 -a -- ${args} 
+            perf record -o ${logdir}/perf.data -F 999 -a -- ${args} 
         fi 
         pkill  tcpdump
         echo "sofa record is done."
@@ -112,7 +112,7 @@ function main()
     fi
 
     #args=$*
-    configFile="default.cfg"
+    configFile="default.json"
     print_info "SOFA: Function Swarms Analysis"
     
     until [ $# -eq 0 ]
