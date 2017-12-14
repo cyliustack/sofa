@@ -45,6 +45,8 @@ mkdir -p ${PREFIX}/tools
 cp -f sofa                      ${PREFIX}/bin
 cp -f sofa-preprocess.py           ${PREFIX}/bin
 cp -f sofa-analyze.py           ${PREFIX}/bin
+cp -f sofaboard/index2.html          ${PREFIX}/sofaboard
+cp -f sofaboard/timeline2.js          ${PREFIX}/sofaboard
 cp -f sofaboard/index.html          ${PREFIX}/sofaboard
 cp -f sofaboard/timeline.js          ${PREFIX}/sofaboard
 cp -f sofaboard/cpu-report.html     ${PREFIX}/sofaboard

@@ -3,6 +3,8 @@ from scapy.all import *
 import pandas as pd
 import numpy as np
 import csv
+import cxxfilt
+import json
 import random
 from operator import itemgetter, attrgetter
 
@@ -76,8 +78,8 @@ def print_format_table():
 # print_format_table()
 
 if __name__ == "__main__":
-    print 'Number of arguments:', len(sys.argv), 'arguments.'
-    print 'Argument List:', str(sys.argv)
+    print('Number of arguments: %d arguments' % len(sys.argv))
+    print('Argument List: %s' % str(sys.argv))
     logdir = []
     filein = []
     overlapness_enabled = False
@@ -95,7 +97,38 @@ if __name__ == "__main__":
             "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
         quit()
 
-    print_title("Task Time (IO included) for each Device (s)")
+    with open(logdir + 'report2.js', 'w') as jsonfile:
+        x = y = data = []
+        A = df.groupby("copyKind")
+        y = A.get_group(-1)["duration"]
+        x = A.get_group(-1)["time"]
+        for i in range(0,len(x)):
+            if i%1 == 0 :
+                data.append([x.iloc[i],y.iloc[i]])
+        jsonfile.write("overhead_ker = ")
+        json.dump(data, jsonfile)
+        jsonfile.write("\n")
+
+        y = A.get_group(1)["duration"]
+        x = A.get_group(1)["time"]
+        for i in range(0,len(x)):
+            if i%1 == 0 :
+                data.append([x.iloc[i],y.iloc[i]])
+        jsonfile.write("overhead_h2d = ")
+        json.dump(data, jsonfile)
+        jsonfile.write("\n")
+        
+        y = A.get_group(2)["duration"]
+        x = A.get_group(2)["time"]
+        data = []
+        for i in range(len(x)):
+            if i%1 == 0 :
+                data.append([x.iloc[i],y.iloc[i]])
+        jsonfile.write("overhead_d2h = ")
+        json.dump(data, jsonfile)
+        jsonfile.write("\n")
+
+    #print_title("Task Time (IO included) for each Device (s)")
     grouped_df = df.groupby("deviceId")["duration"]
     total_tasktime = 0
     for key, item in grouped_df:
@@ -123,6 +156,10 @@ if __name__ == "__main__":
     durations_copyKind = grouped_df = df.groupby("copyKind")["duration"]
     for key, item in grouped_df:
         print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
+
+    print_title("Data Communication Time for Each Pair of deviceId and CopyKind (s)")
+    devcopy = grouped_df = df.groupby(["deviceId","copyKind"])["data_B"].sum()/1000000
+    print(devcopy)
 
     print_title("Task Time spent on Each Stream (s)")
     grouped_df = df.groupby("streamId")["duration"]
