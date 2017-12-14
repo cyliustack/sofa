@@ -226,8 +226,10 @@ try:
     cursor.execute(
         "SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
 except sqlite3.OperationalError:
-    print_warning("Cannot find CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
-    quit()
+    #print_warning("Cannot find CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
+    try:
+        cursor.execute(
+            "SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_KERNEL")
 
 records = cursor.fetchall()
 i = 0
