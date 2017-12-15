@@ -146,7 +146,7 @@ with open(logdir + 'cputrace.csv', 'a') as csvfile:
                 cputrace.tid = int(fields[0].split('/')[1])
                 cputrace.vaddr = int("0x" + fields[4], 16) % 1000000
                 cputrace.deviceId = int(fields[1].split('[')[1].split(']')[0])
-                cputrace.duration = float(fields[3]) / 3e9
+                cputrace.duration = float(fields[3]) / 1.5e9
                 cputrace.data = 0
                 cputrace.name = fields[5].replace("[", "_").replace("]", "_")
                 # print(cputrace.name)

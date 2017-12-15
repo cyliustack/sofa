@@ -77,29 +77,12 @@ def print_format_table():
 
 # print_format_table()
 
-if __name__ == "__main__":
-    print('Number of arguments: %d arguments' % len(sys.argv))
-    print('Argument List: %s' % str(sys.argv))
-    logdir = []
-    filein = []
-    overlapness_enabled = False
+       
+def gpu_profile(df): 
 
-    if len(sys.argv) < 2:
-        print_info("Usage: sofa-report.py /path/to/logdir")
-        quit()
-    else:
-        logdir = sys.argv[1] + "/"
-        filein = logdir + "gputrace.csv"
-    try:
-        df = pd.read_csv(filein)
-    except IOError:
-        print_warning(
-            "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
-        quit()
-
-    with open(logdir + 'report2.js', 'w') as jsonfile:
+    with open(logdir + 'overhead.js', 'w') as jsonfile:
         x = y = data = []
-        A = df.groupby("copyKind")
+        A = df_gpu.groupby("copyKind")
         y = A.get_group(-1)["duration"]
         x = A.get_group(-1)["time"]
         for i in range(0,len(x)):
@@ -129,7 +112,7 @@ if __name__ == "__main__":
         jsonfile.write("\n")
 
     #print_title("Task Time (IO included) for each Device (s)")
-    grouped_df = df.groupby("deviceId")["duration"]
+    grouped_df = df_gpu.groupby("deviceId")["duration"]
     total_tasktime = 0
     for key, item in grouped_df:
         print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
@@ -139,30 +122,30 @@ if __name__ == "__main__":
     theory_overlaptime = avg_tasktime * (n_devices * (n_devices - 1) / 2)
 
     print_title("Data Traffic (bidirection) for each Device (MB)")
-    grouped_df = df.groupby("deviceId")["data_B"]
+    grouped_df = df_gpu.groupby("deviceId")["data_B"]
     for key, item in grouped_df:
         print("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0))
 
     cktable = {-1: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 
     print_title("Data Traffic for each CopyKind (MB)")
-    data_copyKind = grouped_df = df.groupby("copyKind")["data_B"]
+    data_copyKind = grouped_df = df_gpu.groupby("copyKind")["data_B"]
     for key, item in grouped_df:
         print(
             "[%s]: %lf" %
             (cktable[key], grouped_df.get_group(key).sum() / 1000000.0))
 
     print_title("Data Communication (bidirection) Time for each CopyKind (s)")
-    durations_copyKind = grouped_df = df.groupby("copyKind")["duration"]
+    durations_copyKind = grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
         print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
 
     print_title("Data Communication Time for Each Pair of deviceId and CopyKind (s)")
-    devcopy = grouped_df = df.groupby(["deviceId","copyKind"])["data_B"].sum()/1000000
+    devcopy = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["data_B"].sum()/1000000
     print(devcopy)
 
     print_title("Task Time spent on Each Stream (s)")
-    grouped_df = df.groupby("streamId")["duration"]
+    grouped_df = df_gpu.groupby("streamId")["duration"]
     for key, item in grouped_df:
         print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
 
@@ -171,19 +154,20 @@ if __name__ == "__main__":
     for i in range(len(bw)):
         print("[%s]: %.3lf" % (cktable[bw.keys()[i]], bw.iloc[i]))
 
+
     if overlapness_enabled:
         print_title("Overlapness for All Events (s)")
         events = []
-        for i in range(len(df)):
-            t_begin = df.iloc[i]['time']
-            d = df.iloc[i]['duration']
+        for i in range(len(df_gpu)):
+            t_begin = df_gpu.iloc[i]['time']
+            d = df_gpu.iloc[i]['duration']
             t_end = t_begin + d
             e = Event(i, 0, t_begin, d)
             events.append(e)
             e = Event(i, 1, t_end, d)
             events.append(e)
         # for i in range(3):
-        # print("df[%d]=%lf" % (i,df.iloc[i]['time']))
+        # print("df_gpu[%d]=%lf" % (i,df_gpu.iloc[i]['time']))
         #    t_begin =   i
         #    d = 0.5 * random.randint(1, 10)
         #    t_end = t_begin + d
@@ -217,3 +201,50 @@ if __name__ == "__main__":
         print(
             "Theoritical overlapped time of Events: %lf" %
             (theory_overlaptime))
+
+
+def cpu_profile(df): 
+    ## print_title("CPU Profiling: Task Time (IO included) for each Cores (s)")
+    grouped_df = df.groupby("deviceId")["duration"]
+    total_exec_time = 0
+    for key, item in grouped_df:
+        print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
+        total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
+    n_devices = len(grouped_df)
+    avg_exec_time = total_exec_time / n_devices
+    print("total execution time = %.3lf" % total_exec_time )
+    print("average execution time across devices = %.3lf" % avg_exec_time )
+
+
+if __name__ == "__main__":
+    print('Number of arguments: %d arguments' % len(sys.argv))
+    print('Argument List: %s' % str(sys.argv))
+    logdir = []
+    filein = []
+    overlapness_enabled = False
+    df_gpu=[]
+    df_cpu=[]
+
+    if len(sys.argv) < 2:
+        print_info("Usage: sofa-preprocess.py /path/to/logdir")
+        quit()
+    else:
+        logdir = sys.argv[1] + "/"
+        filein_gpu = logdir + "gputrace.csv"
+        filein_cpu = logdir + "cputrace.csv"
+    
+    try:
+        df_gpu = pd.read_csv(filein_gpu)
+        gpu_profile(df_gpu)
+    except IOError:
+        print_warning(
+            "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
+
+    try:
+        df_cpu = pd.read_csv(filein_cpu)
+        cpu_profile(df_cpu)
+    except IOError:
+        print_warning(
+            "cputrace.csv is not found")
+        quit()
+ 
