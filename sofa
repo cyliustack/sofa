@@ -36,6 +36,8 @@ function collect_trace(){
     echo "SOFA_HOME = ${SOFA_HOME}"
     traced_storage=sdb
     args=$*
+    #args=$(echo $* | sed "s/\"//g")
+    print_info "[collect_trace] Trace Command: ""${args}"
 
     if [[ "$(cat /proc/sys/kernel/kptr_restrict)" != "0" ]]; then 
         print_info "$(sysctl kernel.kptr_restrict)"
