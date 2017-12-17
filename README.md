@@ -26,7 +26,9 @@ Simple Test:
 ### Usage2: Performance statistics and visualized analysis
 `sofa record ping google.com.tw -c 3`  
 `sofa report`  
+`open browser with link of http://localhost:8000, http://localhost:8000/cpu-report.html, or http://localhost:8000/gpu-report.html`  
 ### Usage3: Once finishing preprocessing traces, frequently apply different analyses on traces.
+`sofa record your_command [Do it once.]`   
 `sofa preprocess [Do it once.]`    
 `sofa analyze    [Do it as many times as you would like to.]`
 
