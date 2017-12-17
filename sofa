@@ -56,7 +56,7 @@ function collect_trace(){
         if [[ $(command -v nvprof) ]]; then  
             nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvp perf record -o ${logdir}/perf.data -F 999 -a -- ${args} 
             rm ${logdir}/gputrace.nvp 2> ${logdir}/sofa.log
-            mv ${logdir}/gputrace*.nvp ${logdir}/gputrace.nvp 
+            mv ${logdir}/gputrace*.nvp ${logdir}/gputrace.nvp 2> ${logdir}/sofa.log 
         else
             perf record -o ${logdir}/perf.data -F 999 -a -- ${args} 
         fi 
