@@ -76,41 +76,28 @@ def print_format_table():
         print('\n')
 
 # print_format_table()
+cktable = {-1: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
+ckindex = [1,2,8,10]
+
+
 
        
 def gpu_profile(df): 
 
-    with open(logdir + 'overhead.js', 'w') as jsonfile:
-        x = y = data = []
-        A = df_gpu.groupby("copyKind")
-        y = A.get_group(-1)["duration"]
-        x = A.get_group(-1)["time"]
-        for i in range(0,len(x)):
-            if i%1 == 0 :
-                data.append([x.iloc[i],y.iloc[i]])
-        jsonfile.write("overhead_ker = ")
-        json.dump(data, jsonfile)
-        jsonfile.write("\n")
-
-        y = A.get_group(1)["duration"]
-        x = A.get_group(1)["time"]
-        for i in range(0,len(x)):
-            if i%1 == 0 :
-                data.append([x.iloc[i],y.iloc[i]])
-        jsonfile.write("overhead_h2d = ")
-        json.dump(data, jsonfile)
-        jsonfile.write("\n")
-        
-        y = A.get_group(2)["duration"]
-        x = A.get_group(2)["time"]
-        data = []
-        for i in range(len(x)):
-            if i%1 == 0 :
-                data.append([x.iloc[i],y.iloc[i]])
-        jsonfile.write("overhead_d2h = ")
-        json.dump(data, jsonfile)
-        jsonfile.write("\n")
-
+    #with open(logdir + 'overhead.js', 'w') as jsonfile:
+    #    x = y = data = []
+    #    A = df_gpu.groupby("copyKind")
+    #    for ck in range(len(A)):
+    #        print(ck)
+    #        y = A.get_group(ckindex[ck])["duration"]
+    #        x = A.get_group(ckindex[ck])["time"]
+    #        for i in range(0,len(x)):
+    #            if i%1 == 0 :
+    #                data.append([x.iloc[i],y.iloc[i]])
+    #        jsonfile.write("overhead_"+cktable[ckindex[ck]]+" = ")
+    #        json.dump(data, jsonfile)
+    #        jsonfile.write("\n")
+          
     #print_title("Task Time (IO included) for each Device (s)")
     grouped_df = df_gpu.groupby("deviceId")["duration"]
     total_tasktime = 0
@@ -125,8 +112,6 @@ def gpu_profile(df):
     grouped_df = df_gpu.groupby("deviceId")["data_B"]
     for key, item in grouped_df:
         print("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0))
-
-    cktable = {-1: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 
     print_title("Data Traffic for each CopyKind (MB)")
     data_copyKind = grouped_df = df_gpu.groupby("copyKind")["data_B"]
@@ -235,6 +220,8 @@ if __name__ == "__main__":
     
     try:
         df_gpu = pd.read_csv(filein_gpu)
+        
+        
         gpu_profile(df_gpu)
     except IOError:
         print_warning(
