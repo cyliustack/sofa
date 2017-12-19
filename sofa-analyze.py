@@ -44,13 +44,15 @@ class bcolors:
 def print_title(content):
     print(bcolors.TITLE + content + bcolors.ENDC)
 
-
 def print_warning(content):
     print(bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC)
 
-
 def print_info(content):
     print(bcolors.OKGREEN + "[INFO] " + content + bcolors.ENDC)
+
+def print_progress(content):
+    print(bcolors.OKBLUE + "[INFO] " + content + bcolors.ENDC)
+
 
 
 def print_data(content):
@@ -98,7 +100,7 @@ def gpu_profile(df):
     #        json.dump(data, jsonfile)
     #        jsonfile.write("\n")
           
-    #print_title("Task Time (IO included) for each Device (s)")
+    print_title("Task Time (IO included) for each Device (s)")
     grouped_df = df_gpu.groupby("deviceId")["duration"]
     total_tasktime = 0
     for key, item in grouped_df:
@@ -189,7 +191,7 @@ def gpu_profile(df):
 
 
 def cpu_profile(df): 
-    ## print_title("CPU Profiling: Task Time (IO included) for each Cores (s)")
+    print_title("CPU Profiling: Task Time (IO included) for each Cores (s)")
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
     for key, item in grouped_df:
@@ -200,6 +202,34 @@ def cpu_profile(df):
     print("total execution time = %.3lf" % total_exec_time )
     print("average execution time across devices = %.3lf" % avg_exec_time )
 
+def parse_config(path):
+    try:
+        cfg = json.load(open('sofa.json')) 
+        return cfg
+    except IOError:
+        print_warning("sofa.json is not found")
+        quit()
+
+
+def cpu_overhead_report(df,cfg): 
+    print_progress("cpu overhead report -- begin")
+        #with open(logdir + 'overhead.js', 'w') as jsonfile:
+    #    x = y = data = []
+    #    A = df_gpu.groupby("copyKind")
+    #    for ck in range(len(A)):
+    #        print(ck)
+    #        y = A.get_group(ckindex[ck])["duration"]
+    #        x = A.get_group(ckindex[ck])["time"]
+    #        for i in range(0,len(x)):
+    #            if i%1 == 0 :
+    #                data.append([x.iloc[i],y.iloc[i]])
+    #        jsonfile.write("overhead_"+cktable[ckindex[ck]]+" = ")
+    #        json.dump(data, jsonfile)
+    #        jsonfile.write("\n")
+          
+
+    print_progress("cpu overhead report -- end")
+ 
 
 if __name__ == "__main__":
     print('Number of arguments: %d arguments' % len(sys.argv))
@@ -209,6 +239,7 @@ if __name__ == "__main__":
     overlapness_enabled = False
     df_gpu=[]
     df_cpu=[]
+    cfg = []
 
     if len(sys.argv) < 2:
         print_info("Usage: sofa-preprocess.py /path/to/logdir")
@@ -217,11 +248,12 @@ if __name__ == "__main__":
         logdir = sys.argv[1] + "/"
         filein_gpu = logdir + "gputrace.csv"
         filein_cpu = logdir + "cputrace.csv"
+
+    #cfg = parse_config("./sofa.json")
     
     try:
         df_gpu = pd.read_csv(filein_gpu)
-        
-        
+        #gpu_overhead_report(df_gpu,cfg)        
         gpu_profile(df_gpu)
     except IOError:
         print_warning(
@@ -229,9 +261,10 @@ if __name__ == "__main__":
 
     try:
         df_cpu = pd.read_csv(filein_cpu)
+        cpu_overhead_report(df_cpu,cfg)        
         cpu_profile(df_cpu)
     except IOError:
         print_warning(
             "cputrace.csv is not found")
         quit()
- 
+

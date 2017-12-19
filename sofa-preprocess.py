@@ -225,7 +225,9 @@ class GPUTrace:
         return 'hello world'
 
 gputrace = GPUTrace()
-
+gpu_kernel_traces = []
+gpu_memcpy_traces = []
+gpu_memcpy2_traces = []
 print_progress("query CUDA kernels -- begin")
 try:
     cursor.execute(
@@ -241,7 +243,7 @@ print_progress("query CUDA kernels -- end")
 
 
 
-print_progress("export CUDA kernels to CSV -- begin")
+print_progress("export-csv CUDA kernels -- begin")
 records = cursor.fetchall()
 i = 0
 begin = []
@@ -249,9 +251,11 @@ end = []
 event = []
 t_base = 0
 gputraces = []
-with open(logdir + 'gputrace.csv', 'w') as csvfile:
-    writer = csv.DictWriter(csvfile, fieldnames=gputrace.fieldnames)
-    writer.writeheader()
+gpu_series = []
+with open(logdir + 'gputrace.csv', 'w') as f_gputrace:
+    writerA = csv.DictWriter(f_gputrace, fieldnames=gputrace.fieldnames)
+    writerA.writeheader()
+    i=0 
     for record in records:
         i = i + 1
         if i == 1:
@@ -260,7 +264,7 @@ with open(logdir + 'gputrace.csv', 'w') as csvfile:
             t_begin = (record[0] - t_base) / 1e9 + t_glb_base
             t_end = (record[1] - t_base) / 1e9 + t_glb_base
             duration = t_end - t_begin
-            #func_name = cxxfilt.demangle( ("%s" % ftable.loc[ftable._id_ == record[2], 'value']))
+            func_name = cxxfilt.demangle( ("%s" % ftable.loc[ftable._id_ == record[2], 'value']))
             event_id = record[2]
             gputrace.time = t_begin
             gputrace.event = record[2]
@@ -272,7 +276,7 @@ with open(logdir + 'gputrace.csv', 'w') as csvfile:
             # print("event id and its name = %d %s" % (event_id,func_name))
             # print("record-%d: %s at %lf, duration = %lf" % (i,record,
             # t_begin, t_end-t_begin) )
-            writer.writerow(
+            writerA.writerow(
                 {'time': gputrace.time,
                  'event': gputrace.event,
                  'copyKind': gputrace.copyKind,
@@ -280,7 +284,18 @@ with open(logdir + 'gputrace.csv', 'w') as csvfile:
                  'streamId': gputrace.streamId,
                  'duration': gputrace.duration,
                  'data_B': gputrace.data})
-print_progress("export CUDA kernels to CSV -- end")
+        if i%100 == 0 : 
+            gpu_kernel_traces.append(
+                    {"x": gputrace.time,
+                     "y": gputrace.duration,
+                     "name": "%d"%gputrace.event})
+    
+    gpu_series.append(
+            {   "name": 'Compute',
+                "color": 'rgba(255, 80, 80, .5)',
+                "data": gpu_kernel_traces})
+
+print_progress("export-csv CUDA kernels -- end")
 
 
 print_progress("query CUDA memcpy (h2d,d2h,d2d) -- begin")
@@ -297,8 +312,13 @@ begin = []
 end = []
 event = []
 t_base = 0
-with open(logdir + 'gputrace.csv', 'a') as csvfile:
-    writer = csv.DictWriter(csvfile, fieldnames=gputrace.fieldnames)
+with open(logdir + 'gputrace.csv', 'a') as f_gputrace, open(logdir + 'gpu-overhead.csv','a') as f_gpu_overhead:
+    writerA = csv.DictWriter(f_gputrace, fieldnames=gputrace.fieldnames)
+    writerB = csv.DictWriter(f_gpu_overhead, fieldnames = [
+        'timestamp',
+        "compute",
+        "communicate"])
+    i = 0 
     for record in records:
         i = i + 1
         if i == 1:
@@ -315,7 +335,7 @@ with open(logdir + 'gputrace.csv', 'a') as csvfile:
             gputrace.duration = duration
             gputrace.data = record[2]
             
-            writer.writerow(
+            writerA.writerow(
                 {'time': gputrace.time,
                  'event': gputrace.event,
                  'copyKind': gputrace.copyKind,
@@ -323,6 +343,17 @@ with open(logdir + 'gputrace.csv', 'a') as csvfile:
                  'streamId': gputrace.streamId,
                  'duration': gputrace.duration,
                  'data_B': gputrace.data})
+
+        if i%100 == 0 : 
+            gpu_memcpy_traces.append(
+                    {"x": gputrace.time,
+                     "y": gputrace.duration,
+                     "name": ("%dB"%gputrace.data)})
+    
+    gpu_series.append(
+            {   "name": 'memcpy',
+                "color": 'rgba(80, 255, 80, .5)',
+                "data": gpu_memcpy_traces})
 
 print_progress("csv-export CUDA memcpy (h2d,d2h,d2d) -- end")
 
@@ -337,8 +368,13 @@ print_progress("csv-export CUDA memcpy2 (p2p) -- begin")
 begin = []
 end = []
 event = []
-with open(logdir + 'gputrace.csv', 'a') as csvfile:
-    writer = csv.DictWriter(csvfile, fieldnames=gputrace.fieldnames)
+with open(logdir + 'gputrace.csv', 'a') as f_gputrace, open(logdir + 'gpu-overhead.csv','a') as f_gpu_overhead:
+    writerA = csv.DictWriter(f_gputrace, fieldnames=gputrace.fieldnames)
+    writerB = csv.DictWriter(f_gpu_overhead, fieldnames = [
+        'timestamp',
+        "compute",
+        "communicate"])
+
     t_base = 0
     i = 0
     for record in records:
@@ -356,7 +392,7 @@ with open(logdir + 'gputrace.csv', 'a') as csvfile:
             gputrace.streamId = record[7]
             gputrace.duration = duration
             gputrace.data = record[2]
-            writer.writerow(
+            writerA.writerow(
                 {'time': gputrace.time,
                  'event': gputrace.event,
                  'copyKind': gputrace.copyKind,
@@ -364,4 +400,23 @@ with open(logdir + 'gputrace.csv', 'a') as csvfile:
                  'streamId': gputrace.streamId,
                  'duration': gputrace.duration,
                  'data_B': gputrace.data})
-    print_progress("csv-export CUDA memcpy2 (p2p) -- end")
+            
+        if i%100 == 0:
+            gpu_memcpy2_traces.append(
+                    {"x": gputrace.time,
+                     "y": gputrace.duration,
+                     "name": ("%dB"%gputrace.data)})
+
+    gpu_series.append(
+    {   "name": 'memcpy2',
+        "color": 'rgba(80, 80, 255, .5)',
+        "data": gpu_memcpy2_traces})
+print_progress("csv-export CUDA memcpy2 (p2p) -- end")
+
+print_progress("export overhead.js -- begin")
+print("Length of GPU series: %d" % (len(gpu_series)))
+with open(logdir + 'gpu-overhead.js', 'w') as jsonfile:
+    jsonfile.write("trace_data = ")
+    json.dump(gpu_series, jsonfile)
+    jsonfile.write("\n")
+print_progress("export overhead.js -- end")

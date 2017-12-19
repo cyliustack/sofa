@@ -94,8 +94,10 @@ function sofa_visualize(){
     echo "SOFA_HOME = ${SOFA_HOME}"
     cp ${SOFA_HOME}/sofaboard/cpu-report.html ${logdir}
     cp ${SOFA_HOME}/sofaboard/gpu-report.html ${logdir}
-    cp ${SOFA_HOME}/sofaboard/timeline.js ${logdir}
+    cp ${SOFA_HOME}/sofaboard/cpu-overhead.html ${logdir}
+    cp ${SOFA_HOME}/sofaboard/gpu-overhead.html ${logdir}
     cp ${SOFA_HOME}/sofaboard/index.html ${logdir}
+    cp ${SOFA_HOME}/sofaboard/timeline.js ${logdir}
     pushd ${logdir}; python -m SimpleHTTPServer; popd
 }
 
