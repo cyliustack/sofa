@@ -22,9 +22,13 @@ class bcolors:
 def print_warning(content):
     print(bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC)
 
-
 def print_info(content):
     print(bcolors.OKGREEN + "[INFO] " + content + bcolors.ENDC)
+
+def print_progress(content):
+    print(bcolors.OKBLUE + "[INFO] " + content + bcolors.ENDC)
+
+
 
 print('Argument List: %s', str(sys.argv))
 logdir = []
@@ -181,7 +185,7 @@ with open(logdir + 'report.js', 'w') as jsonfile:
     json.dump(series, jsonfile)
     jsonfile.write("\n")
 
-print("Read nvprof traces ...")
+print_progress("read nvprof traces -- begin")
 sqlite_file = filein
 db = sqlite3.connect(sqlite_file)
 cursor = db.cursor()
@@ -198,7 +202,7 @@ for table_name in tables:
         table.to_csv(logdir + tname + '.csv', index_label='index')
     if tname == "StringTable":
         ftable = table
-
+print_progress("read nvprof traces -- end")
 
 class GPUTrace:
     fieldnames = [
@@ -222,6 +226,7 @@ class GPUTrace:
 
 gputrace = GPUTrace()
 
+print_progress("query CUDA kernels -- begin")
 try:
     cursor.execute(
         "SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
@@ -232,7 +237,11 @@ except sqlite3.OperationalError:
     except sqlite3.OperationalError:
         #print_warning("Cannot find CUPTI_ACTIVITY_KIND_KERNEL")
         quit()
+print_progress("query CUDA kernels -- end")
 
+
+
+print_progress("export CUDA kernels to CSV -- begin")
 records = cursor.fetchall()
 i = 0
 begin = []
@@ -247,15 +256,11 @@ with open(logdir + 'gputrace.csv', 'w') as csvfile:
         i = i + 1
         if i == 1:
             t_base = record[0]
-        if (i % 1) == 0:
+        if True:
             t_begin = (record[0] - t_base) / 1e9 + t_glb_base
             t_end = (record[1] - t_base) / 1e9 + t_glb_base
             duration = t_end - t_begin
-            begin = np.append(begin, t_begin)
-            end = np.append(end, t_end)
-            func_name = cxxfilt.demangle(
-                ("%s" %
-                 ftable.loc[ftable._id_ == record[2], 'value']))
+            #func_name = cxxfilt.demangle( ("%s" % ftable.loc[ftable._id_ == record[2], 'value']))
             event_id = record[2]
             gputrace.time = t_begin
             gputrace.event = record[2]
@@ -265,7 +270,6 @@ with open(logdir + 'gputrace.csv', 'w') as csvfile:
             gputrace.duration = duration
             gputrace.data = 0
             # print("event id and its name = %d %s" % (event_id,func_name))
-            event = np.append(event, event_id)
             # print("record-%d: %s at %lf, duration = %lf" % (i,record,
             # t_begin, t_end-t_begin) )
             writer.writerow(
@@ -276,11 +280,18 @@ with open(logdir + 'gputrace.csv', 'w') as csvfile:
                  'streamId': gputrace.streamId,
                  'duration': gputrace.duration,
                  'data_B': gputrace.data})
+print_progress("export CUDA kernels to CSV -- end")
 
+
+print_progress("query CUDA memcpy (h2d,d2h,d2d) -- begin")
 # index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
 cursor.execute(
     "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
 records = cursor.fetchall()
+print_progress("query CUDA memcpy (h2d,d2h,d2d) -- end")
+
+
+print_progress("csv-export CUDA memcpy (h2d,d2h,d2d) -- begin")
 i = 0
 begin = []
 end = []
@@ -292,12 +303,10 @@ with open(logdir + 'gputrace.csv', 'a') as csvfile:
         i = i + 1
         if i == 1:
             t_base = record[0]
-        if (i % 10) == 0:
+        if True:
             t_begin = (record[0] - t_base) / 1e9 + t_glb_base
             t_end = (record[1] - t_base) / 1e9 + t_glb_base
             duration = t_end - t_begin
-            begin = np.append(begin, t_begin)
-            end = np.append(end, t_end)
             gputrace.time = t_begin
             gputrace.event = -1
             gputrace.copyKind = record[3]
@@ -305,6 +314,7 @@ with open(logdir + 'gputrace.csv', 'a') as csvfile:
             gputrace.streamId = record[7]
             gputrace.duration = duration
             gputrace.data = record[2]
+            
             writer.writerow(
                 {'time': gputrace.time,
                  'event': gputrace.event,
@@ -314,9 +324,16 @@ with open(logdir + 'gputrace.csv', 'a') as csvfile:
                  'duration': gputrace.duration,
                  'data_B': gputrace.data})
 
+print_progress("csv-export CUDA memcpy (h2d,d2h,d2d) -- end")
+
+
+print_progress("query CUDA memcpy2 (p2p) -- begin")
 cursor.execute(
     "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")
 records = cursor.fetchall()
+print_progress("query CUDA memcpy2 (p2p) -- end")
+
+print_progress("csv-export CUDA memcpy2 (p2p) -- begin")
 begin = []
 end = []
 event = []
@@ -328,12 +345,10 @@ with open(logdir + 'gputrace.csv', 'a') as csvfile:
         i = i + 1
         if i == 1:
             t_base = record[0]
-        if (i % 10) == 0:
+        if True:
             t_begin = (record[0] - t_base) / 1e9 + t_glb_base
             t_end = (record[1] - t_base) / 1e9 + t_glb_base
             duration = t_end - t_begin
-            begin = np.append(begin, t_begin)
-            end = np.append(end, t_end)
             gputrace.time = t_begin
             gputrace.event = -1
             gputrace.copyKind = record[3]
@@ -349,3 +364,4 @@ with open(logdir + 'gputrace.csv', 'a') as csvfile:
                  'streamId': gputrace.streamId,
                  'duration': gputrace.duration,
                  'data_B': gputrace.data})
+    print_progress("csv-export CUDA memcpy2 (p2p) -- end")
