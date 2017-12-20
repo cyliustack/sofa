@@ -6,7 +6,7 @@ import numpy as np
 import csv
 import cxxfilt
 import json
-
+import sys
 
 class bcolors:
     HEADER = '\033[95m'
@@ -30,6 +30,7 @@ def print_progress(content):
 
 if __name__ == "__main__":
 
+    sys.stdout.flush()
     print('Argument List: %s', str(sys.argv))
     logdir = []
     filein = []
@@ -237,6 +238,91 @@ if __name__ == "__main__":
 #    }
 #    ]
 
+   
+    print_progress("query CUDA memcpy (h2d,d2h,d2d) -- begin")
+    # index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
+    cursor.execute(
+        "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
+    gpu_memcpy_records = cursor.fetchall()
+    print_progress("query CUDA memcpy (h2d,d2h,d2d) -- end")
+   
+    
+    print_progress("export-csv CUDA memcpy (h2d,d2h,d2d) -- begin")
+    if  os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_MEMCPY.csv") : 
+        gpu_memcpy_traces = pd.DataFrame(pd.np.empty((len(gpu_memcpy_records), len(sofa_fieldnames))) * pd.np.nan) 
+        gpu_memcpy_traces.columns = sofa_fieldnames 
+        t_base = 0
+        print_info("Length of gpu_memcpy_traces = %d"%len(gpu_memcpy_traces))
+        for i in range(0, len(gpu_memcpy_traces)):
+            record = gpu_memcpy_records[i]
+            if i == 0:
+                t_base = record[0]
+   
+          #      t_begin = (record[0] - t_base) / 1e9 + t_glb_base
+          #      t_end = (record[1] - t_base) / 1e9 + t_glb_base
+          #      duration = t_end - t_begin
+          #      gputrace.time = t_begin
+          #      gputrace.event = -1
+          #      gputrace.copyKind = record[3]
+          #      gputrace.deviceId = record[4]
+          #      gputrace.streamId = record[7]
+          #      gputrace.duration = duration
+          #      gputrace.data = record[2]
+   
+            t_begin = (record[0] - t_base) / 1e9 + t_glb_base
+            t_end   = (record[1] - t_base) / 1e9 + t_glb_base
+            gpu_memcpy_traces.loc[i,'timestamp']   =   t_begin
+            gpu_memcpy_traces.loc[i,'event']       =   record[2] 
+            gpu_memcpy_traces.loc[i,'duration']    =   t_end - t_begin
+            gpu_memcpy_traces.loc[i,'deviceId']    =   record[4]
+            gpu_memcpy_traces.loc[i,'copyKind']    =   record[3]
+            gpu_memcpy_traces.loc[i,'payload']     =   record[2]
+            gpu_memcpy_traces.loc[i,'pkt_src']     =   -1
+            gpu_memcpy_traces.loc[i,'pkt_dst']     =   -1
+            gpu_memcpy_traces.loc[i,'pid']         =   record[7] #streamId
+            gpu_memcpy_traces.loc[i,'tid']         =   -1
+            gpu_memcpy_traces.loc[i,'name']        =   "%dB"% record[2]#
+            gpu_memcpy_traces.loc[i,'category']    =   0
+        
+    print_progress("export-csv CUDA memcpy (h2d,d2h,d2d) -- end")
+ 
+    
+    print_progress("query CUDA memcpy2 (p2p) -- begin")
+    cursor.execute(
+        "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")
+    gpu_memcpy2_records = cursor.fetchall()
+    print_progress("query CUDA memcpy2 (p2p) -- end")
+    
+    print_progress("export-csv CUDA memcpy2 (p2p) -- begin")
+    if  os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_MEMCPY2.csv") : 
+        gpu_memcpy2_traces = pd.DataFrame(pd.np.empty((len(gpu_memcpy2_records), len(sofa_fieldnames))) * pd.np.nan) 
+        gpu_memcpy2_traces.columns = sofa_fieldnames 
+        t_base = 0
+        print_info("Length of gpu_memcpy2_traces = %d"%len(gpu_memcpy2_traces))
+        for i in range(0, len(gpu_memcpy2_traces)):
+            record = gpu_memcpy2_records[i]
+            if i == 0:
+                t_base = record[0]
+   
+            t_begin = (record[0] - t_base) / 1e9 + t_glb_base
+            t_end   = (record[1] - t_base) / 1e9 + t_glb_base
+            gpu_memcpy2_traces.loc[i,'timestamp']   =   t_begin
+            gpu_memcpy2_traces.loc[i,'event']       =   record[2] 
+            gpu_memcpy2_traces.loc[i,'duration']    =   t_end - t_begin
+            gpu_memcpy2_traces.loc[i,'deviceId']    =   record[4]
+            gpu_memcpy2_traces.loc[i,'copyKind']    =   record[3]
+            gpu_memcpy2_traces.loc[i,'payload']     =   record[2]
+            gpu_memcpy2_traces.loc[i,'pkt_src']     =   -1
+            gpu_memcpy2_traces.loc[i,'pkt_dst']     =   -1
+            gpu_memcpy2_traces.loc[i,'pid']         =   record[7] #streamId
+            gpu_memcpy2_traces.loc[i,'tid']         =   -1
+            gpu_memcpy2_traces.loc[i,'name']        =   "%dB"% record[2]#
+            gpu_memcpy2_traces.loc[i,'category']    =   0
+        
+    print_progress("export-csv CUDA memcpy2 (h2d,d2h,d2d) -- end")
+    
+
+    #==================== Summary ==================#
     print_progress("json-export for cpu, network and gpu traces -- begin")
     print_info("Number of groups of series: %d" % (len(series)))
     with open(logdir + 'report.js', 'w') as f_report:
@@ -264,7 +350,7 @@ if __name__ == "__main__":
         if len(gpu_kernel_traces) > 0:
             f_report.write("gpu_kernel_traces = ")
             gpu_kernel_traces.rename(columns={'timestamp': 'x', 'event':'y'}, inplace=True)
-            sofa_series = { "name": 'GPU Kernel',
+            sofa_series = { "name": 'GPU_Kernel',
                             "color": 'rgba(10, 50, 255, .5)',
                             "data": json.loads(gpu_kernel_traces.to_json(orient='records'))
                             }
@@ -273,134 +359,43 @@ if __name__ == "__main__":
         else:
             f_report.write("gpu_kernel_traces = {}") 
         f_report.write("\n\n")
+       
+        if len(gpu_memcpy_traces) > 0:
+            f_report.write("gpu_memcpy_traces = ")
+            gpu_memcpy_traces.rename(columns={'timestamp': 'x', 'event':'y'}, inplace=True)
+            sofa_series = { "name": 'GPU_MEMCPY',
+                            "color": 'rgba(10, 110, 200, .5)',
+                            "data": json.loads(gpu_memcpy_traces.to_json(orient='records'))
+                            }
+            json.dump(sofa_series, f_report)
+            f_report.write("\n\n")
+        else:
+            f_report.write("gpu_memcpy_traces = {}") 
+        f_report.write("\n\n")
         
-        f_report.write("sofa_traces = [ cpu_traces, net_traces, gpu_kernel_traces ]")        
+        if len(gpu_memcpy2_traces) > 0:
+            f_report.write("gpu_memcpy2_traces = ")
+            gpu_memcpy2_traces.rename(columns={'timestamp': 'x', 'event':'y'}, inplace=True)
+            sofa_series = { "name": 'GPU_MEMCPY2',
+                            "color": 'rgba(10, 80, 50, .5)',
+                            "data": json.loads(gpu_memcpy2_traces.to_json(orient='records'))
+                            }
+            json.dump(sofa_series, f_report)
+            f_report.write("\n\n")
+        else:
+            f_report.write("gpu_memcpy2_traces = {}") 
+        f_report.write("\n\n")
+        
+        f_report.write("sofa_traces = [ cpu_traces, net_traces, gpu_kernel_traces, gpu_memcpy_traces, gpu_memcpy2_traces ]")        
                 
     print_progress("json-export for cpu, network and gpu traces -- end")
 
-    print_warning("intentionally quit! (remember to remove it)")
-    quit()
-    
-    print_progress("query CUDA memcpy (h2d,d2h,d2d) -- begin")
-    # index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
-    cursor.execute(
-        "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
-    records = cursor.fetchall()
-    print_progress("query CUDA memcpy (h2d,d2h,d2d) -- end")
-    
-    
-    print_progress("csv-export CUDA memcpy (h2d,d2h,d2d) -- begin")
-    i = 0
-    begin = []
-    end = []
-    event = []
-    t_base = 0
-    with open(logdir + 'gputrace.csv', 'a') as f_gputrace, open(logdir + 'gpu-overhead.csv','a') as f_gpu_overhead:
-        writerA = csv.DictWriter(f_gputrace, fieldnames=gputrace.fieldnames)
-        writerB = csv.DictWriter(f_gpu_overhead, fieldnames = [
-            'timestamp',
-            "compute",
-            "communicate"])
-        i = 0 
-        for record in records:
-            i = i + 1
-            if i == 1:
-                t_base = record[0]
-            if True:
-                t_begin = (record[0] - t_base) / 1e9 + t_glb_base
-                t_end = (record[1] - t_base) / 1e9 + t_glb_base
-                duration = t_end - t_begin
-                gputrace.time = t_begin
-                gputrace.event = -1
-                gputrace.copyKind = record[3]
-                gputrace.deviceId = record[4]
-                gputrace.streamId = record[7]
-                gputrace.duration = duration
-                gputrace.data = record[2]
-                
-                writerA.writerow(
-                    {'time': gputrace.time,
-                     'event': gputrace.event,
-                     'copyKind': gputrace.copyKind,
-                     'deviceId': gputrace.deviceId,
-                     'streamId': gputrace.streamId,
-                     'duration': gputrace.duration,
-                     'data_B': gputrace.data})
-    
-            if False:
-            #if i%100 == 0 : 
-                gpu_memcpy_traces.append(
-                        {"x": gputrace.time,
-                         "y": gputrace.duration,
-                         "name": ("%dB"%gputrace.data)})
-        
-        gpu_series.append(
-                {   "name": 'memcpy',
-                    "color": 'rgba(80, 255, 80, .5)',
-                    "data": gpu_memcpy_traces})
-    
-    print_progress("csv-export CUDA memcpy (h2d,d2h,d2d) -- end")
-    
-    
-    print_progress("query CUDA memcpy2 (p2p) -- begin")
-    cursor.execute(
-        "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")
-    records = cursor.fetchall()
-    print_progress("query CUDA memcpy2 (p2p) -- end")
-    
-    print_progress("csv-export CUDA memcpy2 (p2p) -- begin")
-    begin = []
-    end = []
-    event = []
-    with open(logdir + 'gputrace.csv', 'a') as f_gputrace, open(logdir + 'gpu-overhead.csv','a') as f_gpu_overhead:
-        writerA = csv.DictWriter(f_gputrace, fieldnames=gputrace.fieldnames)
-        writerB = csv.DictWriter(f_gpu_overhead, fieldnames = [
-            'timestamp',
-            "compute",
-            "communicate"])
-    
-        t_base = 0
-        i = 0
-        for record in records:
-            i = i + 1
-            if i == 1:
-                t_base = record[0]
-            if True:
-                t_begin = (record[0] - t_base) / 1e9 + t_glb_base
-                t_end = (record[1] - t_base) / 1e9 + t_glb_base
-                duration = t_end - t_begin
-                gputrace.time = t_begin
-                gputrace.event = -1
-                gputrace.copyKind = record[3]
-                gputrace.deviceId = record[4]
-                gputrace.streamId = record[7]
-                gputrace.duration = duration
-                gputrace.data = record[2]
-                writerA.writerow(
-                    {'time': gputrace.time,
-                     'event': gputrace.event,
-                     'copyKind': gputrace.copyKind,
-                     'deviceId': gputrace.deviceId,
-                     'streamId': gputrace.streamId,
-                     'duration': gputrace.duration,
-                     'data_B': gputrace.data})
-            if False:    
-            #if i%100 == 0:
-                gpu_memcpy2_traces.append(
-                        {"x": gputrace.time,
-                         "y": gputrace.duration,
-                         "name": ("%dB"%gputrace.data)})
-    
-        gpu_series.append(
-        {   "name": 'memcpy2',
-            "color": 'rgba(80, 80, 255, .5)',
-            "data": gpu_memcpy2_traces})
-    print_progress("csv-export CUDA memcpy2 (p2p) -- end")
-    
-    print_progress("export overhead.js -- begin")
-    print("Length of GPU series: %d" % (len(gpu_series)))
-    with open(logdir + 'gpu-overhead.js', 'w') as jsonfile:
-        jsonfile.write("trace_data = ")
-        json.dump(gpu_series, jsonfile)
-        jsonfile.write("\n")
-    print_progress("export overhead.js -- end")
+
+
+    #print_progress("export overhead.js -- begin")
+    #print("Length of GPU series: %d" % (len(gpu_series)))
+    #with open(logdir + 'gpu-overhead.js', 'w') as jsonfile:
+    #    jsonfile.write("trace_data = ")
+    #    json.dump(gpu_series, jsonfile)
+    #    jsonfile.write("\n")
+    #print_progress("export overhead.js -- end")

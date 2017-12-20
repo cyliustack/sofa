@@ -35,8 +35,13 @@ Simple Test:
 
 
 ## Interactive and Visualization Result:  
+`sofa record ./tools/gpu-train.sh resnet50 64 2`      
+![Alt text](./figures/demo0.png)
+`sofa record ./tools/gpu-train.sh resnet50 64 8`      
 ![Alt text](./figures/demo1.png)
+`sofa record mpirun -f hosts.txt -n 4 ./compute_pi`   
 ![Alt text](./figures/demo3.png)
+`sofa record ./tools/gpu-train.sh resnet50 32 1 --num_batches=20`      
 ![Alt text](./figures/demo4.png)
 
 
