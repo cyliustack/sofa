@@ -55,8 +55,10 @@ Highcharts.chart('container', {
             tooltip: {
                 headerFormat: '<b>Category: {series.name}</b><br>',
                 pointFormat: '[{point.x} s] ID: {point.y}, Name: {point.name}'
-            }
+            },
+            turboThreshold: 0 
+
         }
     },
-    series: trace_data
+    series: sofa_traces 
 });
