@@ -35,7 +35,7 @@ Simple Test:
 
 
 ## Interactive and Visualization Result:  
-`sofa record ./tools/gpu-train.sh resnet50 64 2`      
+`sofa record ./tools/gpu-train.sh resnet50 64 1`      
 ![Alt text](./figures/demo0.png)
 `sofa record ./tools/gpu-train.sh resnet50 64 8`      
 ![Alt text](./figures/demo1.png)
