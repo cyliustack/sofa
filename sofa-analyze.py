@@ -111,12 +111,12 @@ def gpu_profile(df):
     theory_overlaptime = avg_tasktime * (n_devices * (n_devices - 1) / 2)
 
     print_title("Data Traffic (bidirection) for each Device (MB)")
-    grouped_df = df_gpu.groupby("deviceId")["data_B"]
+    grouped_df = df_gpu.groupby("deviceId")["payload"]
     for key, item in grouped_df:
         print("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0))
 
     print_title("Data Traffic for each CopyKind (MB)")
-    data_copyKind = grouped_df = df_gpu.groupby("copyKind")["data_B"]
+    data_copyKind = grouped_df = df_gpu.groupby("copyKind")["payload"]
     for key, item in grouped_df:
         print(
             "[%s]: %lf" %
@@ -128,11 +128,11 @@ def gpu_profile(df):
         print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
 
     print_title("Data Communication Time for Each Pair of deviceId and CopyKind (s)")
-    devcopy = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["data_B"].sum()/1000000
+    devcopy = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["payload"].sum()/1000000
     print(devcopy)
 
     print_title("Task Time spent on Each Stream (s)")
-    grouped_df = df_gpu.groupby("streamId")["duration"]
+    grouped_df = df_gpu.groupby("pid")["duration"]
     for key, item in grouped_df:
         print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
 
