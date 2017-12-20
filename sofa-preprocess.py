@@ -135,6 +135,7 @@ with open(logdir + 'cputrace.csv', 'a') as csvfile:
     with open(logdir + 'perf.script') as f:
         lines = f.readlines()
         t_base = 0
+        
         for i in range(0, len(lines)):
             fields = lines[i].split()
             time = float(fields[2].split(':')[0])
@@ -153,6 +154,7 @@ with open(logdir + 'cputrace.csv', 'a') as csvfile:
                 cputrace.duration = float(fields[3]) / 1.5e9
                 cputrace.data = 0
                 cputrace.name = fields[5].replace("[", "_").replace("]", "_")
+                cputrace.name
                 # print(cputrace.name)
                 cputrace.event = cputrace.vaddr
                 # cpu_traces.append([cputrace.time,  cputrace.event,
@@ -284,7 +286,8 @@ with open(logdir + 'gputrace.csv', 'w') as f_gputrace:
                  'streamId': gputrace.streamId,
                  'duration': gputrace.duration,
                  'data_B': gputrace.data})
-        if i%100 == 0 : 
+        if False:
+        #if i%100 == 0 : 
             gpu_kernel_traces.append(
                     {"x": gputrace.time,
                      "y": gputrace.duration,
@@ -344,7 +347,8 @@ with open(logdir + 'gputrace.csv', 'a') as f_gputrace, open(logdir + 'gpu-overhe
                  'duration': gputrace.duration,
                  'data_B': gputrace.data})
 
-        if i%100 == 0 : 
+        if False:
+        #if i%100 == 0 : 
             gpu_memcpy_traces.append(
                     {"x": gputrace.time,
                      "y": gputrace.duration,
@@ -400,8 +404,8 @@ with open(logdir + 'gputrace.csv', 'a') as f_gputrace, open(logdir + 'gpu-overhe
                  'streamId': gputrace.streamId,
                  'duration': gputrace.duration,
                  'data_B': gputrace.data})
-            
-        if i%100 == 0:
+        if False:    
+        #if i%100 == 0:
             gpu_memcpy2_traces.append(
                     {"x": gputrace.time,
                      "y": gputrace.duration,
