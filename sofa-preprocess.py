@@ -28,6 +28,10 @@ def print_info(content):
 def print_progress(content):
     print(bcolors.OKBLUE + "[INFO] " + content + bcolors.ENDC)
 
+def traces_to_json(traces, x_field, y_field, name, color, path, mode):
+    print_info("Dump %s traces to JSON file"%name)    
+    
+
 if __name__ == "__main__":
 
     sys.stdout.flush()
@@ -321,7 +325,7 @@ if __name__ == "__main__":
         
     print_progress("export-csv CUDA memcpy2 (h2d,d2h,d2d) -- end")
     
-
+    
     #==================== Summary ==================#
     print_progress("json-export for cpu, network and gpu traces -- begin")
     print_info("Number of groups of series: %d" % (len(series)))
@@ -333,6 +337,7 @@ if __name__ == "__main__":
                         "data": json.loads(cpu_traces.to_json(orient='records'))
                         }
         json.dump(sofa_series, f_report)
+        cpu_traces.rename(columns={'x': 'timestamp', 'y':'event'}, inplace=True)
         f_report.write("\n\n")
 
         if len(net_traces) > 0:
@@ -343,6 +348,7 @@ if __name__ == "__main__":
                             "data": json.loads(net_traces.to_json(orient='records'))
                             }
             json.dump(sofa_series, f_report)
+            net_traces.rename(columns={'x': 'timestamp', 'y':'event'}, inplace=True)
         else:
             f_report.write("net_traces = {}")
         f_report.write("\n\n")
@@ -355,6 +361,7 @@ if __name__ == "__main__":
                             "data": json.loads(gpu_kernel_traces.to_json(orient='records'))
                             }
             json.dump(sofa_series, f_report)
+            gpu_kernel_traces.rename(columns={'x': 'timestamp', 'y':'event'}, inplace=True)
             f_report.write("\n\n")
         else:
             f_report.write("gpu_kernel_traces = {}") 
@@ -368,6 +375,7 @@ if __name__ == "__main__":
                             "data": json.loads(gpu_memcpy_traces.to_json(orient='records'))
                             }
             json.dump(sofa_series, f_report)
+            gpu_memcpy_traces.rename(columns={'x': 'timestamp', 'y':'event'}, inplace=True)
             f_report.write("\n\n")
         else:
             f_report.write("gpu_memcpy_traces = {}") 
@@ -381,6 +389,7 @@ if __name__ == "__main__":
                             "data": json.loads(gpu_memcpy2_traces.to_json(orient='records'))
                             }
             json.dump(sofa_series, f_report)
+            gpu_memcpy2_traces.rename(columns={'x': 'timestamp', 'y':'event'}, inplace=True)
             f_report.write("\n\n")
         else:
             f_report.write("gpu_memcpy2_traces = {}") 
@@ -389,6 +398,76 @@ if __name__ == "__main__":
         f_report.write("sofa_traces = [ cpu_traces, net_traces, gpu_kernel_traces, gpu_memcpy_traces, gpu_memcpy2_traces ]")        
                 
     print_progress("json-export for cpu, network and gpu traces -- end")
+
+    print_progress("Display overhead dynamic for cpu, network and gpu traces -- begin")
+    print_info("Number of groups of series: %d" % (len(series)))
+    with open(logdir + 'overhead.js', 'w') as f_report:
+        f_report.write("cpu_traces = ")
+        cpu_traces.rename(columns={'timestamp':'x', 'duration':'y'}, inplace=True)
+        sofa_series = { "name": 'CPU',
+                        "color": 'rgba(255, 100, 50, .5)',
+                        "data": json.loads(cpu_traces.to_json(orient='records'))
+                        }
+        json.dump(sofa_series, f_report)
+        cpu_traces.rename(columns={'x':'timestamp', 'y':'duration'}, inplace=True)
+        f_report.write("\n\n")
+
+        if len(net_traces) > 0:
+            f_report.write("net_traces = ")
+            net_traces.rename(columns={'timestamp': 'x', 'duration':'y'}, inplace=True)
+            sofa_series = { "name": 'Network',
+                            "color": 'rgba(100, 255, 50, .5)',
+                            "data": json.loads(net_traces.to_json(orient='records'))
+                            }
+            json.dump(sofa_series, f_report)
+            net_traces.rename(columns={'x':'timestamp', 'y':'duration'}, inplace=True)
+        else:
+            f_report.write("net_traces = {}")
+        f_report.write("\n\n")
+
+        if len(gpu_kernel_traces) > 0:
+            f_report.write("gpu_kernel_traces = ")
+            gpu_kernel_traces.rename(columns={'timestamp': 'x', 'duration':'y'}, inplace=True)
+            sofa_series = { "name": 'GPU_Kernel',
+                            "color": 'rgba(10, 50, 255, .5)',
+                            "data": json.loads(gpu_kernel_traces.to_json(orient='records'))
+                            }
+            json.dump(sofa_series, f_report)
+            gpu_kernel_traces.rename(columns={'x':'timestamp', 'y':'duration'}, inplace=True)
+        else:
+            f_report.write("gpu_kernel_traces = {}") 
+        f_report.write("\n\n")
+       
+        if len(gpu_memcpy_traces) > 0:
+            f_report.write("gpu_memcpy_traces = ")
+            gpu_memcpy_traces.rename(columns={'timestamp': 'x', 'duration':'y'}, inplace=True)
+            sofa_series = { "name": 'GPU_MEMCPY',
+                            "color": 'rgba(10, 110, 200, .5)',
+                            "data": json.loads(gpu_memcpy_traces.to_json(orient='records'))
+                            }
+            json.dump(sofa_series, f_report)
+            gpu_memcpy_traces.rename(columns={'x':'timestamp', 'y':'duration'}, inplace=True)
+        else:
+            f_report.write("gpu_memcpy_traces = {}") 
+        f_report.write("\n\n")
+        
+        if len(gpu_memcpy2_traces) > 0:
+            #traces_to_json(cpu_traces, 'timestamp', 'event', 'CPU', 'rgba(255,100,50,.5)', logdir + 'gpu-overhead.js', 'a')
+            f_report.write("gpu_memcpy2_traces = ")
+            gpu_memcpy2_traces.rename(columns={'timestamp': 'x', 'duration':'y'}, inplace=True)
+            sofa_series = { "name": 'GPU_MEMCPY2',
+                            "color": 'rgba(10, 80, 50, .5)',
+                            "data": json.loads(gpu_memcpy2_traces.to_json(orient='records'))
+                            }
+            json.dump(sofa_series, f_report)
+            gpu_memcpy2_traces.rename(columns={'x':'timestamp', 'y':'duration'}, inplace=True)
+        else:
+            f_report.write("gpu_memcpy2_traces = {}") 
+        f_report.write("\n\n")
+        
+        f_report.write("sofa_traces = [ cpu_traces, net_traces, gpu_kernel_traces, gpu_memcpy_traces, gpu_memcpy2_traces ]")        
+                
+    print_progress("Display overhead dynamic for cpu, network and gpu traces -- end")
 
 
 
