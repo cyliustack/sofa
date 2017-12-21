@@ -49,8 +49,7 @@ cp -f sofaboard/index.html          ${PREFIX}/sofaboard
 cp -f sofaboard/timeline.js         ${PREFIX}/sofaboard
 cp -f sofaboard/cpu-report.html     ${PREFIX}/sofaboard
 cp -f sofaboard/gpu-report.html     ${PREFIX}/sofaboard
-cp -f sofaboard/cpu-overhead.html          ${PREFIX}/sofaboard
-cp -f sofaboard/gpu-overhead.html          ${PREFIX}/sofaboard
+cp -f sofaboard/overhead.html          ${PREFIX}/sofaboard
 echo "export PATH=\$PATH:${PREFIX}/bin" > tools/activate.sh
 cp -f tools/activate.sh   ${PREFIX}/tools
 set +x

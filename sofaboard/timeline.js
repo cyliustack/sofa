@@ -20,7 +20,7 @@ Highcharts.chart('container', {
     },
     yAxis: {
         title: {
-            text: 'Function (ID)'
+            text: 'Overhead (s)'
         },
         type: "logarithmic"
     },
