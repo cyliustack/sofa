@@ -373,7 +373,7 @@ if __name__ == "__main__":
     sofatrace = SOFATrace()
     sofatrace.name = 'cpu_trace'
     sofatrace.title = 'CPU'
-    sofatrace.color = 'rgba(255,100,50,.5)'
+    sofatrace.color = 'orange'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = cpu_traces
@@ -382,7 +382,7 @@ if __name__ == "__main__":
     sofatrace = SOFATrace()
     sofatrace.name = 'net_trace'
     sofatrace.title = 'NET'
-    sofatrace.color = 'rgba(0,255,50,.5)'
+    sofatrace.color = 'blue'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = net_traces
@@ -391,7 +391,7 @@ if __name__ == "__main__":
     sofatrace = SOFATrace()
     sofatrace.name = 'gpu_kernel_trace'
     sofatrace.title = 'GPU kernel'
-    sofatrace.color = 'rgba(0,0,255,.5)'
+    sofatrace.color = 'rgba(0,180,0,0.8)'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = gpu_kernel_traces
@@ -400,7 +400,7 @@ if __name__ == "__main__":
     sofatrace = SOFATrace()
     sofatrace.name = 'gpu_memcpy_trace'
     sofatrace.title = 'GPU memcpy'
-    sofatrace.color = 'rgba(5,50,255,.5)'
+    sofatrace.color = 'red'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = gpu_memcpy_traces
@@ -409,7 +409,7 @@ if __name__ == "__main__":
     sofatrace = SOFATrace()
     sofatrace.name = 'gpu_memcpy2_trace'
     sofatrace.title = 'GPU memcpy2'
-    sofatrace.color = 'rgba(5,50,255,.5)'
+    sofatrace.color = 'brown'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = gpu_memcpy2_traces
