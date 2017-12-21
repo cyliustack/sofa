@@ -322,7 +322,7 @@ if __name__ == "__main__":
             gpu_memcpy_traces.at[i,'pkt_dst']     =   -1
             gpu_memcpy_traces.at[i,'pid']         =   record[7] #streamId
             gpu_memcpy_traces.at[i,'tid']         =   -1
-            gpu_memcpy_traces.loc[i,'name']        =   "%dB"% record[2]#
+            gpu_memcpy_traces.loc[i,'name']       =  "gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]) 
             gpu_memcpy_traces.at[i,'category']    =   0
         
     print_progress("export-csv CUDA memcpy (h2d,d2h,d2d) -- end")
@@ -360,7 +360,7 @@ if __name__ == "__main__":
             gpu_memcpy2_traces.at[i,'pkt_dst']     =   -1
             gpu_memcpy2_traces.at[i,'pid']         =   record[7] #streamId
             gpu_memcpy2_traces.at[i,'tid']         =   -1
-            gpu_memcpy2_traces.loc[i,'name']        =   "%dB"% record[2]#
+            gpu_memcpy2_traces.loc[i,'name']        =   "gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2])
             gpu_memcpy2_traces.at[i,'category']    =   0
         
     print_progress("export-csv CUDA memcpy2 (h2d,d2h,d2d) -- end")
