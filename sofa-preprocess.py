@@ -299,8 +299,8 @@ if __name__ == "__main__":
             if i == 0:
                 t_base = record[0]
    
-          #      t_begin = (record[0] - t_base) / 1e9 + t_glb_base
-          #      t_end = (record[1] - t_base) / 1e9 + t_glb_base
+          #      t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
+          #      t_end = (record[1] - t_base) / 1e9 + t_glb_gpu_base
           #      duration = t_end - t_begin
           #      gputrace.time = t_begin
           #      gputrace.event = -1

@@ -3,6 +3,10 @@ Highcharts.chart('container', {
         type: 'scatter',
         zoomType: 'xy'
     },
+    boost: {
+          useGPUTranslations: true,
+          usePreAllocated: true
+      },
     title: {
         text: 'Time Versus Functions and Events'
     },
