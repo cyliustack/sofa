@@ -122,12 +122,13 @@ def gpu_profile(df_gpu):
             "[%s]: %lf" %
             (cktable[key], grouped_df.get_group(key).sum() / 1000000.0))
 
-    print_title("Data Communication (bidirection) Time for each CopyKind (s)")
+    print_title("Data Communication Time for each CopyKind (s)")
     durations_copyKind = grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
-        print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
+        if int(float(key))>0:
+            print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
 
-    print_title("Data Communication Time for Each Pair of deviceId and CopyKind (s)")
+    print_title("Data Traffic for Each Pair of deviceId and CopyKind (MB)")
     devcopy = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["payload"].sum()/1000000
     print(devcopy)
 
