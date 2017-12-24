@@ -84,8 +84,8 @@ ckindex = [1,2,8,10]
 
 
        
-def gpu_profile(df): 
-
+def gpu_profile(df_gpu): 
+    #df_gpu = df_gpu.convert_objects(convert_numeric=True)
     #with open(logdir + 'overhead.js', 'w') as jsonfile:
     #    x = y = data = []
     #    A = df_gpu.groupby("copyKind")
@@ -104,7 +104,7 @@ def gpu_profile(df):
     grouped_df = df_gpu.groupby("deviceId")["duration"]
     total_tasktime = 0
     for key, item in grouped_df:
-        print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
+        print("[%d]: %lf" % (int(float(key)), grouped_df.get_group(key).sum() ))
         total_tasktime = total_tasktime + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
     avg_tasktime = total_tasktime / n_devices
@@ -146,7 +146,7 @@ def gpu_profile(df):
         print_title("Overlapness for All Events (s)")
         events = []
         for i in range(len(df_gpu)):
-            t_begin = df_gpu.iloc[i]['time']
+            t_begin = df_gpu.iloc[i]['timestamp']
             d = df_gpu.iloc[i]['duration']
             t_end = t_begin + d
             e = Event(i, 0, t_begin, d)
@@ -154,7 +154,7 @@ def gpu_profile(df):
             e = Event(i, 1, t_end, d)
             events.append(e)
         # for i in range(3):
-        # print("df_gpu[%d]=%lf" % (i,df_gpu.iloc[i]['time']))
+        # print("df_gpu[%d]=%lf" % (i,df_gpu.iloc[i]['timestamp']))
         #    t_begin =   i
         #    d = 0.5 * random.randint(1, 10)
         #    t_end = t_begin + d

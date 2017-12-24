@@ -26,7 +26,7 @@ def print_info(content):
     print(bcolors.OKGREEN + "[INFO] " + content + bcolors.ENDC)
 
 def print_progress(content):
-    print(bcolors.OKBLUE + "[INFO] " + content + bcolors.ENDC)
+    print(bcolors.OKBLUE + "[PROGRESS] " + content + bcolors.ENDC)
 
 class SOFATrace:
     data = []
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     with open(logdir + 'sofa_time.txt') as f:
         t_glb_base = float(f.readlines()[0])
         t_glb_net_base = t_glb_base + 0.5
-        t_glb_gpu_base = t_glb_base + 3.0
+        t_glb_gpu_base = t_glb_base 
         print t_glb_base
         print t_glb_net_base
         print t_glb_gpu_base
@@ -117,6 +117,8 @@ if __name__ == "__main__":
     gpu_kernel_traces = []
     gpu_memcpy_traces = []
     gpu_memcpy2_traces = []
+    gpulog_mode = 'w'
+    gpulog_header = 'True'
 
     with open(logdir + 'perf.script') as f:
         samples = f.readlines()
@@ -169,6 +171,10 @@ if __name__ == "__main__":
             cpu_traces.at[i,'tid']         =   int(fields[0].split('/')[1])
             cpu_traces.loc[i,'name']        =   fields[5] #.replace("[", "_").replace("]", "_")
             cpu_traces.at[i,'category']    =   0
+            
+            if (cpu_traces.loc[i,'name'] == "testHostToDeviceTransfer"):
+                t_glb_gpu_base = float(cpu_traces.at[i,'timestamp'])
+
         cpu_traces.to_csv(logdir + 'cputrace.csv', mode='w', header=True)        
 
 
@@ -234,6 +240,8 @@ if __name__ == "__main__":
             print_info("No GPU traces were collected.")
     print_progress("query CUDA kernels -- end")
     
+    with open(logdir+"gputrace.csv",mode='w') as f:
+        print_info("Create new gputrace.csv")    
     
     if  os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_KERNEL.csv") or os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL.csv") : 
         print_progress("export-csv CUDA kernels -- begin")
@@ -251,7 +259,7 @@ if __name__ == "__main__":
             t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
             gpu_kernel_traces.at[i,'timestamp']   =   t_begin
             gpu_kernel_traces.at[i,'event']       =   record[2] 
-            gpu_kernel_traces.at[i,'duration']    =   t_end - t_begin
+            gpu_kernel_traces.at[i,'duration']    =   float(t_end - t_begin)
             gpu_kernel_traces.at[i,'deviceId']    =   record[4]
             gpu_kernel_traces.at[i,'copyKind']    =   -1
             gpu_kernel_traces.at[i,'payload']     =   0
@@ -259,9 +267,15 @@ if __name__ == "__main__":
             gpu_kernel_traces.at[i,'pkt_dst']     =   -1
             gpu_kernel_traces.at[i,'pid']         =   record[3] #streamId
             gpu_kernel_traces.at[i,'tid']         =   -1
-            gpu_kernel_traces.loc[i,'name']       =   "%s" % (gpu_symbol_table.loc[gpu_symbol_table._id_ == record[2], 'value']) # "ID%d"%record[2] #
+            kernel_name = "%s"%(gpu_symbol_table.loc[gpu_symbol_table._id_ == record[2], 'value'])
+            kernel_name = kernel_name[:-30]
+            gpu_kernel_traces.loc[i,'name']       =   kernel_name # "ID%d"%record[2] #
             gpu_kernel_traces.at[i,'category']    =   0
-        gpu_kernel_traces.to_csv(logdir + 'gputrace.csv', mode='w')        
+        gpu_kernel_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
+        gpulog_mode = 'a'
+        gpulog_header = False
+
+
         print_progress("export-csv CUDA kernels -- end")
 
  
@@ -314,7 +328,7 @@ if __name__ == "__main__":
             t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
             gpu_memcpy_traces.at[i,'timestamp']   =   t_begin
             gpu_memcpy_traces.at[i,'event']       =   record[2] 
-            gpu_memcpy_traces.at[i,'duration']    =   t_end - t_begin
+            gpu_memcpy_traces.at[i,'duration']    =   float(t_end - t_begin)
             gpu_memcpy_traces.at[i,'deviceId']    =   record[4]
             gpu_memcpy_traces.at[i,'copyKind']    =   record[3]
             gpu_memcpy_traces.at[i,'payload']     =   record[2]
@@ -324,7 +338,14 @@ if __name__ == "__main__":
             gpu_memcpy_traces.at[i,'tid']         =   -1
             gpu_memcpy_traces.loc[i,'name']       =  "gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]) 
             gpu_memcpy_traces.at[i,'category']    =   0
-        
+        gpu_memcpy_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
+        gpulog_mode = 'a'
+        gpulog_header = False
+
+
+    gpu_memcpy_h2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 1)].copy()
+    gpu_memcpy_d2h_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 2)].copy()
+    gpu_memcpy_d2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 8)].copy()
     print_progress("export-csv CUDA memcpy (h2d,d2h,d2d) -- end")
  
     
@@ -336,7 +357,7 @@ if __name__ == "__main__":
     except sqlite3.OperationalError:
         print_info("No GPU MEMCPY2 traces were collected.")
     print_progress("query CUDA memcpy2 (p2p) -- end")
-    
+   
     print_progress("export-csv CUDA memcpy2 (p2p) -- begin")
     if  os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_MEMCPY2.csv") : 
         gpu_memcpy2_traces = pd.DataFrame(pd.np.empty((len(gpu_memcpy2_records), len(sofa_fieldnames))) * pd.np.nan) 
@@ -352,7 +373,7 @@ if __name__ == "__main__":
             t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
             gpu_memcpy2_traces.at[i,'timestamp']   =   t_begin
             gpu_memcpy2_traces.at[i,'event']       =   record[2] 
-            gpu_memcpy2_traces.at[i,'duration']    =   t_end - t_begin
+            gpu_memcpy2_traces.at[i,'duration']    =   float(t_end - t_begin)
             gpu_memcpy2_traces.at[i,'deviceId']    =   record[4]
             gpu_memcpy2_traces.at[i,'copyKind']    =   record[3]
             gpu_memcpy2_traces.at[i,'payload']     =   record[2]
@@ -362,7 +383,9 @@ if __name__ == "__main__":
             gpu_memcpy2_traces.at[i,'tid']         =   -1
             gpu_memcpy2_traces.loc[i,'name']        =   "gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2])
             gpu_memcpy2_traces.at[i,'category']    =   0
-        
+        gpu_memcpy2_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
+        gpulog_mode = 'a'
+        gpulog_header = False
     print_progress("export-csv CUDA memcpy2 (h2d,d2h,d2d) -- end")
     
     
@@ -398,12 +421,30 @@ if __name__ == "__main__":
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()
-    sofatrace.name = 'gpu_memcpy_trace'
-    sofatrace.title = 'GPU memcpy'
+    sofatrace.name = 'gpu_memcpy_h2d_trace'
+    sofatrace.title = 'GPU memcpy (H2D)'
     sofatrace.color = 'red'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
-    sofatrace.data = gpu_memcpy_traces
+    sofatrace.data = gpu_memcpy_h2d_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'gpu_memcpy_d2h_trace'
+    sofatrace.title = 'GPU memcpy (D2H)'
+    sofatrace.color = 'pink'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = gpu_memcpy_d2h_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'gpu_memcpy_d2d_trace'
+    sofatrace.title = 'GPU memcpy (D2D)'
+    sofatrace.color = 'magenta'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = gpu_memcpy_d2d_traces
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()
