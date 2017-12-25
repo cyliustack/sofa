@@ -129,6 +129,9 @@ if __name__ == "__main__":
     gpu_kernel_traces = []
     gpu_memcpy_traces = []
     gpu_memcpy2_traces = []
+    gpu_memcpy_h2d_traces = []
+    gpu_memcpy_d2h_traces = []
+    gpu_memcpy_d2d_traces = []
     gpulog_mode = 'w'
     gpulog_header = 'True'
 
@@ -241,8 +244,8 @@ if __name__ == "__main__":
             print_info("No GPU traces were collected.")
     print_progress("query CUDA kernels -- end")
     
-    with open(logdir+"gputrace.csv",mode='w') as f:
-        print_info("Create new gputrace.csv")    
+    #with open(logdir+"gputrace.csv",mode='w') as f:
+    #    print_info("Create new gputrace.csv")    
     
     if  os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_KERNEL.csv") or os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL.csv") : 
         print_progress("export-csv CUDA kernels -- begin")
@@ -275,7 +278,7 @@ if __name__ == "__main__":
         gpu_kernel_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
         gpulog_mode = 'a'
         gpulog_header = False
-
+        
 
         print_progress("export-csv CUDA kernels -- end")
 
@@ -343,11 +346,14 @@ if __name__ == "__main__":
         gpu_memcpy_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
         gpulog_mode = 'a'
         gpulog_header = False
-
-
-    gpu_memcpy_h2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 1)].copy()
-    gpu_memcpy_d2h_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 2)].copy()
-    gpu_memcpy_d2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 8)].copy()
+        if len(gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 1)]) > 0:
+            gpu_memcpy_h2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 1)].copy()
+        
+        if len(gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 2)]) > 0:
+            gpu_memcpy_d2h_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 2)].copy()
+        
+        if len(gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 8)]) > 0:
+            gpu_memcpy_d2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 8)].copy()
 
     print_progress("export-csv CUDA memcpy (h2d,d2h,d2d) -- end")
  
