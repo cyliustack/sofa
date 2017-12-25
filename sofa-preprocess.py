@@ -7,6 +7,8 @@ import csv
 import cxxfilt
 import json
 import sys
+import argparse
+
 
 class bcolors:
     HEADER = '\033[95m'
@@ -92,17 +94,26 @@ sofa_fieldnames = [
 if __name__ == "__main__":
 
     sys.stdout.flush()
-    print('Argument List: %s', str(sys.argv))
-    logdir = []
-    filein = []
-    
-    if len(sys.argv) < 2:
-        print_info("Usage: sofa-preproc.py /path/to/logdir")
-        quit()
-    else:
-        logdir = sys.argv[1] + "/"
-        filein = logdir + "gputrace.nvp"
+     
+    parser = argparse.ArgumentParser(description='SOFA Preprocessing')
+    parser.add_argument("--logdir", metavar="/path/to/logdir/", type=str, required=True, 
+                    help='path to the directory of SOFA logged files')
+    parser.add_argument('--config', metavar="/path/to/config.cfg", type=str, required=True,
+                    help='path to the directory of SOFA configuration file')
 
+    args =parser.parse_args()
+    logdir = args.logdir + "/"
+
+    cfg = json.loads('{"filters":[{"keyword":"idle","color":"cadeblue"}, {"keyword":"flush", "color":"#00BFFF"} ]}')
+    try:
+        with open(args.config) as f:
+            cfg = json.load(f)
+    except:
+        with open( 'sofa.cfg', "w") as f:
+            json.dump(cfg,f)
+            f.write("\n")
+    print_info("SOFA Configuration: ")    
+    print(cfg)
     
     with open(logdir + 'sofa_time.txt') as f:
         t_glb_base = float(f.readlines()[0])
@@ -134,30 +145,6 @@ if __name__ == "__main__":
             func_name = fields[5]
             t_begin = time - t_base + t_glb_base
             t_end = time - t_base + t_glb_base
-#        'timestamp',
-#        "event",
-#        "duration",
-#        "deviceId",
-#        "copyKind",
-#        "payload",
-#        "pkt_src",
-#        "pkt_dst",
-#        "pid",
-#        "tid",
-#        "name",
-#        "category"]
-#            cpu_traces.iat[i,0]   =   t_begin
-#            cpu_traces.iat[i,1]     =   np.log(int("0x" + fields[4], 16)) #% 1000000
-#            cpu_traces.iat[i,2]    =   float(fields[3]) / 1.5e9  
-#            cpu_traces.iat[i,3]    =    int(fields[1].split('[')[1].split(']')[0])
-#            cpu_traces.iat[i,4]    =   -1
-#            cpu_traces.iat[i,5]     =   0
-#            cpu_traces.iat[i,6]     =   -1 
-#            cpu_traces.iat[i,7]     =   -1
-#            cpu_traces.iat[i,8]     =   int(fields[0].split('/')[0])     
-#            cpu_traces.iat[i,9]     =   int(fields[0].split('/')[1])
-#            cpu_traces.iloc[i,10]     =   fields[5] #.replace("[", "_").replace("]", "_")
-#            cpu_traces.iat[i,11]    =   0
 
             cpu_traces.at[i,'timestamp']   =   t_begin
             cpu_traces.at[i,'event']       =   np.log(int("0x" + fields[4], 16)) #% 1000000
@@ -178,6 +165,16 @@ if __name__ == "__main__":
         cpu_traces.to_csv(logdir + 'cputrace.csv', mode='w', header=True)        
 
 
+    df_grouped = cpu_traces.groupby('name')
+    filtered_groups = []
+    color_of_filtered_group = []
+    #e.g. cpu_trace_filters = [ {"keyword":"nv_", "color":"red"}, {"keyword":"idle", "color":"green"} ]
+    cpu_trace_filters = cfg['filters'] 
+    for cpu_trace_filter in cpu_trace_filters:
+        group = cpu_traces[ cpu_traces['name'].str.contains(cpu_trace_filter['keyword'], re.IGNORECASE)]
+        filtered_groups.append({'group':group,'color':cpu_trace_filter['color'], 'keyword':cpu_trace_filter['keyword']})
+
+    
     with open(logdir + 'sofa.pcap','r') as f_pcap:
         packets = rdpcap(logdir + 'sofa.pcap')
         net_traces = pd.DataFrame(pd.np.empty((len(packets), len(sofa_fieldnames))) * pd.np.nan)
@@ -212,7 +209,8 @@ if __name__ == "__main__":
 
     ### ============ Preprocessing GPU Trace ==========================
     print_progress("read nvprof traces -- begin")
-    sqlite_file = filein
+    sqlite_file = logdir + "gputrace.nvp"
+
     db = sqlite3.connect(sqlite_file)
     cursor = db.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
@@ -401,7 +399,18 @@ if __name__ == "__main__":
     sofatrace.y_field = 'duration'
     sofatrace.data = cpu_traces
     traces.append(sofatrace)
-   
+
+    for filtered_group in filtered_groups:
+        sofatrace = SOFATrace()
+        sofatrace.name = filtered_group['keyword']
+        sofatrace.title = 'keyword_'+sofatrace.name
+        sofatrace.color = filtered_group['color']
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = filtered_group['group'].copy()
+        traces.append(sofatrace)
+    
+
     sofatrace = SOFATrace()
     sofatrace.name = 'net_trace'
     sofatrace.title = 'NET'

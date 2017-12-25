@@ -20,7 +20,7 @@ Simple Test:
 
 # 3. Quick Start 
 
-## 3-1. Hello World 
+## 3-1. Basic Usages 
 ### Usage1: Basic performance statistics
 `sofa stat ping google.com.tw -c 3`  
 ### Usage2: Performance statistics and visualized analysis
@@ -31,6 +31,9 @@ Simple Test:
 `sofa record your_command [Do it once.]`   
 `sofa preprocess [Do it once.]`    
 `sofa analyze    [Do it as many times as you would like to.]`
+### Usage4: Add filters to configuration ./sofa.cfg
+`vim ./sofa.cfg`  
+`sofa stat ping google.com.tw -c 3`  
 
 
 
@@ -43,7 +46,7 @@ Simple Test:
 ![Alt text](./figures/demo2.png)
 `sofa record mpirun -f hosts.txt -n 4 ./compute_pi`   
 ![Alt text](./figures/demo3.png)
-`sofa record ./tools/gpu-train.sh resnet50 32 1 --num_batches=20`      
+`sofa record ./tools/gpu-train.sh resnet50 32 1 --num_batches=10`      
 ![Alt text](./figures/demo4.png)
 
 

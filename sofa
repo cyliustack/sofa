@@ -3,7 +3,7 @@
 SOFA_BIN=$(dirname "$0")
 SOFA_HOME="`echo "$SOFA_BIN" | rev | cut -d/ -f2- | rev`"
 logdir=./sofalog
-
+config_file=./sofa.cfg
 C_NONE="\033[0m"
 C_CYAN="\033[36m"
 C_RED="\033[31m"
@@ -72,9 +72,9 @@ function collect_trace(){
 
 function sofa_preprocess(){
     echo "SOFA_HOME = ${SOFA_HOME}"
-    print_info "Configuration File: ${configFile}"
+    print_info "SOFA Configuration File: ${config_file}"
     perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period > ${logdir}/perf.script
-    ${SOFA_BIN}/sofa-preprocess.py ${logdir}
+    ${SOFA_BIN}/sofa-preprocess.py --logdir=${logdir} --config=${config_file}
 }
 
 function sofa_apply_plugin(){
@@ -117,7 +117,6 @@ function main()
     fi
 
     #args=$*
-    configFile="default.json"
     print_info "SOFA: Function Swarms Analysis"
     
     until [ $# -eq 0 ]
@@ -189,7 +188,7 @@ function main()
                 ;;
             "--config" )
                 shift
-                configFile=$1
+                config_file=$1
                 ;;
             *)
                 print_help
