@@ -84,6 +84,7 @@ sofa_fieldnames = [
         "deviceId",
         "copyKind",
         "payload",
+        "bandwidth",
         "pkt_src",
         "pkt_dst",
         "pid",
@@ -152,6 +153,7 @@ if __name__ == "__main__":
             cpu_traces.at[i,'deviceId']    =    int(fields[1].split('[')[1].split(']')[0])
             cpu_traces.at[i,'copyKind']    =   -1
             cpu_traces.at[i,'payload']     =   0
+            cpu_traces.at[i,'bandwidth']   =   0
             cpu_traces.at[i,'pkt_src']     =   -1 
             cpu_traces.at[i,'pkt_dst']     =   -1
             cpu_traces.at[i,'pid']         =   int(fields[0].split('/')[0])     
@@ -196,6 +198,7 @@ if __name__ == "__main__":
                 net_traces.at[i,'deviceId']    =   -1
                 net_traces.at[i,'copyKind']    =   -1
                 net_traces.at[i,'payload']     =   payload
+                net_traces.at[i,'bandwidth']   =   125.0e6
                 net_traces.at[i,'pkt_src']     =   pkt_src 
                 net_traces.at[i,'pkt_dst']     =   pkt_dst
                 net_traces.at[i,'pid']         =   -1  
@@ -330,6 +333,7 @@ if __name__ == "__main__":
             gpu_memcpy_traces.at[i,'deviceId']    =   record[4]
             gpu_memcpy_traces.at[i,'copyKind']    =   record[3]
             gpu_memcpy_traces.at[i,'payload']     =   record[2]
+            gpu_memcpy_traces.at[i,'bandwidth']   =   float(record[2])/(t_end-t_begin)/1.0e6
             gpu_memcpy_traces.at[i,'pkt_src']     =   -1
             gpu_memcpy_traces.at[i,'pkt_dst']     =   -1
             gpu_memcpy_traces.at[i,'pid']         =   record[7] #streamId
@@ -344,6 +348,7 @@ if __name__ == "__main__":
     gpu_memcpy_h2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 1)].copy()
     gpu_memcpy_d2h_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 2)].copy()
     gpu_memcpy_d2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 8)].copy()
+
     print_progress("export-csv CUDA memcpy (h2d,d2h,d2d) -- end")
  
     
@@ -375,6 +380,7 @@ if __name__ == "__main__":
             gpu_memcpy2_traces.at[i,'deviceId']    =   record[4]
             gpu_memcpy2_traces.at[i,'copyKind']    =   record[3]
             gpu_memcpy2_traces.at[i,'payload']     =   record[2]
+            gpu_memcpy2_traces.at[i,'bandwidth']     =   record[2]/float((t_end-t_begin))/1.0e6
             gpu_memcpy2_traces.at[i,'pkt_src']     =   -1
             gpu_memcpy2_traces.at[i,'pkt_dst']     =   -1
             gpu_memcpy2_traces.at[i,'pid']         =   record[7] #streamId
@@ -409,7 +415,6 @@ if __name__ == "__main__":
         sofatrace.y_field = 'duration'
         sofatrace.data = filtered_group['group'].copy()
         traces.append(sofatrace)
-    
 
     sofatrace = SOFATrace()
     sofatrace.name = 'net_trace'
@@ -457,11 +462,48 @@ if __name__ == "__main__":
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()
+    sofatrace.name = 'gpu_memcpy_h2d_bw_trace'
+    sofatrace.title = 'GPU memcpy H2D bandwidth (MB/s)'
+    sofatrace.color = 'DarkSeaGreen'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'bandwidth'
+    sofatrace.data = gpu_memcpy_h2d_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'gpu_memcpy_d2h_bw_trace'
+    sofatrace.title = 'GPU memcpy D2H bandwidth (MB/s)'
+    sofatrace.color = 'DarkKhaki'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'bandwidth'
+    sofatrace.data = gpu_memcpy_d2h_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'gpu_memcpy_d2d_bw_trace'
+    sofatrace.title = 'GPU memcpy D2D bandwidth (MB/s)'
+    sofatrace.color = 'DarkMagenta'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'bandwidth'
+    sofatrace.data = gpu_memcpy_d2d_traces
+    traces.append(sofatrace)
+
+
+    sofatrace = SOFATrace()
     sofatrace.name = 'gpu_memcpy2_trace'
     sofatrace.title = 'GPU memcpy2'
     sofatrace.color = 'brown'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
+    sofatrace.data = gpu_memcpy2_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'gpu_memcpy2_bw_trace'
+    sofatrace.title = 'GPU memcpy2 bandwidth (MB/s)'
+    sofatrace.color = 'DarkSeaGreen'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'bandwidth'
     sofatrace.data = gpu_memcpy2_traces
     traces.append(sofatrace)
 
