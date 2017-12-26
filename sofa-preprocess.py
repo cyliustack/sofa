@@ -452,7 +452,7 @@ if __name__ == "__main__":
     sofatrace = SOFATrace()
     sofatrace.name = 'gpu_memcpy_d2h_trace'
     sofatrace.title = 'GPU memcpy (D2H)'
-    sofatrace.color = 'pink'
+    sofatrace.color = 'greenyellow'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = gpu_memcpy_d2h_traces
@@ -461,7 +461,7 @@ if __name__ == "__main__":
     sofatrace = SOFATrace()
     sofatrace.name = 'gpu_memcpy_d2d_trace'
     sofatrace.title = 'GPU memcpy (D2D)'
-    sofatrace.color = 'magenta'
+    sofatrace.color = 'darkblue'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = gpu_memcpy_d2d_traces
@@ -470,7 +470,7 @@ if __name__ == "__main__":
     sofatrace = SOFATrace()
     sofatrace.name = 'gpu_memcpy_h2d_bw_trace'
     sofatrace.title = 'GPU memcpy H2D bandwidth (MB/s)'
-    sofatrace.color = 'DarkSeaGreen'
+    sofatrace.color = 'Crimson'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'bandwidth'
     sofatrace.data = gpu_memcpy_h2d_traces
@@ -479,7 +479,7 @@ if __name__ == "__main__":
     sofatrace = SOFATrace()
     sofatrace.name = 'gpu_memcpy_d2h_bw_trace'
     sofatrace.title = 'GPU memcpy D2H bandwidth (MB/s)'
-    sofatrace.color = 'DarkKhaki'
+    sofatrace.color = 'DarkOliveGreen'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'bandwidth'
     sofatrace.data = gpu_memcpy_d2h_traces
