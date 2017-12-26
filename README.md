@@ -38,7 +38,7 @@ Simple Test:
 
 
 ## Interactive and Visualization Result:  
-`sofa record ./tools/gpu-train.sh resnet50 64 1`      
+`sofa record ~/cuda_samples/1_Utilities/bandwidthTest/bandwidthTest`      
 ![Alt text](./figures/demo0.png)
 `sofa record ./tools/gpu-train.sh resnet50 64 8 --num_warmup_batches=0 --num_batches=1`      
 ![Alt text](./figures/demo1.png)
