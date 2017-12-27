@@ -8,6 +8,113 @@ import cxxfilt
 import json
 import sys
 import argparse
+import multiprocessing as mp
+from functools import partial
+
+def cpu_trace_read(sample, t_offset):
+    fields = sample.split()
+    time = float(fields[2].split(':')[0])
+    func_name = fields[5]
+    t_begin = time + t_offset
+    t_end = time  + t_offset
+
+    trace = [t_begin,
+    	np.log(int("0x" + fields[4], 16)), #% 1000000
+    	float(fields[3]) / 1.5e9,  
+    	int(fields[1].split('[')[1].split(']')[0]),
+    	-1,
+    	0,
+    	0,
+    	-1,
+    	-1,
+    	int(fields[0].split('/')[0]),    
+    	int(fields[0].split('/')[1]),
+    	fields[5], 
+    	0]
+     
+    return trace
+
+def gpu_kernel_trace_read(record, t_base, t_glb_base):
+    t_begin = (record[0] - t_base) / 1e9 + t_glb_base
+    t_end   = (record[1] - t_base) / 1e9 + t_glb_base
+    kernel_name = "%s"%(gpu_symbol_table.loc[gpu_symbol_table._id_ == record[2], 'value'])
+    kernel_name = kernel_name[:-30]
+    trace = [	t_begin,
+		record[2],
+		float(t_end - t_begin),
+		record[4],
+		-1,
+		0,
+		0.0,
+		-1,
+		-1,
+		record[3],
+		-1,
+		kernel_name,
+		0]
+    return trace
+
+def gpu_memcpy_trace_read(record, t_base, t_glb_base):
+    t_begin = (record[0] - t_base) / 1e9 + t_glb_base
+    t_end   = (record[1] - t_base) / 1e9 + t_glb_base
+    trace = [	t_begin,
+    		record[2],
+    		float(t_end - t_begin),
+    		record[4],
+    		record[3],
+    		record[2],
+    		float(record[2])/(t_end-t_begin)/1.0e6,
+    		-1,
+    		-1,
+    		record[7], #streamId
+    		-1,
+    		"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]), 
+    		0]
+    return trace
+
+def gpu_memcpy2_trace_read(record, t_base, t_glb_base):
+    t_begin = (record[0] - t_base) / 1e9 + t_glb_base
+    t_end   = (record[1] - t_base) / 1e9 + t_glb_base
+    trace = [	t_begin,
+    		record[2],
+    		float(t_end - t_begin),
+    		record[4],
+    		record[3],
+    		record[2],
+    		float(record[2])/(t_end-t_begin)/1.0e6,
+    		-1,
+    		-1,
+    		record[7], #streamId
+    		-1,
+    		"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]), 
+    		0]
+    return trace
+
+def net_trace_read(packet, t_base, t_glb_base):
+    try:
+        time = packet[IP].time
+        t_begin = (time - t_base) + t_glb_base
+        t_end = (time - t_base) + t_glb_base
+        payload = packet.len
+        pkt_src = packet[IP].src.split('.')[3]
+        pkt_dst = packet[IP].dst.split('.')[3]                
+        trace = [   t_begin,
+       	            payload*100+17,
+       	            payload/125.0e6,   
+       	            -1,
+       	            -1,
+       	            payload,
+       	            125.0e6,
+       	            pkt_src,
+       	            pkt_dst,
+       	            -1, 
+       	            -1,
+       	            "%s_to_%s_with_%d" % (pkt_src, pkt_dst, payload),
+       	            0]
+	return trace
+    except Exception as e:
+        print(e)
+	return []
 
 
 class bcolors:
@@ -93,9 +200,8 @@ sofa_fieldnames = [
         "category"]
 
 if __name__ == "__main__":
-
-    sys.stdout.flush()
-     
+    
+ 
     parser = argparse.ArgumentParser(description='SOFA Preprocessing')
     parser.add_argument("--logdir", metavar="/path/to/logdir/", type=str, required=True, 
                     help='path to the directory of SOFA logged files')
@@ -134,38 +240,44 @@ if __name__ == "__main__":
     gpu_memcpy_d2d_traces = []
     gpulog_mode = 'w'
     gpulog_header = 'True'
-
+    cpu_count = mp.cpu_count()
+    
     with open(logdir + 'perf.script') as f:
         samples = f.readlines()
         t_base = 0
-        cpu_traces = pd.DataFrame(pd.np.empty((len(samples), len(sofa_fieldnames))) * pd.np.nan) 
-        cpu_traces.columns = sofa_fieldnames 
         print_info("Length of cpu_traces = %d"%len(cpu_traces))
-        for i in range(0, len(cpu_traces)):
-            fields = samples[i].split()
-            time = float(fields[2].split(':')[0])
-            if i == 0:
-                t_base = time
-            func_name = fields[5]
-            t_begin = time - t_base + t_glb_base
-            t_end = time - t_base + t_glb_base
+	
+        pool = mp.Pool(processes=cpu_count)
+	t_base = float((samples[0].split())[2].split(':')[0]) 
+	res = pool.map( partial(cpu_trace_read, t_offset=t_glb_base - t_base), samples)
+	cpu_traces = pd.DataFrame(res)
+        cpu_traces.columns = sofa_fieldnames 
+	#print res
+	#for i in range(0, len(cpu_traces)):
+        #    fields = samples[i].split()
+        #    time = float(fields[2].split(':')[0])
+        #    if i == 0:
+        #        t_base = time
+        #    func_name = fields[5]
+        #    t_begin = time - t_base + t_glb_base
+        #    t_end = time - t_base + t_glb_base
 
-            cpu_traces.at[i,'timestamp']   =   t_begin
-            cpu_traces.at[i,'event']       =   np.log(int("0x" + fields[4], 16)) #% 1000000
-            cpu_traces.at[i,'duration']    =   float(fields[3]) / 1.5e9  
-            cpu_traces.at[i,'deviceId']    =    int(fields[1].split('[')[1].split(']')[0])
-            cpu_traces.at[i,'copyKind']    =   -1
-            cpu_traces.at[i,'payload']     =   0
-            cpu_traces.at[i,'bandwidth']   =   0
-            cpu_traces.at[i,'pkt_src']     =   -1 
-            cpu_traces.at[i,'pkt_dst']     =   -1
-            cpu_traces.at[i,'pid']         =   int(fields[0].split('/')[0])     
-            cpu_traces.at[i,'tid']         =   int(fields[0].split('/')[1])
-            cpu_traces.loc[i,'name']        =   fields[5] #.replace("[", "_").replace("]", "_")
-            cpu_traces.at[i,'category']    =   0
-            
-            if (cpu_traces.loc[i,'name'] == "testHostToDeviceTransfer"):
-                t_glb_gpu_base = float(cpu_traces.at[i,'timestamp'])
+        #    cpu_traces.at[i] = [t_begin,
+        #    			np.log(int("0x" + fields[4], 16)), #% 1000000
+        #    			float(fields[3]) / 1.5e9,  
+        #    			int(fields[1].split('[')[1].split(']')[0]),
+        #    			-1,
+        #    			0,
+        #    			0,
+        #    			-1,
+        #    			-1,
+        #    			int(fields[0].split('/')[0]),    
+        #    			int(fields[0].split('/')[1]),
+        #    			fields[5], 
+        #    			0]
+        #    
+        #    if (cpu_traces.loc[i,'name'] == "testHostToDeviceTransfer"):
+        #        t_glb_gpu_base = float(cpu_traces.at[i,'timestamp'])
 
         cpu_traces.to_csv(logdir + 'cputrace.csv', mode='w', header=True)        
 
@@ -179,12 +291,23 @@ if __name__ == "__main__":
         group = cpu_traces[ cpu_traces['name'].str.contains(cpu_trace_filter['keyword'], re.IGNORECASE)]
         filtered_groups.append({'group':group,'color':cpu_trace_filter['color'], 'keyword':cpu_trace_filter['keyword']})
 
+    for i in range(0, len(cpu_traces)):
+        if (cpu_traces.loc[i,'name'] == "testHostToDeviceTransfer"):
+            t_glb_gpu_base = float(cpu_traces.at[i,'timestamp'])
+
+
     
     with open(logdir + 'sofa.pcap','r') as f_pcap:
         packets = rdpcap(logdir + 'sofa.pcap')
         net_traces = pd.DataFrame(pd.np.empty((len(packets), len(sofa_fieldnames))) * pd.np.nan)
         net_traces.columns = sofa_fieldnames 
         print_info("Length of net_traces = %d"%len(net_traces))
+
+        #pool = mp.Pool(processes=cpu_count)
+	#t_base = packets[0][IP].time 
+	#res = pool.map( partial(net_trace_read, t_base=t_base, t_glb_base=t_glb_net_base), packets)
+	#net_traces = pd.DataFrame(res)
+        #net_traces.columns = sofa_fieldnames
         for i in range(0, len(net_traces)):
             try:
                 time = packets[i][IP].time
@@ -195,19 +318,19 @@ if __name__ == "__main__":
                 payload = packets[i].len
                 pkt_src = packets[i][IP].src.split('.')[3]
                 pkt_dst = packets[i][IP].dst.split('.')[3]                
-                net_traces.at[i,'timestamp']   =   t_begin
-                net_traces.at[i,'event']       =   payload*100+17
-                net_traces.at[i,'duration']    =   payload/125.0e6   
-                net_traces.at[i,'deviceId']    =   -1
-                net_traces.at[i,'copyKind']    =   -1
-                net_traces.at[i,'payload']     =   payload
-                net_traces.at[i,'bandwidth']   =   125.0e6
-                net_traces.at[i,'pkt_src']     =   pkt_src 
-                net_traces.at[i,'pkt_dst']     =   pkt_dst
-                net_traces.at[i,'pid']         =   -1  
-                net_traces.at[i,'tid']         =   -1
-                net_traces.loc[i,'name']        =   "%s_to_%s_with_%d" % (pkt_src, pkt_dst, payload)
-                net_traces.at[i,'category']    =   0
+                net_traces.at[i] = [	t_begin,
+                			payload*100+17,
+                			payload/125.0e6,   
+                			-1,
+                			-1,
+                			payload,
+                			125.0e6,
+                			pkt_src,
+                			pkt_dst,
+                			-1, 
+                			-1,
+                			"%s_to_%s_with_%d" % (pkt_src, pkt_dst, payload),
+                			0]
             except Exception as e:
                 print(e)
         net_traces.to_csv(logdir + 'cputrace.csv', mode='a', header=False)        
@@ -253,29 +376,37 @@ if __name__ == "__main__":
         gpu_kernel_records = cursor.fetchall()
         gpu_kernel_traces = pd.DataFrame(pd.np.empty((len(gpu_kernel_records), len(sofa_fieldnames))) * pd.np.nan) 
         gpu_kernel_traces.columns = sofa_fieldnames 
-        t_base = 0
         print_info("Length of gpu_kernel_traces = %d"%len(gpu_kernel_traces))
-        for i in range(0, len(gpu_kernel_traces)):
-            record = gpu_kernel_records[i]
-            if i == 0:
-                t_base = record[0]
-            t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
-            t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
-            gpu_kernel_traces.at[i,'timestamp']   =   t_begin
-            gpu_kernel_traces.at[i,'event']       =   record[2] 
-            gpu_kernel_traces.at[i,'duration']    =   float(t_end - t_begin)
-            gpu_kernel_traces.at[i,'deviceId']    =   record[4]
-            gpu_kernel_traces.at[i,'copyKind']    =   -1
-            gpu_kernel_traces.at[i,'payload']     =   0
-            gpu_kernel_traces.at[i,'pkt_src']     =   -1
-            gpu_kernel_traces.at[i,'pkt_dst']     =   -1
-            gpu_kernel_traces.at[i,'pid']         =   record[3] #streamId
-            gpu_kernel_traces.at[i,'tid']         =   -1
-            kernel_name = "%s"%(gpu_symbol_table.loc[gpu_symbol_table._id_ == record[2], 'value'])
-            kernel_name = kernel_name[:-30]
-            gpu_kernel_traces.loc[i,'name']       =   kernel_name # "ID%d"%record[2] #
-            gpu_kernel_traces.at[i,'category']    =   0
-        gpu_kernel_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
+       	
+	pool = mp.Pool(processes=cpu_count)
+	
+        record = gpu_kernel_records[0]
+	t_base = float(record[0])
+	res = pool.map( partial(gpu_kernel_trace_read, t_base=t_base, t_glb_base=t_glb_gpu_base), gpu_kernel_records)
+	gpu_kernel_traces = pd.DataFrame(res)
+        gpu_kernel_traces.columns = sofa_fieldnames
+	#for i in range(0, len(gpu_kernel_traces)):
+        #    record = gpu_kernel_records[i]
+        #    if i == 0:
+        #        t_base = record[0]
+        #    t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
+        #    t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
+        #    kernel_name = "%s"%(gpu_symbol_table.loc[gpu_symbol_table._id_ == record[2], 'value'])
+        #    kernel_name = kernel_name[:-30]
+        #    gpu_kernel_traces.at[i] = [	t_begin,
+	#				record[2],
+        #                                float(t_end - t_begin),
+        #                                record[4],
+        #                                -1,
+        #                                0,
+        #                                0.0,
+        #                                -1,
+        #                                -1,
+        #                                record[3],
+        #                                -1,
+        #                                kernel_name,
+        #                                0]
+        gpu_kernel_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header, index_label=False)
         gpulog_mode = 'a'
         gpulog_header = False
         
@@ -312,37 +443,32 @@ if __name__ == "__main__":
         gpu_memcpy_traces.columns = sofa_fieldnames 
         t_base = 0
         print_info("Length of gpu_memcpy_traces = %d"%len(gpu_memcpy_traces))
-        for i in range(0, len(gpu_memcpy_traces)):
-            record = gpu_memcpy_records[i]
-            if i == 0:
-                t_base = record[0]
+        
+	record = gpu_memcpy_records[0]
+	t_base = float(record[0])
+	res = pool.map( partial(gpu_memcpy_trace_read, t_base=t_base, t_glb_base=t_glb_gpu_base), gpu_memcpy_records)
+	gpu_memcpy_traces = pd.DataFrame(res)
+        gpu_memcpy_traces.columns = sofa_fieldnames
+	#for i in range(0, len(gpu_memcpy_traces)):
+        #    record = gpu_memcpy_records[i]
+        #    if i == 0:
+        #        t_base = record[0]
    
-          #      t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
-          #      t_end = (record[1] - t_base) / 1e9 + t_glb_gpu_base
-          #      duration = t_end - t_begin
-          #      gputrace.time = t_begin
-          #      gputrace.event = -1
-          #      gputrace.copyKind = record[3]
-          #      gputrace.deviceId = record[4]
-          #      gputrace.streamId = record[7]
-          #      gputrace.duration = duration
-          #      gputrace.data = record[2]
-   
-            t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
-            t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
-            gpu_memcpy_traces.at[i,'timestamp']   =   t_begin
-            gpu_memcpy_traces.at[i,'event']       =   record[2] 
-            gpu_memcpy_traces.at[i,'duration']    =   float(t_end - t_begin)
-            gpu_memcpy_traces.at[i,'deviceId']    =   record[4]
-            gpu_memcpy_traces.at[i,'copyKind']    =   record[3]
-            gpu_memcpy_traces.at[i,'payload']     =   record[2]
-            gpu_memcpy_traces.at[i,'bandwidth']   =   float(record[2])/(t_end-t_begin)/1.0e6
-            gpu_memcpy_traces.at[i,'pkt_src']     =   -1
-            gpu_memcpy_traces.at[i,'pkt_dst']     =   -1
-            gpu_memcpy_traces.at[i,'pid']         =   record[7] #streamId
-            gpu_memcpy_traces.at[i,'tid']         =   -1
-            gpu_memcpy_traces.loc[i,'name']       =  "gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]) 
-            gpu_memcpy_traces.at[i,'category']    =   0
+        #    t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
+        #    t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
+        #    gpu_memcpy_traces.at[i] = [ t_begin,
+        #    				record[2],
+        #    				float(t_end - t_begin),
+        #    				record[4],
+        #    				record[3],
+        #    				record[2],
+        #    				float(record[2])/(t_end-t_begin)/1.0e6,
+        #    				-1,
+        #    				-1,
+        #    				record[7], #streamId
+        #    				-1,
+        #    				"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]), 
+        #    				0]
         gpu_memcpy_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
         gpulog_mode = 'a'
         gpulog_header = False
@@ -373,26 +499,32 @@ if __name__ == "__main__":
         gpu_memcpy2_traces.columns = sofa_fieldnames 
         t_base = 0
         print_info("Length of gpu_memcpy2_traces = %d"%len(gpu_memcpy2_traces))
-        for i in range(0, len(gpu_memcpy2_traces)):
-            record = gpu_memcpy2_records[i]
-            if i == 0:
-                t_base = record[0]
+        
+	record = gpu_memcpy2_records[0]
+	t_base = float(record[0])
+	res = pool.map( partial(gpu_memcpy2_trace_read, t_base=t_base, t_glb_base=t_glb_gpu_base), gpu_memcpy2_records)
+	gpu_memcpy2_traces = pd.DataFrame(res)
+        gpu_memcpy2_traces.columns = sofa_fieldnames
+	#for i in range(0, len(gpu_memcpy2_traces)):
+        #    record = gpu_memcpy2_records[i]
+        #    if i == 0:
+        #        t_base = record[0]
    
-            t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
-            t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
-            gpu_memcpy2_traces.at[i,'timestamp']   =   t_begin
-            gpu_memcpy2_traces.at[i,'event']       =   record[2] 
-            gpu_memcpy2_traces.at[i,'duration']    =   float(t_end - t_begin)
-            gpu_memcpy2_traces.at[i,'deviceId']    =   record[4]
-            gpu_memcpy2_traces.at[i,'copyKind']    =   record[3]
-            gpu_memcpy2_traces.at[i,'payload']     =   record[2]
-            gpu_memcpy2_traces.at[i,'bandwidth']     =   record[2]/float((t_end-t_begin))/1.0e6
-            gpu_memcpy2_traces.at[i,'pkt_src']     =   -1
-            gpu_memcpy2_traces.at[i,'pkt_dst']     =   -1
-            gpu_memcpy2_traces.at[i,'pid']         =   record[7] #streamId
-            gpu_memcpy2_traces.at[i,'tid']         =   -1
-            gpu_memcpy2_traces.loc[i,'name']        =   "gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2])
-            gpu_memcpy2_traces.at[i,'category']    =   0
+        #    t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
+        #    t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
+        #    gpu_memcpy2_traces.at[i] = [t_begin,
+        #    				record[2], 
+        #    				float(t_end - t_begin),
+        #    				record[4],
+        #    				record[3],
+        #    				record[2],
+        #    				record[2]/float((t_end-t_begin))/1.0e6,
+        #    				-1,
+        #    				-1,
+        #    				record[7], #streamId
+        #    				-1,
+        #    				"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]),
+        #    				0]
         gpu_memcpy2_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
         gpulog_mode = 'a'
         gpulog_header = False
