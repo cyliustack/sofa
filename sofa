@@ -86,7 +86,8 @@ function sofa_apply_plugin(){
 
 function sofa_analyze(){
     echo "SOFA_HOME = ${SOFA_HOME}"
-    ${SOFA_BIN}/sofa-analyze.py ${logdir}
+    print_info "SOFA Configuration File: ${config_file}"
+    ${SOFA_BIN}/sofa-analyze.py --logdir=${logdir} --config=${config_file}
     sofa_apply_plugin
 }
 

@@ -4,12 +4,13 @@ import sqlite3
 import pandas as pd
 import numpy as np
 import csv
-import cxxfilt
 import json
 import sys
 import argparse
 import multiprocessing as mp
 from functools import partial
+from sofa_config import *
+from sofa_print import *
 
 def cpu_trace_read(sample, t_offset):
     fields = sample.split()
@@ -208,20 +209,11 @@ if __name__ == "__main__":
     parser.add_argument('--config', metavar="/path/to/config.cfg", type=str, required=True,
                     help='path to the directory of SOFA configuration file')
 
-    args =parser.parse_args()
+    args = parser.parse_args()
     logdir = args.logdir + "/"
 
-    cfg = json.loads('{"filters":[{"keyword":"idle","color":"cadeblue"}, {"keyword":"flush", "color":"#00BFFF"} ]}')
-    try:
-        with open(args.config) as f:
-            cfg = json.load(f)
-    except:
-        with open( 'sofa.cfg', "w") as f:
-            json.dump(cfg,f)
-            f.write("\n")
-    print_info("SOFA Configuration: ")    
-    print(cfg)
-    
+    cfg = read_config(args.config)
+
     with open(logdir + 'sofa_time.txt') as f:
         t_glb_base = float(f.readlines()[0])
         t_glb_net_base = t_glb_base + 0.5
@@ -245,14 +237,14 @@ if __name__ == "__main__":
     with open(logdir + 'perf.script') as f:
         samples = f.readlines()
         t_base = 0
-        print_info("Length of cpu_traces = %d"%len(cpu_traces))
-	
+        	
         pool = mp.Pool(processes=cpu_count)
 	t_base = float((samples[0].split())[2].split(':')[0]) 
 	res = pool.map( partial(cpu_trace_read, t_offset=t_glb_base - t_base), samples)
 	cpu_traces = pd.DataFrame(res)
         cpu_traces.columns = sofa_fieldnames 
-	#print res
+        print_info("Length of cpu_traces = %d"%len(cpu_traces))
+        #print res
 	#for i in range(0, len(cpu_traces)):
         #    fields = samples[i].split()
         #    time = float(fields[2].split(':')[0])
@@ -414,7 +406,7 @@ if __name__ == "__main__":
         print_progress("export-csv CUDA kernels -- end")
 
  
-    print_progress("query CUDA kernels -- begin")
+    print_progress("query CUDA concurrent kernels -- begin")
     try:
         cursor.execute(
             "SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
@@ -423,7 +415,7 @@ if __name__ == "__main__":
             cursor.execute("SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_KERNEL")
         except sqlite3.OperationalError:
             print_info("No GPU traces were collected.")
-    print_progress("query CUDA kernels -- end")
+    print_progress("query CUDA concurrent kernels -- end")
     
    
     print_progress("query CUDA memcpy (h2d,d2h,d2d) -- begin")
@@ -599,32 +591,33 @@ if __name__ == "__main__":
     sofatrace.data = gpu_memcpy_d2d_traces
     traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'gpu_memcpy_h2d_bw_trace'
-    sofatrace.title = 'GPU memcpy H2D bandwidth (MB/s)'
-    sofatrace.color = 'Crimson'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'bandwidth'
-    sofatrace.data = gpu_memcpy_h2d_traces
-    traces.append(sofatrace)
+    if cfg['enable_plot_bandwidth'] == 'true':
+        sofatrace = SOFATrace()
+        sofatrace.name = 'gpu_memcpy_h2d_bw_trace'
+        sofatrace.title = 'GPU memcpy H2D bandwidth (MB/s)'
+        sofatrace.color = 'Crimson'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'bandwidth'
+        sofatrace.data = gpu_memcpy_h2d_traces
+        traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'gpu_memcpy_d2h_bw_trace'
-    sofatrace.title = 'GPU memcpy D2H bandwidth (MB/s)'
-    sofatrace.color = 'DarkOliveGreen'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'bandwidth'
-    sofatrace.data = gpu_memcpy_d2h_traces
-    traces.append(sofatrace)
+        sofatrace = SOFATrace()
+        sofatrace.name = 'gpu_memcpy_d2h_bw_trace'
+        sofatrace.title = 'GPU memcpy D2H bandwidth (MB/s)'
+        sofatrace.color = 'DarkOliveGreen'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'bandwidth'
+        sofatrace.data = gpu_memcpy_d2h_traces
+        traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'gpu_memcpy_d2d_bw_trace'
-    sofatrace.title = 'GPU memcpy D2D bandwidth (MB/s)'
-    sofatrace.color = 'DarkMagenta'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'bandwidth'
-    sofatrace.data = gpu_memcpy_d2d_traces
-    traces.append(sofatrace)
+        sofatrace = SOFATrace()
+        sofatrace.name = 'gpu_memcpy_d2d_bw_trace'
+        sofatrace.title = 'GPU memcpy D2D bandwidth (MB/s)'
+        sofatrace.color = 'DarkMagenta'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'bandwidth'
+        sofatrace.data = gpu_memcpy_d2d_traces
+        traces.append(sofatrace)
 
 
     sofatrace = SOFATrace()
@@ -636,14 +629,15 @@ if __name__ == "__main__":
     sofatrace.data = gpu_memcpy2_traces
     traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'gpu_memcpy2_bw_trace'
-    sofatrace.title = 'GPU memcpy2 bandwidth (MB/s)'
-    sofatrace.color = 'DarkSeaGreen'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'bandwidth'
-    sofatrace.data = gpu_memcpy2_traces
-    traces.append(sofatrace)
+    if cfg['enable_plot_bandwidth'] == 'true':
+        sofatrace = SOFATrace()
+        sofatrace.name = 'gpu_memcpy2_bw_trace'
+        sofatrace.title = 'GPU memcpy2 bandwidth (MB/s)'
+        sofatrace.color = 'DarkSeaGreen'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'bandwidth'
+        sofatrace.data = gpu_memcpy2_traces
+        traces.append(sofatrace)
 
     traces_to_json(traces, logdir+'report.js')
     traces_to_json(traces, logdir+'overhead.js')

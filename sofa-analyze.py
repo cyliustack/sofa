@@ -3,11 +3,14 @@ from scapy.all import *
 import pandas as pd
 import numpy as np
 import csv
-import cxxfilt
 import json
 import random
 from operator import itemgetter, attrgetter
-
+import argparse
+import multiprocessing as mp
+from functools import partial
+from sofa_print import *
+from sofa_config import *
 
 class Event:
 
@@ -22,67 +25,13 @@ class Event:
 
 # Assume pa<pb, pc<pd:
 
-
 def overlap(pa, pb, pc, pd):
     if pb - pc >= 0 and pd - pa >= 0:
         return min(pb, pd) - max(pa, pc)
 
-
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    DATA = '\033[5;30;47m'
-    TITLE = '\033[7;34;47m'
-
-
-def print_title(content):
-    print(bcolors.TITLE + content + bcolors.ENDC)
-
-def print_warning(content):
-    print(bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC)
-
-def print_info(content):
-    print(bcolors.OKGREEN + "[INFO] " + content + bcolors.ENDC)
-
-def print_progress(content):
-    print(bcolors.OKBLUE + "[INFO] " + content + bcolors.ENDC)
-
-
-
-def print_data(content):
-    print(bcolors.DATA)
-    print(content)
-    print(bcolors.ENDC)
-
-# print_format_table() refers to
-# https://stackoverflow.com/posts/21786287/revisions
-
-
-def print_format_table():
-    """
-    prints table of formatted text format options
-    """
-    for style in range(8):
-        for fg in range(30, 38):
-            s1 = ''
-            for bg in range(40, 48):
-                format = ';'.join([str(style), str(fg), str(bg)])
-                s1 += '\x1b[%sm %s \x1b[0m' % (format, format)
-            print(s1)
-        print('\n')
-
 # print_format_table()
 cktable = {-1: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 ckindex = [1,2,8,10]
-
-
-
        
 def gpu_profile(df_gpu): 
     #df_gpu = df_gpu.convert_objects(convert_numeric=True)
@@ -108,6 +57,7 @@ def gpu_profile(df_gpu):
         total_tasktime = total_tasktime + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
     avg_tasktime = total_tasktime / n_devices
+    print("Averaged task time of devices: %.2lf"%avg_tasktime)
     theory_overlaptime = avg_tasktime * (n_devices * (n_devices - 1) / 2)
 
     print_title("Data Traffic (bidirection) for each Device (MB)")
@@ -125,12 +75,16 @@ def gpu_profile(df_gpu):
     print_title("Data Communication Time for each CopyKind (s)")
     durations_copyKind = grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
-        if int(float(key))>0:
-            print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
+        print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
 
     print_title("Data Traffic for Each Pair of deviceId and CopyKind (MB)")
     devcopy = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["payload"].sum()/1000000
     print(devcopy)
+
+    print_title("Data Communication Time for Each Pair of deviceId and CopyKind (s)")
+    devcopytime = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["duration"].sum()
+    print(devcopytime)
+
 
     print_title("Task Time spent on Each Stream (s)")
     grouped_df = df_gpu.groupby("pid")["duration"]
@@ -143,7 +97,7 @@ def gpu_profile(df_gpu):
         print("[%s]: %.3lf" % (cktable[bw.keys()[i]], bw.iloc[i]))
 
 
-    if overlapness_enabled:
+    if enable_overlapness:
         print_title("Overlapness for All Events (s)")
         events = []
         for i in range(len(df_gpu)):
@@ -191,25 +145,18 @@ def gpu_profile(df_gpu):
             (theory_overlaptime))
 
 
-def cpu_profile(df): 
+def cpu_profile(cfg, df): 
     print_title("CPU Profiling: Task Time (IO included) for each Cores (s)")
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
     for key, item in grouped_df:
-        print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
+        if cfg['enable_verbose'] == "true":
+            print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
         total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
     avg_exec_time = total_exec_time / n_devices
     print("total execution time = %.3lf" % total_exec_time )
     print("average execution time across devices = %.3lf" % avg_exec_time )
-
-def parse_config(path):
-    try:
-        cfg = json.load(open('sofa.json')) 
-        return cfg
-    except IOError:
-        print_warning("sofa.json is not found")
-        quit()
 
 
 def cpu_overhead_report(df,cfg): 
@@ -237,21 +184,33 @@ if __name__ == "__main__":
     print('Argument List: %s' % str(sys.argv))
     logdir = []
     filein = []
-    overlapness_enabled = False
+    enable_verbose=False
+    enable_overlapness = False
     df_gpu=[]
     df_cpu=[]
-    cfg = []
 
-    if len(sys.argv) < 2:
-        print_info("Usage: sofa-preprocess.py /path/to/logdir")
-        quit()
-    else:
-        logdir = sys.argv[1] + "/"
-        filein_gpu = logdir + "gputrace.csv"
-        filein_cpu = logdir + "cputrace.csv"
-
-    #cfg = parse_config("./sofa.json")
+    parser = argparse.ArgumentParser(description='SOFA Analyze')
+    parser.add_argument("--logdir", metavar="/path/to/logdir/", type=str, required=True, 
+                    help='path to the directory of SOFA logged files')
+    parser.add_argument('--config', metavar="/path/to/config.cfg", type=str, required=True,
+                    help='path to the directory of SOFA configuration file')
     
+    args =parser.parse_args()
+    logdir = args.logdir + "/"
+    filein_gpu = logdir + "gputrace.csv"
+    filein_cpu = logdir + "cputrace.csv"
+
+    cfg = read_config(args.config) 
+    #try:
+    #    with open(args.config) as f:
+    #        cfg = json.load(f)
+    #except:
+    #    with open( 'sofa.cfg', "w") as f:
+    #        json.dump(cfg,f)
+    #        f.write("\n")
+    #print_info("SOFA Configuration: ")    
+    #print(cfg)
+
     try:
         df_gpu = pd.read_csv(filein_gpu)
         #gpu_overhead_report(df_gpu,cfg)        
@@ -263,7 +222,7 @@ if __name__ == "__main__":
     try:
         df_cpu = pd.read_csv(filein_cpu)
         cpu_overhead_report(df_cpu,cfg)        
-        cpu_profile(df_cpu)
+        cpu_profile(cfg, df_cpu)
     except IOError:
         print_warning(
             "cputrace.csv is not found")
