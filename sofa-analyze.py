@@ -77,19 +77,26 @@ def gpu_profile(df_gpu):
     for key, item in grouped_df:
         print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
 
-    print_title("Data Traffic for Each Pair of deviceId and CopyKind (MB)")
-    devcopy = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["payload"].sum()/1000000
-    print(devcopy)
-
-    print_title("Data Communication Time for Each Pair of deviceId and CopyKind (s)")
-    devcopytime = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["duration"].sum()
-    print(devcopytime)
+    if cfg['enable_verbose'] == "true":
+        print_title("Data Traffic for Each Pair of deviceId and CopyKind (MB)")
+        devcopy = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["payload"].sum()/1000000
+        print(devcopy)
+        print_title("Data Communication Time for Each Pair of deviceId and CopyKind (s)")
+        devcopytime = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["duration"].sum()
+        print(devcopytime)
 
 
     print_title("Task Time spent on Each Stream (s)")
     grouped_df = df_gpu.groupby("pid")["duration"]
+    stream_durations = []
     for key, item in grouped_df:
-        print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
+        if cfg['enable_verbose'] == "true":
+            print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
+        stream_durations = np.append( stream_durations, grouped_df.get_group(key).sum() )
+    topk_streams = np.sort(stream_durations)[-8:]
+    print(topk_streams)
+    print("Mean of Top-%d Stream Times = %.2lf" % (len(topk_streams),np.mean(topk_streams)))
+    
 
     print_title("Averaged Achieved Bandwidth for each CopyKind: (GB/s)")
     bw = (data_copyKind.sum() / 1000000) / durations_copyKind.sum() / 1000
