@@ -7,10 +7,23 @@ import csv
 import json
 import sys
 import argparse
-import multiprocessing as mp
+import multiprocessing as mp 
+import glob, os 
 from functools import partial
 from sofa_config import *
 from sofa_print import *
+
+def sqlite3_read_tables(filename):
+
+    return tables
+
+
+def nvprof_db_read(logdir):
+    db = [] 
+    for sqlite_filename in glob.glob(logdir+"gputrace*[0-9].nvp"):
+        db = sqlite3.connect(sqlite_filename)
+	print("Merging %s" % sqlite_filename)
+    return 0
 
 def cpu_trace_read(sample, t_offset):
     fields = sample.split()
@@ -35,7 +48,7 @@ def cpu_trace_read(sample, t_offset):
      
     return trace
 
-def gpu_kernel_trace_read(record, t_base, t_glb_base):
+def gpu_kernel_trace_read(record, pid, t_base, t_glb_base):
     t_begin = (record[0] - t_base) / 1e9 + t_glb_base
     t_end   = (record[1] - t_base) / 1e9 + t_glb_base
     kernel_name = "%s"%(gpu_symbol_table.loc[gpu_symbol_table._id_ == record[2], 'value'])
@@ -49,8 +62,8 @@ def gpu_kernel_trace_read(record, t_base, t_glb_base):
 		0.0,
 		-1,
 		-1,
+                pid,
 		record[3],
-		-1,
 		kernel_name,
 		0]
     return trace
@@ -230,6 +243,13 @@ if __name__ == "__main__":
     gpu_memcpy_h2d_traces = []
     gpu_memcpy_d2h_traces = []
     gpu_memcpy_d2d_traces = []
+    gpu_glb_kernel_traces = []
+    gpu_glb_memcpy_traces = []
+    gpu_glb_memcpy2_traces = []
+    gpu_glb_memcpy_h2d_traces = []
+    gpu_glb_memcpy_d2h_traces = []
+    gpu_glb_memcpy_d2d_traces = []
+
     gpulog_mode = 'w'
     gpulog_header = 'True'
     cpu_count = mp.cpu_count()
@@ -329,199 +349,182 @@ if __name__ == "__main__":
     
 
     ### ============ Preprocessing GPU Trace ==========================
-    print_progress("read nvprof traces -- begin")
-    sqlite_file = logdir + "gputrace.nvp"
-
-    db = sqlite3.connect(sqlite_file)
-    cursor = db.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = cursor.fetchall()
-    gpu_symbol_table = []
-    for table_name in tables:
-        tname = table_name[0]
-        table = pd.read_sql_query("SELECT * from %s" % tname, db)
-        # print("table-%d = %s, count=%d" % (i,tname,len(table.index)) )
-        if len(table.index) > 0:
-            table.to_csv(logdir + tname + '.csv', index_label='index')
-        if tname == "StringTable":
-            gpu_symbol_table = table
-    print_progress("read nvprof traces -- end")
-    
-    
-    print_progress("query CUDA kernels -- begin")
-    try:
-        cursor.execute(
-            "SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
-    except sqlite3.OperationalError:
-        try:
-            cursor.execute("SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_KERNEL")
-        except sqlite3.OperationalError:
-            print_info("No GPU traces were collected.")
-    print_progress("query CUDA kernels -- end")
-    
-    #with open(logdir+"gputrace.csv",mode='w') as f:
-    #    print_info("Create new gputrace.csv")    
-    
-    if  os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_KERNEL.csv") or os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL.csv") : 
-        print_progress("export-csv CUDA kernels -- begin")
-        
-        gpu_kernel_records = cursor.fetchall()
-        gpu_kernel_traces = pd.DataFrame(pd.np.empty((len(gpu_kernel_records), len(sofa_fieldnames))) * pd.np.nan) 
-        gpu_kernel_traces.columns = sofa_fieldnames 
-        print_info("Length of gpu_kernel_traces = %d"%len(gpu_kernel_traces))
-       	
-	pool = mp.Pool(processes=cpu_count)
+    print_progress("read and csv-transform nvprof traces -- begin")
+    num_cudaproc = 0
+    for sqlite_filename in glob.glob(logdir+"gputrace*[0-9].nvp"):
 	
-        record = gpu_kernel_records[0]
-	t_base = float(record[0])
-	res = pool.map( partial(gpu_kernel_trace_read, t_base=t_base, t_glb_base=t_glb_gpu_base), gpu_kernel_records)
-	gpu_kernel_traces = pd.DataFrame(res)
-        gpu_kernel_traces.columns = sofa_fieldnames
-	#for i in range(0, len(gpu_kernel_traces)):
-        #    record = gpu_kernel_records[i]
-        #    if i == 0:
-        #        t_base = record[0]
-        #    t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
-        #    t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
-        #    kernel_name = "%s"%(gpu_symbol_table.loc[gpu_symbol_table._id_ == record[2], 'value'])
-        #    kernel_name = kernel_name[:-30]
-        #    gpu_kernel_traces.at[i] = [	t_begin,
-	#				record[2],
-        #                                float(t_end - t_begin),
-        #                                record[4],
-        #                                -1,
-        #                                0,
-        #                                0.0,
-        #                                -1,
-        #                                -1,
-        #                                record[3],
-        #                                -1,
-        #                                kernel_name,
-        #                                0]
-        gpu_kernel_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header, index_label=False)
-        gpulog_mode = 'a'
-        gpulog_header = False
-        
-
-        print_progress("export-csv CUDA kernels -- end")
+ 	print("Merging %s" % sqlite_filename)
+	db = sqlite3.connect(sqlite_filename)
+	cursor = db.cursor()
+    	cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    	tables = cursor.fetchall()
+    	gpu_symbol_table = []
+    	for table_name in tables:
+    	    tname = table_name[0]
+    	    table = pd.read_sql_query("SELECT * from %s" % tname, db)
+    	    # print("table-%d = %s, count=%d" % (i,tname,len(table.index)) )
+    	    if len(table.index) > 0:
+    	        table.to_csv(logdir + ("CUDAPROC%d_"%(num_cudaproc)) + tname + '.csv', index_label='index')
+    	    if tname == "StringTable":
+    	        gpu_symbol_table = table
+    	print_progress("read and csv-transform nvprof traces -- end")
+    	
+    	
+    	print_progress("query CUDA kernels -- begin")
+    	try:
+    	    cursor.execute(
+    	        "SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
+    	except sqlite3.OperationalError:
+    	    try:
+    	        cursor.execute("SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_KERNEL")
+    	    except sqlite3.OperationalError:
+    	        print_info("No GPU traces were collected.")
+    	print_progress("query CUDA kernels -- end")
+    	
+    	#with open(logdir+"gputrace.csv",mode='w') as f:
+    	#    print_info("Create new gputrace.csv")    
+    	
+    	if  os.path.exists(logdir+"CUDAPROC%d_CUPTI_ACTIVITY_KIND_KERNEL.csv"%(num_cudaproc) ) or os.path.exists(logdir+"CUDAPROC%d_CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL.csv"%num_cudaproc ) : 
+    	    print_progress("export-csv CUDA kernels -- begin")
+    	    
+    	    gpu_kernel_records = cursor.fetchall()
+    	    gpu_kernel_traces = pd.DataFrame(pd.np.empty((len(gpu_kernel_records), len(sofa_fieldnames))) * pd.np.nan) 
+    	    gpu_kernel_traces.columns = sofa_fieldnames 
+    	    print_info("Length of gpu_kernel_traces = %d"%len(gpu_kernel_traces))
+    	   	
+    	    pool = mp.Pool(processes=cpu_count)
+    	    
+    	    record = gpu_kernel_records[0]
+    	    t_base = float(record[0])
+    	    res = pool.map( partial(gpu_kernel_trace_read, pid=num_cudaproc, t_base=t_base, t_glb_base=t_glb_gpu_base), gpu_kernel_records)
+    	    gpu_kernel_traces = pd.DataFrame(res)
+    	    gpu_kernel_traces.columns = sofa_fieldnames
+    	    gpu_kernel_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header, index_label=False)
+    	    gpulog_mode = 'a'
+    	    gpulog_header = False
+            gpu_glb_kernel_traces.append(gpu_kernel_traces)
+    	    print_progress("export-csv CUDA kernels -- end")
 
  
-    print_progress("query CUDA concurrent kernels -- begin")
-    try:
-        cursor.execute(
-            "SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
-    except sqlite3.OperationalError:
-        try:
-            cursor.execute("SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_KERNEL")
-        except sqlite3.OperationalError:
-            print_info("No GPU traces were collected.")
-    print_progress("query CUDA concurrent kernels -- end")
-    
+    	print_progress("query CUDA concurrent kernels -- begin")
+    	try:
+    	    cursor.execute(
+    	        "SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL")
+    	except sqlite3.OperationalError:
+    	    try:
+    	        cursor.execute("SELECT start,end,name,streamId,deviceId FROM CUPTI_ACTIVITY_KIND_KERNEL")
+    	    except sqlite3.OperationalError:
+    	        print_info("No GPU traces were collected.")
+    	print_progress("query CUDA concurrent kernels -- end")
+    	
    
-    print_progress("query CUDA memcpy (h2d,d2h,d2d) -- begin")
-    try:
-        # index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
-        cursor.execute(
-            "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
-        gpu_memcpy_records = cursor.fetchall() 
-    except sqlite3.OperationalError:
-            print_info("No GPU MEMCPY traces were collected.")
-    print_progress("query CUDA memcpy (h2d,d2h,d2d) -- end")
+    	print_progress("query CUDA memcpy (h2d,d2h,d2d) -- begin")
+    	try:
+    	    # index,_id_,copyKind,srcKind,dstKind,flags,bytes,start,end,deviceId,contextId,streamId,correlationId,runtimeCorrelationId
+    	    cursor.execute(
+    	        "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY")
+    	    gpu_memcpy_records = cursor.fetchall() 
+    	except sqlite3.OperationalError:
+    	        print_info("No GPU MEMCPY traces were collected.")
+    	print_progress("query CUDA memcpy (h2d,d2h,d2d) -- end")
    
-    
-    print_progress("export-csv CUDA memcpy (h2d,d2h,d2d) -- begin")
-    if  os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_MEMCPY.csv") : 
-        gpu_memcpy_traces = pd.DataFrame(pd.np.empty((len(gpu_memcpy_records), len(sofa_fieldnames))) * pd.np.nan) 
-        gpu_memcpy_traces.columns = sofa_fieldnames 
-        t_base = 0
-        print_info("Length of gpu_memcpy_traces = %d"%len(gpu_memcpy_traces))
-        
-	record = gpu_memcpy_records[0]
-	t_base = float(record[0])
-	res = pool.map( partial(gpu_memcpy_trace_read, t_base=t_base, t_glb_base=t_glb_gpu_base), gpu_memcpy_records)
-	gpu_memcpy_traces = pd.DataFrame(res)
-        gpu_memcpy_traces.columns = sofa_fieldnames
-	#for i in range(0, len(gpu_memcpy_traces)):
-        #    record = gpu_memcpy_records[i]
-        #    if i == 0:
-        #        t_base = record[0]
+    	
+    	print_progress("export-csv CUDA memcpy (h2d,d2h,d2d) -- begin")
+    	if  os.path.exists(logdir+"CUDAPROC%d_CUPTI_ACTIVITY_KIND_MEMCPY.csv"%num_cudaproc ) : 
+    	    gpu_memcpy_traces = pd.DataFrame(pd.np.empty((len(gpu_memcpy_records), len(sofa_fieldnames))) * pd.np.nan) 
+    	    gpu_memcpy_traces.columns = sofa_fieldnames 
+    	    t_base = 0
+    	    print_info("Length of gpu_memcpy_traces = %d"%len(gpu_memcpy_traces))
+    	    
+    	    record = gpu_memcpy_records[0]
+    	    t_base = float(record[0])
+    	    res = pool.map( partial(gpu_memcpy_trace_read, t_base=t_base, t_glb_base=t_glb_gpu_base), gpu_memcpy_records)
+    	    gpu_memcpy_traces = pd.DataFrame(res)
+    	    gpu_memcpy_traces.columns = sofa_fieldnames
+    	    #for i in range(0, len(gpu_memcpy_traces)):
+    	    #    record = gpu_memcpy_records[i]
+    	    #    if i == 0:
+    	    #        t_base = record[0]
    
-        #    t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
-        #    t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
-        #    gpu_memcpy_traces.at[i] = [ t_begin,
-        #    				record[2],
-        #    				float(t_end - t_begin),
-        #    				record[4],
-        #    				record[3],
-        #    				record[2],
-        #    				float(record[2])/(t_end-t_begin)/1.0e6,
-        #    				-1,
-        #    				-1,
-        #    				record[7], #streamId
-        #    				-1,
-        #    				"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]), 
-        #    				0]
-        gpu_memcpy_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
-        gpulog_mode = 'a'
-        gpulog_header = False
-        if len(gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 1)]) > 0:
-            gpu_memcpy_h2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 1)].copy()
-        
-        if len(gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 2)]) > 0:
-            gpu_memcpy_d2h_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 2)].copy()
-        
-        if len(gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 8)]) > 0:
-            gpu_memcpy_d2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 8)].copy()
-
-    print_progress("export-csv CUDA memcpy (h2d,d2h,d2d) -- end")
+    	    #    t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
+    	    #    t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
+    	    #    gpu_memcpy_traces.at[i] = [ t_begin,
+    	    #    				record[2],
+    	    #    				float(t_end - t_begin),
+    	    #    				record[4],
+    	    #    				record[3],
+    	    #    				record[2],
+    	    #    				float(record[2])/(t_end-t_begin)/1.0e6,
+    	    #    				-1,
+    	    #    				-1,
+    	    #    				record[7], #streamId
+    	    #    				-1,
+    	    #    				"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]), 
+    	    #    				0]
+    	    gpu_memcpy_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
+    	    gpu_glb_memcpy_traces.append(gpu_memcpy_traces)
+            gpulog_mode = 'a'
+    	    gpulog_header = False
+    	    if len(gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 1)]) > 0:
+    	        gpu_memcpy_h2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 1)].copy()
+    	    
+    	    if len(gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 2)]) > 0:
+    	        gpu_memcpy_d2h_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 2)].copy()
+    	    
+    	    if len(gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 8)]) > 0:
+    	        gpu_memcpy_d2d_traces = gpu_memcpy_traces[(gpu_memcpy_traces.copyKind == 8)].copy()
+            
+    	print_progress("export-csv CUDA memcpy (h2d,d2h,d2d) -- end")
  
-    
-    print_progress("query CUDA memcpy2 (p2p) -- begin")
-    try:
-        cursor.execute(
-            "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")
-        gpu_memcpy2_records = cursor.fetchall()
-    except sqlite3.OperationalError:
-        print_info("No GPU MEMCPY2 traces were collected.")
-    print_progress("query CUDA memcpy2 (p2p) -- end")
+    	
+    	print_progress("query CUDA memcpy2 (p2p) -- begin")
+    	try:
+    	    cursor.execute(
+    	        "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")
+    	    gpu_memcpy2_records = cursor.fetchall()
+    	except sqlite3.OperationalError:
+    	    print_info("No GPU MEMCPY2 traces were collected.")
+    	print_progress("query CUDA memcpy2 (p2p) -- end")
    
-    print_progress("export-csv CUDA memcpy2 (p2p) -- begin")
-    if  os.path.exists(logdir+"CUPTI_ACTIVITY_KIND_MEMCPY2.csv") : 
-        gpu_memcpy2_traces = pd.DataFrame(pd.np.empty((len(gpu_memcpy2_records), len(sofa_fieldnames))) * pd.np.nan) 
-        gpu_memcpy2_traces.columns = sofa_fieldnames 
-        t_base = 0
-        print_info("Length of gpu_memcpy2_traces = %d"%len(gpu_memcpy2_traces))
-        
-	record = gpu_memcpy2_records[0]
-	t_base = float(record[0])
-	res = pool.map( partial(gpu_memcpy2_trace_read, t_base=t_base, t_glb_base=t_glb_gpu_base), gpu_memcpy2_records)
-	gpu_memcpy2_traces = pd.DataFrame(res)
-        gpu_memcpy2_traces.columns = sofa_fieldnames
-	#for i in range(0, len(gpu_memcpy2_traces)):
-        #    record = gpu_memcpy2_records[i]
-        #    if i == 0:
-        #        t_base = record[0]
+    	print_progress("export-csv CUDA memcpy2 (p2p) -- begin")
+    	if  os.path.exists(logdir+"CUDAPROC%d_CUPTI_ACTIVITY_KIND_MEMCPY2.csv"%num_cudaproc ) : 
+    	    gpu_memcpy2_traces = pd.DataFrame(pd.np.empty((len(gpu_memcpy2_records), len(sofa_fieldnames))) * pd.np.nan) 
+    	    gpu_memcpy2_traces.columns = sofa_fieldnames 
+    	    t_base = 0
+    	    print_info("Length of gpu_memcpy2_traces = %d"%len(gpu_memcpy2_traces))
+    	    
+    	    record = gpu_memcpy2_records[0]
+    	    t_base = float(record[0])
+    	    res = pool.map( partial(gpu_memcpy2_trace_read, t_base=t_base, t_glb_base=t_glb_gpu_base), gpu_memcpy2_records)
+    	    gpu_memcpy2_traces = pd.DataFrame(res)
+    	    gpu_memcpy2_traces.columns = sofa_fieldnames
+    	    #for i in range(0, len(gpu_memcpy2_traces)):
+    	    #    record = gpu_memcpy2_records[i]
+    	    #    if i == 0:
+    	    #        t_base = record[0]
    
-        #    t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
-        #    t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
-        #    gpu_memcpy2_traces.at[i] = [t_begin,
-        #    				record[2], 
-        #    				float(t_end - t_begin),
-        #    				record[4],
-        #    				record[3],
-        #    				record[2],
-        #    				record[2]/float((t_end-t_begin))/1.0e6,
-        #    				-1,
-        #    				-1,
-        #    				record[7], #streamId
-        #    				-1,
-        #    				"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]),
-        #    				0]
-        gpu_memcpy2_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
-        gpulog_mode = 'a'
-        gpulog_header = False
-    print_progress("export-csv CUDA memcpy2 (h2d,d2h,d2d) -- end")
-    
+    	    #    t_begin = (record[0] - t_base) / 1e9 + t_glb_gpu_base
+    	    #    t_end   = (record[1] - t_base) / 1e9 + t_glb_gpu_base
+    	    #    gpu_memcpy2_traces.at[i] = [t_begin,
+    	    #    				record[2], 
+    	    #    				float(t_end - t_begin),
+    	    #    				record[4],
+    	    #    				record[3],
+    	    #    				record[2],
+    	    #    				record[2]/float((t_end-t_begin))/1.0e6,
+    	    #    				-1,
+    	    #    				-1,
+    	    #    				record[7], #streamId
+    	    #    				-1,
+    	    #    				"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]),
+    	    #    				0]
+    	    gpu_memcpy2_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
+    	    gpulog_mode = 'a'
+    	    gpulog_header = False
+            gpu_glb_memcpy2_traces.append(gpu_memcpy2_traces)
+    	print_progress("export-csv CUDA memcpy2 (h2d,d2h,d2d) -- end")
+    	
+	num_cudaproc = num_cudaproc + 1  # End of reading NVPROF SQLite3 Database
     
 
     print_progress("Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
