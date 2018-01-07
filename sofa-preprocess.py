@@ -291,7 +291,7 @@ if __name__ == "__main__":
         #    if (cpu_traces.loc[i,'name'] == "testHostToDeviceTransfer"):
         #        t_glb_gpu_base = float(cpu_traces.at[i,'timestamp'])
 
-        cpu_traces.to_csv(logdir + 'cputrace.csv', mode='w', header=True)        
+        cpu_traces.to_csv(logdir + 'cputrace.csv', mode='w', header=True, index=False,float_format='%.6f')        
 
 
     df_grouped = cpu_traces.groupby('name')
@@ -345,7 +345,7 @@ if __name__ == "__main__":
                 			0]
             except Exception as e:
                 print(e)
-        net_traces.to_csv(logdir + 'cputrace.csv', mode='a', header=False)        
+        net_traces.to_csv(logdir + 'cputrace.csv', mode='a', header=False, index=False, float_format='%.6f')        
     
 
     ### ============ Preprocessing GPU Trace ==========================
@@ -399,7 +399,7 @@ if __name__ == "__main__":
     	    res = pool.map( partial(gpu_kernel_trace_read, pid=num_cudaproc, t_base=t_base, t_glb_base=t_glb_gpu_base), gpu_kernel_records)
     	    gpu_kernel_traces = pd.DataFrame(res)
     	    gpu_kernel_traces.columns = sofa_fieldnames
-    	    gpu_kernel_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header, index_label=False)
+    	    gpu_kernel_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header, index=False,float_format='%.6f')
     	    gpulog_mode = 'a'
     	    gpulog_header = False
             gpu_glb_kernel_traces.append(gpu_kernel_traces)
@@ -461,7 +461,7 @@ if __name__ == "__main__":
     	    #    				-1,
     	    #    				"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]), 
     	    #    				0]
-    	    gpu_memcpy_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
+    	    gpu_memcpy_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header, index=False, float_format='%.6f')
     	    gpu_glb_memcpy_traces.append(gpu_memcpy_traces)
             gpulog_mode = 'a'
     	    gpulog_header = False
@@ -518,7 +518,7 @@ if __name__ == "__main__":
     	    #    				-1,
     	    #    				"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]),
     	    #    				0]
-    	    gpu_memcpy2_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header)
+    	    gpu_memcpy2_traces.to_csv(logdir + 'gputrace.csv', mode=gpulog_mode, header=gpulog_header, index=False, float_format='%.6f')
     	    gpulog_mode = 'a'
     	    gpulog_header = False
             gpu_glb_memcpy2_traces.append(gpu_memcpy2_traces)
