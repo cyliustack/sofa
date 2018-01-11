@@ -12,6 +12,7 @@ from functools import partial
 from sofa_print import *
 from sofa_config import *
 
+
 class Event:
 
     def __init__(self, name, ttype, timestamp, duration):
@@ -25,45 +26,47 @@ class Event:
 
 # Assume pa<pb, pc<pd:
 
+
 def overlap(pa, pb, pc, pd):
     if pb - pc >= 0 and pd - pa >= 0:
         return min(pb, pd) - max(pa, pc)
 
+
 # print_format_table()
 cktable = {-1: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
-ckindex = [1,2,8,10]
-       
-def gpu_profile(df_gpu): 
-    #df_gpu = df_gpu.convert_objects(convert_numeric=True)
-    #with open(logdir + 'overhead.js', 'w') as jsonfile:
-    #    x = y = data = []
-    #    A = df_gpu.groupby("copyKind")
-    #    for ck in range(len(A)):
-    #        print(ck)
-    #        y = A.get_group(ckindex[ck])["duration"]
-    #        x = A.get_group(ckindex[ck])["time"]
-    #        for i in range(0,len(x)):
-    #            if i%1 == 0 :
-    #                data.append([x.iloc[i],y.iloc[i]])
-    #        jsonfile.write("overhead_"+cktable[ckindex[ck]]+" = ")
-    #        json.dump(data, jsonfile)
-    #        jsonfile.write("\n")
-          
+ckindex = [1, 2, 8, 10]
+
+
+def gpu_profile(df_gpu):
+
+    total_kernel_time = 0.0
+    total_gpu_time = 0.0
+    total_memcopy_time = 0.0
+    total_traffic = 0.0
+    step_kernel_time = 0.0
+    batch_size = 64
+    throughput = 1414.0
+    n_steps = 20
+
     print_title("Task Time (IO included) for each Device (s)")
     grouped_df = df_gpu.groupby("deviceId")["duration"]
     total_tasktime = 0
     for key, item in grouped_df:
-        print("[%d]: %lf" % (int(float(key)), grouped_df.get_group(key).sum() ))
+        print("[%d]: %lf" % (int(float(key)), grouped_df.get_group(key).sum()))
         total_tasktime = total_tasktime + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
-    avg_tasktime = total_tasktime / n_devices
-    print("Averaged task time of devices: %.2lf"%avg_tasktime)
-    theory_overlaptime = avg_tasktime * (n_devices * (n_devices - 1) / 2)
+    per_gpu_time = total_tasktime / n_devices
+    step_gpu_time = per_gpu_time / n_steps
+    print("Averaged GPU time of devices: %.2lf" % per_gpu_time)
+    theory_overlaptime = step_gpu_time * (n_devices * (n_devices - 1) / 2)
 
     print_title("Data Traffic (bidirection) for each Device (MB)")
     grouped_df = df_gpu.groupby("deviceId")["payload"]
     for key, item in grouped_df:
         print("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0))
+        total_traffic = total_traffic + \
+            grouped_df.get_group(key).sum() / 1000000.0
+    print("Total traffic: %.2lf" % total_traffic)
 
     print_title("Data Traffic for each CopyKind (MB)")
     data_copyKind = grouped_df = df_gpu.groupby("copyKind")["payload"]
@@ -76,15 +79,22 @@ def gpu_profile(df_gpu):
     durations_copyKind = grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
         print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
+        if key == -1:
+            total_kernel_time = grouped_df.get_group(key).sum()
+        else:
+            total_memcopy_time = total_memcopy_time + \
+                grouped_df.get_group(key).sum()
 
     if cfg['enable_verbose'] == "true":
         print_title("Data Traffic for Each Pair of deviceId and CopyKind (MB)")
-        devcopy = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["payload"].sum()/1000000
+        devcopy = grouped_df = df_gpu.groupby(["deviceId", "copyKind"])[
+            "payload"].sum() / 1000000
         print(devcopy)
-        print_title("Data Communication Time for Each Pair of deviceId and CopyKind (s)")
-        devcopytime = grouped_df = df_gpu.groupby(["deviceId","copyKind"])["duration"].sum()
+        print_title(
+            "Data Communication Time for Each Pair of deviceId and CopyKind (s)")
+        devcopytime = grouped_df = df_gpu.groupby(
+            ["deviceId", "copyKind"])["duration"].sum()
         print(devcopytime)
-
 
     print_title("Task Time spent on Each Stream (s)")
     grouped_df = df_gpu.groupby("pid")["duration"]
@@ -92,17 +102,43 @@ def gpu_profile(df_gpu):
     for key, item in grouped_df:
         if cfg['enable_verbose'] == "true":
             print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
-        stream_durations = np.append( stream_durations, grouped_df.get_group(key).sum() )
+        stream_durations = np.append(
+            stream_durations,
+            grouped_df.get_group(key).sum())
     topk_streams = np.sort(stream_durations)[-8:]
     print(topk_streams)
-    print("Mean of Top-%d Stream Times = %.2lf" % (len(topk_streams),np.mean(topk_streams)))
-    
+    print("Mean of Top-%d Stream Times = %.2lf" %
+          (len(topk_streams), np.mean(topk_streams)))
 
     print_title("Averaged Achieved Bandwidth for each CopyKind: (GB/s)")
     bw = (data_copyKind.sum() / 1000000) / durations_copyKind.sum() / 1000
     for i in range(len(bw)):
         print("[%s]: %.3lf" % (cktable[bw.keys()[i]], bw.iloc[i]))
 
+    print_title("Model Performance (Meas.)")
+    meas = pd.DataFrame(
+        [],
+        columns=[
+            'step_time',
+            'step_gpu_time',
+            'step_kernel_time'])
+
+    step_time = (n_devices * batch_size / throughput)
+    step_kernel_time = total_kernel_time / float(n_devices) / n_steps
+
+    print("Measured Total MemCopy Time = %lf (s)" % total_memcopy_time)
+    print("Measured Total Traffic = %lf (MB)" % total_traffic)
+    print("Detected Number of Steps = %d" % n_steps)
+    print("Measured Step Time = %lf (s)" % step_time)
+    print("Measured Step Kernel/MemCopy Time = %lf (s)" % step_gpu_time)
+    print("Measured Step Kernel Time = %lf (s)" % step_kernel_time)
+    meas['step_time'] = step_time
+    meas['step_gpu_time'] = step_gpu_time
+    meas['step_kernel_time'] = step_kernel_time
+    print_title("Model Performance (Calc.)")
+    step_memcopy_time = step_gpu_time - step_kernel_time
+    print("Calculated Step MemCopy Time = %lf (s)" % step_memcopy_time)
+#    print("Calculated Kernel Time = %lf" % () )
 
     if enable_overlapness:
         print_title("Overlapness for All Events (s)")
@@ -152,7 +188,7 @@ def gpu_profile(df_gpu):
             (theory_overlaptime))
 
 
-def cpu_profile(cfg, df): 
+def cpu_profile(cfg, df):
     print_title("CPU Profiling: Task Time (IO included) for each Cores (s)")
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
@@ -162,65 +198,43 @@ def cpu_profile(cfg, df):
         total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
     avg_exec_time = total_exec_time / n_devices
-    print("total execution time = %.3lf" % total_exec_time )
-    print("average execution time across devices = %.3lf" % avg_exec_time )
+    print("total execution time = %.3lf" % total_exec_time)
+    print("average execution time across devices = %.3lf" % avg_exec_time)
 
-
-def cpu_overhead_report(df,cfg): 
-    print_progress("cpu overhead report -- begin")
-        #with open(logdir + 'overhead.js', 'w') as jsonfile:
-    #    x = y = data = []
-    #    A = df_gpu.groupby("copyKind")
-    #    for ck in range(len(A)):
-    #        print(ck)
-    #        y = A.get_group(ckindex[ck])["duration"]
-    #        x = A.get_group(ckindex[ck])["time"]
-    #        for i in range(0,len(x)):
-    #            if i%1 == 0 :
-    #                data.append([x.iloc[i],y.iloc[i]])
-    #        jsonfile.write("overhead_"+cktable[ckindex[ck]]+" = ")
-    #        json.dump(data, jsonfile)
-    #        jsonfile.write("\n")
-          
-
-    print_progress("cpu overhead report -- end")
- 
 
 if __name__ == "__main__":
     print('Number of arguments: %d arguments' % len(sys.argv))
     print('Argument List: %s' % str(sys.argv))
     logdir = []
     filein = []
-    enable_verbose=False
+    enable_verbose = False
     enable_overlapness = False
-    df_gpu=[]
-    df_cpu=[]
+    df_gpu = []
+    df_cpu = []
 
     parser = argparse.ArgumentParser(description='SOFA Analyze')
-    parser.add_argument("--logdir", metavar="/path/to/logdir/", type=str, required=True, 
-                    help='path to the directory of SOFA logged files')
-    parser.add_argument('--config', metavar="/path/to/config.cfg", type=str, required=True,
-                    help='path to the directory of SOFA configuration file')
-    
-    args =parser.parse_args()
+    parser.add_argument(
+        "--logdir",
+        metavar="/path/to/logdir/",
+        type=str,
+        required=True,
+        help='path to the directory of SOFA logged files')
+    parser.add_argument(
+        '--config',
+        metavar="/path/to/config.cfg",
+        type=str,
+        required=True,
+        help='path to the directory of SOFA configuration file')
+
+    args = parser.parse_args()
     logdir = args.logdir + "/"
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
 
-    cfg = read_config(args.config) 
-    #try:
-    #    with open(args.config) as f:
-    #        cfg = json.load(f)
-    #except:
-    #    with open( 'sofa.cfg', "w") as f:
-    #        json.dump(cfg,f)
-    #        f.write("\n")
-    #print_info("SOFA Configuration: ")    
-    #print(cfg)
+    cfg = read_config(args.config)
 
     try:
         df_gpu = pd.read_csv(filein_gpu)
-        #gpu_overhead_report(df_gpu,cfg)        
         gpu_profile(df_gpu)
     except IOError:
         print_warning(
@@ -228,10 +242,8 @@ if __name__ == "__main__":
 
     try:
         df_cpu = pd.read_csv(filein_cpu)
-        cpu_overhead_report(df_cpu,cfg)        
         cpu_profile(cfg, df_cpu)
     except IOError:
         print_warning(
             "cputrace.csv is not found")
         quit()
-
