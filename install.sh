@@ -37,7 +37,7 @@ fi
 
 echo " Installation directory is ${PREFIX}"
 set -x
-rm -rf ${PREFIX}
+mkdir -p ${PREFIX}
 mkdir -p ${PREFIX}/bin
 mkdir -p ${PREFIX}/sofaboard
 mkdir -p ${PREFIX}/plugin
@@ -53,6 +53,7 @@ cp -f sofaboard/cpu-report.html     ${PREFIX}/sofaboard
 cp -f sofaboard/gpu-report.html     ${PREFIX}/sofaboard
 cp -f sofaboard/overhead.html          ${PREFIX}/sofaboard
 echo "export PATH=\$PATH:${PREFIX}/bin" > tools/activate.sh
+echo "export PATH=\$PATH:/usr/local/cuda/bin" >> tools/activate.sh
 cp -f tools/activate.sh   ${PREFIX}/tools
 set +x
 echo "Please try 'source ${PREFIX}/tools/activate.sh' to enjoy sofa!"
