@@ -52,9 +52,9 @@ function collect_trace(){
         rm -f ${logdir}/sofa.pcap 2> /dev/null
         tcpdump -i any -v tcp -w ${logdir}/sofa.pcap & 
         date +%s > ${logdir}/sofa_time.txt
-        if [[ $(command -v nvprof) ]]; then  
-            nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvp perf record -o ${logdir}/perf.data -F 99 -a -- ${args} 
-            rm ${logdir}/gputrace.nvp 2> ${logdir}/sofa.log
+        if [[ $(command -v nvprof) ]]; then 
+            rm ${logdir}/gputrace*.nvp 2> ${logdir}/sofa.log
+            nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvp perf record -o ${logdir}/perf.data -F 99 -a -- ${args}  
         else
             perf record -o ${logdir}/perf.data -F 99 -a -- ${args} 
         fi 

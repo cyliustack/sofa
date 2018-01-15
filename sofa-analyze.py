@@ -48,7 +48,7 @@ def gpu_profile(df_gpu):
     throughput = 1414.0
     n_steps = 20
 
-    print_title("Task Time (IO included) for each Device (s)")
+    print_title("Task Time (MEMCPY included) for each Device (s)")
     grouped_df = df_gpu.groupby("deviceId")["duration"]
     total_tasktime = 0
     for key, item in grouped_df:
@@ -84,6 +84,15 @@ def gpu_profile(df_gpu):
         else:
             total_memcopy_time = total_memcopy_time + \
                 grouped_df.get_group(key).sum()
+
+    print_title("All-reduce Time (s)")
+    all_reduce_time=0
+    grouped_df = df_gpu.groupby("name")["duration"]
+    for key, item in grouped_df:
+        #print("[%s]: %lf" % (key, grouped_df.get_group(key).sum()))
+        if key.find("AllReduce") != -1:
+            all_reduce_time = all_reduce_time +  grouped_df.get_group(key).sum()
+                
 
     if cfg['enable_verbose'] == "true":
         print_title("Data Traffic for Each Pair of deviceId and CopyKind (MB)")
@@ -132,6 +141,7 @@ def gpu_profile(df_gpu):
     print("Measured Step Time = %lf (s)" % step_time)
     print("Measured Step Kernel/MemCopy Time = %lf (s)" % step_gpu_time)
     print("Measured Step Kernel Time = %lf (s)" % step_kernel_time)
+    print("Measured All-reduce Time = %lf (s)" % all_reduce_time)
     meas['step_time'] = step_time
     meas['step_gpu_time'] = step_gpu_time
     meas['step_kernel_time'] = step_kernel_time
@@ -187,6 +197,18 @@ def gpu_profile(df_gpu):
             "Theoritical overlapped time of Events: %lf" %
             (theory_overlaptime))
 
+def net_profile(cfg, df):
+    print_title("Network Profiling: Communication Time (s)")
+    grouped_df = df.groupby("name")["duration"]
+    total_net_time = 0
+    n_packets = 0 
+    for key, item in grouped_df:
+        print("[%s]: %lf" % (key, grouped_df.get_group(key).sum()))
+        if key.find("network:tcp:") != -1:
+            total_net_time = total_net_time + grouped_df.get_group(key).sum()
+            n_packets = n_packets + 1
+    print("total network time = %.3lf" % total_net_time)
+    print("total amount of network packets  = %d" % n_packets)
 
 def cpu_profile(cfg, df):
     print_title("CPU Profiling: Task Time (IO included) for each Cores (s)")
@@ -243,6 +265,7 @@ if __name__ == "__main__":
     try:
         df_cpu = pd.read_csv(filein_cpu)
         cpu_profile(cfg, df_cpu)
+        net_profile(cfg, df_cpu)
     except IOError:
         print_warning(
             "cputrace.csv is not found")

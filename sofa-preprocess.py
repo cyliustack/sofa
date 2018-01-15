@@ -104,11 +104,12 @@ def gpu_memcpy2_trace_read(record, t_base, t_glb_base):
     		0]
     return trace
 
-def net_trace_read(packet, t_base, t_glb_base):
+def net_trace_read(packet, t_offset):
+    trace = []
     try:
         time = packet[IP].time
-        t_begin = (time - t_base) + t_glb_base
-        t_end = (time - t_base) + t_glb_base
+        t_begin = time + t_offset
+        t_end = time  + t_offset    
         payload = packet.len
         pkt_src = packet[IP].src.split('.')[3]
         pkt_dst = packet[IP].dst.split('.')[3]                
@@ -123,13 +124,12 @@ def net_trace_read(packet, t_base, t_glb_base):
        	            pkt_dst,
        	            -1, 
        	            -1,
-       	            "%s_to_%s_with_%d" % (pkt_src, pkt_dst, payload),
+                    "network:tcp:%s_to_%s_with_%d" % (pkt_src, pkt_dst, payload),
        	            0]
 	return trace
     except Exception as e:
         print(e)
-	return []
-
+	return trace
 
 class bcolors:
     HEADER = '\033[95m'
@@ -317,7 +317,7 @@ if __name__ == "__main__":
 
         #pool = mp.Pool(processes=cpu_count)
 	#t_base = packets[0][IP].time 
-	#res = pool.map( partial(net_trace_read, t_base=t_base, t_glb_base=t_glb_net_base), packets)
+	#res = pool.map( partial(net_trace_read, t_offset=t_glb_net_base - t_base), packets)
 	#net_traces = pd.DataFrame(res)
         #net_traces.columns = sofa_fieldnames
         for i in range(0, len(net_traces)):
@@ -341,7 +341,7 @@ if __name__ == "__main__":
                 			pkt_dst,
                 			-1, 
                 			-1,
-                			"%s_to_%s_with_%d" % (pkt_src, pkt_dst, payload),
+                                        "network:tcp:%s_to_%s_with_%d" % (pkt_src, pkt_dst, payload),
                 			0]
             except Exception as e:
                 print(e)
