@@ -203,7 +203,7 @@ def net_profile(cfg, df):
     total_net_time = 0
     n_packets = 0 
     for key, item in grouped_df:
-        print("[%s]: %lf" % (key, grouped_df.get_group(key).sum()))
+        #print("[%s]: %lf" % (key, grouped_df.get_group(key).sum()))
         if key.find("network:tcp:") != -1:
             total_net_time = total_net_time + grouped_df.get_group(key).sum()
             n_packets = n_packets + 1
