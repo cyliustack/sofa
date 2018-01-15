@@ -47,7 +47,6 @@ function collect_trace(){
     fi
     
     if [[ "$(cat /proc/sys/kernel/perf_event_paranoid)" == "-1" ]]; then 
-        rm -r ${logdir}
         mkdir -p ${logdir}
         rm -f ${logdir}/perf.data 2> /dev/null
         rm -f ${logdir}/sofa.pcap 2> /dev/null
