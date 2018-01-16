@@ -54,6 +54,7 @@ function collect_trace(){
         date +%s > ${logdir}/sofa_time.txt
         if [[ $(command -v nvprof) ]]; then 
             rm ${logdir}/gputrace*.nvp 2> ${logdir}/sofa.log
+            rm ${logdir}/*.csv 2> ${logdir}/sofa.log
             nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvp perf record -o ${logdir}/perf.data -F 99 -a -- ${args}  
         else
             perf record -o ${logdir}/perf.data -F 99 -a -- ${args} 

@@ -180,7 +180,7 @@ def traces_to_json(traces, path):
     
     with open(path, 'w') as f:
         for trace in traces:
-            print_info("Dump %s to JSON file"%trace.name)    
+            #print_info("Dump %s to JSON file"%trace.name)    
             if len(trace.data) > 0:
                 f.write(trace.name+" = ")
                 trace.data.rename(columns={trace.x_field:'x', trace.y_field:'y'}, inplace=True)
@@ -214,7 +214,7 @@ sofa_fieldnames = [
         "category"]
 
 if __name__ == "__main__":
-    
+    sys.stdout.flush() 
  
     parser = argparse.ArgumentParser(description='SOFA Preprocessing')
     parser.add_argument("--logdir", metavar="/path/to/logdir/", type=str, required=True, 

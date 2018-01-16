@@ -42,6 +42,7 @@ mkdir -p ${PREFIX}/bin
 mkdir -p ${PREFIX}/sofaboard
 mkdir -p ${PREFIX}/plugin
 mkdir -p ${PREFIX}/tools
+rm ${PREFIX}/bin/*.pyc
 cp -f sofa                      ${PREFIX}/bin
 cp -f sofa-preprocess.py        ${PREFIX}/bin
 cp -f sofa-analyze.py           ${PREFIX}/bin

@@ -45,7 +45,6 @@ def gpu_profile(df_gpu):
     total_traffic = 0.0
     step_kernel_time = 0.0
     batch_size = 64
-    throughput = 1414.0
     n_steps = 20
 
     print_title("Task Time (MEMCPY included) for each Device (s)")
@@ -128,21 +127,17 @@ def gpu_profile(df_gpu):
     meas = pd.DataFrame(
         [],
         columns=[
-            'step_time',
             'step_gpu_time',
             'step_kernel_time'])
 
-    step_time = (n_devices * batch_size / throughput)
     step_kernel_time = total_kernel_time / float(n_devices) / n_steps
 
     print("Measured Total MemCopy Time = %lf (s)" % total_memcopy_time)
     print("Measured Total Traffic = %lf (MB)" % total_traffic)
     print("Detected Number of Steps = %d" % n_steps)
-    print("Measured Step Time = %lf (s)" % step_time)
     print("Measured Step Kernel/MemCopy Time = %lf (s)" % step_gpu_time)
     print("Measured Step Kernel Time = %lf (s)" % step_kernel_time)
     print("Measured All-reduce Time = %lf (s)" % all_reduce_time)
-    meas['step_time'] = step_time
     meas['step_gpu_time'] = step_gpu_time
     meas['step_kernel_time'] = step_kernel_time
     print_title("Model Performance (Calc.)")
