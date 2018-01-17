@@ -37,16 +37,13 @@ cktable = {-1: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 ckindex = [1, 2, 8, 10]
 
 
-def gpu_profile(df_gpu):
+def gpu_profile(cfg, df_gpu):
 
     total_kernel_time = 0.0
     total_gpu_time = 0.0
     total_memcopy_time = 0.0
     total_traffic = 0.0
-    step_kernel_time = 0.0
-    batch_size = 64
-    n_steps = 20
-
+    top_k = int(cfg['top_k'])
     print_title("Task Time (MEMCPY included) for each Device (s)")
     grouped_df = df_gpu.groupby("deviceId")["duration"]
     total_tasktime = 0
@@ -55,17 +52,12 @@ def gpu_profile(df_gpu):
         total_tasktime = total_tasktime + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
     per_gpu_time = total_tasktime / n_devices
-    step_gpu_time = per_gpu_time / n_steps
     print("Averaged GPU time of devices: %.2lf" % per_gpu_time)
-    theory_overlaptime = step_gpu_time * (n_devices * (n_devices - 1) / 2)
 
     print_title("Data Traffic (bidirection) for each Device (MB)")
     grouped_df = df_gpu.groupby("deviceId")["payload"]
     for key, item in grouped_df:
         print("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0))
-        total_traffic = total_traffic + \
-            grouped_df.get_group(key).sum() / 1000000.0
-    print("Total traffic: %.2lf" % total_traffic)
 
     print_title("Data Traffic for each CopyKind (MB)")
     data_copyKind = grouped_df = df_gpu.groupby("copyKind")["payload"]
@@ -73,7 +65,12 @@ def gpu_profile(df_gpu):
         print(
             "[%s]: %lf" %
             (cktable[key], grouped_df.get_group(key).sum() / 1000000.0))
+        if int(key) != 8:
+            total_traffic = total_traffic + \
+                grouped_df.get_group(key).sum() / 1000000.0
+    print("Total traffic: %.2lf" % total_traffic)
 
+       
     print_title("Data Communication Time for each CopyKind (s)")
     durations_copyKind = grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
@@ -106,15 +103,14 @@ def gpu_profile(df_gpu):
 
     print_title("Task Time spent on Each Stream (s)")
     grouped_df = df_gpu.groupby("pid")["duration"]
-    stream_durations = []
+    
+
+    s = []
     for key, item in grouped_df:
-        if cfg['enable_verbose'] == "true":
-            print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
-        stream_durations = np.append(
-            stream_durations,
-            grouped_df.get_group(key).sum())
-    topk_streams = np.sort(stream_durations)[-8:]
-    print(topk_streams)
+        s.append( [key, grouped_df.get_group(key).sum()] )
+    topk_streams = sorted(s,key=lambda l:l[1], reverse=True)[:-top_k]
+    for s in topk_streams:   
+        print("[%d]: %.3lf" % (s[0],s[1]))
     print("Mean of Top-%d Stream Times = %.2lf" %
           (len(topk_streams), np.mean(topk_streams)))
 
@@ -124,26 +120,13 @@ def gpu_profile(df_gpu):
         print("[%s]: %.3lf" % (cktable[bw.keys()[i]], bw.iloc[i]))
 
     print_title("Model Performance (Meas.)")
-    meas = pd.DataFrame(
-        [],
-        columns=[
-            'step_gpu_time',
-            'step_kernel_time'])
 
-    step_kernel_time = total_kernel_time / float(n_devices) / n_steps
 
-    print("Measured Total MemCopy Time = %lf (s)" % total_memcopy_time)
-    print("Measured Total Traffic = %lf (MB)" % total_traffic)
-    print("Detected Number of Steps = %d" % n_steps)
-    print("Measured Step Kernel/MemCopy Time = %lf (s)" % step_gpu_time)
-    print("Measured Step Kernel Time = %lf (s)" % step_kernel_time)
-    print("Measured All-reduce Time = %lf (s)" % all_reduce_time)
-    meas['step_gpu_time'] = step_gpu_time
-    meas['step_kernel_time'] = step_kernel_time
+    print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
+    print("MeasuredTotalMemCopyTime : %lf (s)" % total_memcopy_time)
+    print("MeasuredTotalTraffic : %lf (MB)" % total_traffic)
+    print("MeasuredAllReduceTime : %lf (s)" % all_reduce_time)
     print_title("Model Performance (Calc.)")
-    step_memcopy_time = step_gpu_time - step_kernel_time
-    print("Calculated Step MemCopy Time = %lf (s)" % step_memcopy_time)
-#    print("Calculated Kernel Time = %lf" % () )
 
     if enable_overlapness:
         print_title("Overlapness for All Events (s)")
@@ -188,9 +171,6 @@ def gpu_profile(df_gpu):
                 # print("pop out %d" % e.name)
                 event_stack = [es for es in event_stack if es.name != e.name]
         print("Measured Overlapped time of Events: %lf" % (overlaptime))
-        print(
-            "Theoritical overlapped time of Events: %lf" %
-            (theory_overlaptime))
 
 def net_profile(cfg, df):
     print_title("Network Profiling: Communication Time (s)")
@@ -252,7 +232,7 @@ if __name__ == "__main__":
 
     try:
         df_gpu = pd.read_csv(filein_gpu)
-        gpu_profile(df_gpu)
+        gpu_profile(cfg, df_gpu)
     except IOError:
         print_warning(
             "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
