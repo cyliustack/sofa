@@ -71,6 +71,16 @@ def gpu_kernel_trace_read(record, pid, t_base, t_glb_base):
 def gpu_memcpy_trace_read(record, t_base, t_glb_base):
     t_begin = (record[0] - t_base) / 1e9 + t_glb_base
     t_end   = (record[1] - t_base) / 1e9 + t_glb_base
+    
+    src = -1
+    dst = -1
+    if record[3] == 1:
+        src = 0
+        dst = record[4]+1
+    elif record[3] == 2:
+        src = record[4]+1
+        dst = 0
+
     trace = [	t_begin,
     		record[2],
     		float(t_end - t_begin),
@@ -78,8 +88,8 @@ def gpu_memcpy_trace_read(record, t_base, t_glb_base):
     		record[3],
     		record[2],
     		float(record[2])/(t_end-t_begin)/1.0e6,
-    		-1,
-    		-1,
+    		src,
+    		dst,
     		record[7], #streamId
     		-1,
     		"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]), 
@@ -96,8 +106,8 @@ def gpu_memcpy2_trace_read(record, t_base, t_glb_base):
     		record[3],
     		record[2],
     		float(record[2])/(t_end-t_begin)/1.0e6,
-    		-1,
-    		-1,
+    		record[8],
+    		record[9],
     		record[7], #streamId
     		-1,
     		"gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]), 
@@ -480,7 +490,7 @@ if __name__ == "__main__":
     	print_progress("query CUDA memcpy2 (p2p) -- begin")
     	try:
     	    cursor.execute(
-    	        "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")
+    	        "SELECT start,end,bytes,copyKind,deviceId,srcKind,dstKind,streamId,srcContextId,dstContextId  FROM CUPTI_ACTIVITY_KIND_MEMCPY2")
     	    gpu_memcpy2_records = cursor.fetchall()
     	except sqlite3.OperationalError:
     	    print_info("No GPU MEMCPY2 traces were collected.")
