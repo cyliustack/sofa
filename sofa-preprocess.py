@@ -539,6 +539,13 @@ if __name__ == "__main__":
 
     print_progress("Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
+    # cpu_traces.loc[:,'timestamp'] -= cpu_traces.loc[0,'timestamp']
+    # net_traces.loc[:,'timestamp'] -= net_traces.loc[0,'timestamp']
+    # gpu_kernel_traces.loc[:,'timestamp'] -= gpu_kernel_traces.loc[0,'timestamp']
+    # gpu_memcpy_traces.loc[:,'timestamp'] -= gpu_memcpy_traces.loc[0,'timestamp']
+    # gpu_memcpy2_traces.loc[:,'timestamp'] -= gpu_memcpy2_traces.loc[0,'timestamp']
+
+
     traces = []
     sofatrace = SOFATrace()
     sofatrace.name = 'cpu_trace'

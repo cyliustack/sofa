@@ -55,7 +55,7 @@
           left: 0;
         }
     </style>
-    <link rel="stylesheet" href="scatter.css" charset="utf-8">
+    <!--<link rel="stylesheet" href="scatter.css" charset="utf-8">-->
   </head>
   <body>
     <div id="scatter"></div>
@@ -77,25 +77,20 @@
 				var y = d3.scale.linear()
 				    .range([height, 0]).nice();
 				
-				var xCat = "Calories",
-				    yCat = "Potassium",
-				    rCat = "Protein (g)",
-				    colorCat = "Manufacturer";
-				
+				var xCat = "timestamp",
+				    yCat = "pkt_src",
+				    rCat = "payload",
+				    colorCat = "pkt_dst";
+			// Cereal Name,Manufacturer,Type,Calories,Protein (g),Fat,Sodium,Dietary Fiber,Carbs,\
+			// Sugars,Display Shelf,Potassium,Vitamins and Minerals,Serving Size Weight,Cups per Serving
+			//100%_Bran,Nabisco,C,70,4,1,130,10,5,6,3,280,25,1,0.33
+			//100%_Natural_Bran,Quaker Oats,C,120,3,5,15,2,8,8,3,135,0,1,-1	
 				d3.csv("comm.csv", function(data) {
 				  data.forEach(function(d) {
-				    d.Calories = +d.Calories;
-				    d.Carbs = +d.Carbs;
-				    d["Cups per Serving"] = +d["Cups per Serving"];
-				    d["Dietary Fiber"] = +d["Dietary Fiber"];
-				    d["Display Shelf"] = +d["Display Shelf"];
-				    d.Fat = +d.Fat;
-				    d.Potassium = +d.Potassium;
-				    d["Protein (g)"] = +d["Protein (g)"];
-				    d["Serving Size Weight"] = +d["Serving Size Weight"];
-				    d.Sodium = +d.Sodium;
-				    d.Sugars = +d.Sugars;
-				    d["Vitamins and Minerals"] = +d["Vitamins and Minerals"];
+				    d.timestamp = +d.timestamp;
+				    d.pkt_src = +d.pkt_src;
+				    d.pkt_dst = +d.pkt_dst;
+				    d.payload = +d.payload;
 				  });
 				
 				  var xMax = d3.max(data, function(d) { return d[xCat]; }) * 1.05,
@@ -124,7 +119,10 @@
 				      .attr("class", "d3-tip")
 				      .offset([-10, 0])
 				      .html(function(d) {
-				        return xCat + ": " + d[xCat] + "<br>" + yCat + ": " + d[yCat];
+					      content = xCat + ": " + d[xCat] + "<br>" 
+					      content += rCat + ": " + d[rCat] + "<br>" 	      
+					      content += colorCat + ": " + d[colorCat] + "<br>" 	      
+					      return content ;
 				      });
 				
 				  var zoomBeh = d3.behavior.zoom()
@@ -193,9 +191,9 @@
 				      .data(data)
 				    .enter().append("circle")
 				      .classed("dot", true)
-				      .attr("r", function (d) { return 6 * Math.sqrt(d[rCat] / Math.PI); })
+				      .attr("r", function (d) { return 6 * Math.sqrt( Math.sqrt(d[rCat]/1024/1024) / Math.PI); })
 				      .attr("transform", transform)
-				      .style("fill", function(d) { return color(d[colorCat]); })
+				      .style("fill", function(d) { return color(d[colorCat]*10); })
 				      .on("mouseover", tip.show)
 				      .on("mouseout", tip.hide);
 				
@@ -218,9 +216,9 @@
 				  d3.select("input").on("click", change);
 				
 				  function change() {
-				    xCat = "Carbs";
-				    xMax = d3.max(data, function(d) { return d[xCat]; });
-				    xMin = d3.min(data, function(d) { return d[xCat]; });
+				    xCat = "timestamp";
+				    xMax = d3.max(data, function(d) { return d[timestamp]; });
+				    xMin = d3.min(data, function(d) { return d[timestamp]; });
 				
 				    zoomBeh.x(x.domain([xMin, xMax])).y(y.domain([yMin, yMax]));
 				

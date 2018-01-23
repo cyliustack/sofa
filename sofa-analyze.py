@@ -53,7 +53,6 @@ def comm_profile(cfg, df_gpu):
         payload = df_gpu.loc[i,'payload']
         accum[src][dst] = int(accum[src][dst] + payload)
         accum_count[src][dst] = int(accum_count[src][dst] + 1)
-        
         if cfg['enable_verbose'] == "true":
             if df_gpu.loc[i,'copyKind'] == 1:
                 print("[H2D] HOST%d to GPU%d, count:%d\tpayload:%d\taccum_payload:%d" % ( df_gpu.loc[i,'pkt_src'],df_gpu.loc[i,'pkt_dst'], accum_count[src][dst], payload, accum[src][dst]))
@@ -77,6 +76,7 @@ def comm_profile(cfg, df_gpu):
             row_str = row_str + "%d"%(accum[i][j]/(1024*1024)) + "\t"
         print(row_str)
         #for i in range(len(df_gpu)):
+    df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload"] )    
 
 def gpu_profile(cfg, df_gpu):
 
@@ -286,6 +286,7 @@ if __name__ == "__main__":
 
     try:
         df_gpu = pd.read_csv(filein_gpu)
+        df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
         gpu_profile(cfg, df_gpu)
         comm_profile(cfg, df_gpu)
     except IOError:
