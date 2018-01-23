@@ -76,7 +76,7 @@ def comm_profile(cfg, df_gpu):
             row_str = row_str + "%d"%(accum[i][j]/(1024*1024)) + "\t"
         print(row_str)
         #for i in range(len(df_gpu)):
-    df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload"] )    
+    df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload","bandwidth"] )    
 
 def gpu_profile(cfg, df_gpu):
 

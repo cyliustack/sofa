@@ -119,9 +119,9 @@
 				      .attr("class", "d3-tip")
 				      .offset([-10, 0])
 				      .html(function(d) {
-					      content = xCat + ": " + d[xCat] + "<br>" 
-					      content += rCat + ": " + d[rCat] + "<br>" 	      
-					      content += colorCat + ": " + d[colorCat] + "<br>" 	      
+					      content = xCat + ": " + d[xCat].toFixed(3) + "<br>" 
+					      content += "payload(MB) : " + (d['payload']/1024/1024).toFixed(1) + "<br>" 	      
+					      content += "bandwidth(GB/s) : " + (d['bandwidth']/1024).toFixed(1) + "<br>" 	      
 					      return content ;
 				      });
 				
@@ -154,7 +154,7 @@
 				      .attr("x", width)
 				      .attr("y", margin.bottom - 10)
 				      .style("text-anchor", "end")
-				      .text(xCat);
+				      .text("Time (s)");
 				
 				  svg.append("g")
 				      .classed("y axis", true)
@@ -165,7 +165,7 @@
 				      .attr("y", -margin.left)
 				      .attr("dy", ".71em")
 				      .style("text-anchor", "end")
-				      .text(yCat);
+				      .text("Device ID");
 				
 				  var objects = svg.append("svg")
 				      .classed("objects", true)
