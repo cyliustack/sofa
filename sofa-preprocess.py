@@ -20,7 +20,7 @@ def sqlite3_read_tables(filename):
 
 def nvprof_db_read(logdir):
     db = [] 
-    for sqlite_filename in glob.glob(logdir+"gputrace*[0-9].nvp"):
+    for sqlite_filename in glob.glob(logdir+"gputrace*[0-9].nvvp"):
         db = sqlite3.connect(sqlite_filename)
 	print("Merging %s" % sqlite_filename)
     return 0
@@ -365,7 +365,7 @@ if __name__ == "__main__":
     ### ============ Preprocessing GPU Trace ==========================
     print_progress("read and csv-transform nvprof traces -- begin")
     num_cudaproc = 0
-    for sqlite_filename in glob.glob(logdir+"gputrace*[0-9].nvp"):
+    for sqlite_filename in glob.glob(logdir+"gputrace*[0-9].nvvp"):
 	
  	print("Merging %s" % sqlite_filename)
 	db = sqlite3.connect(sqlite_filename)
