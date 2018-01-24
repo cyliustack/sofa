@@ -80,7 +80,7 @@ def gpu_memcpy_trace_read(record, t_base, t_glb_base):
     elif record[3] == 2:
         src = record[4]+1
         dst = 0
-    elif record[8] == 8:
+    elif record[3] == 8:
         src = record[4]+1
         dst = record[4]+1
 
