@@ -36,73 +36,18 @@ def overlap(pa, pb, pc, pd):
 cktable = {-1: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 ckindex = [1, 2, 8, 10]
 
-def comm_profile(cfg, df_gpu):
-    n_gpus = 0
-    for i in range(len(df_gpu)):
-        if df_gpu.loc[i,'pkt_src'] > n_gpus:
-            n_gpus = df_gpu.loc[i,'pkt_src']
-     
-    accum = np.zeros((1+n_gpus, 1+n_gpus))
-    accum_count = np.zeros((1+n_gpus, 1+n_gpus))
-    
-    for i in range(len(df_gpu)):
-        if df_gpu.loc[i,'copyKind'] == -1 or df_gpu.loc[i,'copyKind'] == 8:
-            continue
-        src = df_gpu.loc[i,'pkt_src']
-        dst = df_gpu.loc[i,'pkt_dst']
-        payload = df_gpu.loc[i,'payload']
-        accum[src][dst] = int(accum[src][dst] + payload)
-        accum_count[src][dst] = int(accum_count[src][dst] + 1)
-        if cfg['enable_verbose'] == "true":
-            if df_gpu.loc[i,'copyKind'] == 1:
-                print("[H2D] HOST%d to GPU%d, count:%d\tpayload:%d\taccum_payload:%d" % ( df_gpu.loc[i,'pkt_src'],df_gpu.loc[i,'pkt_dst'], accum_count[src][dst], payload, accum[src][dst]))
-            if df_gpu.loc[i,'copyKind'] == 2:
-                print("[D2H] GPU%d to HOST%d, count:%d\tpayload:%d\taccum_payload:%d" % ( df_gpu.loc[i,'pkt_src'],df_gpu.loc[i,'pkt_dst'], accum_count[src][dst], payload, accum[src][dst]))
-            if df_gpu.loc[i,'copyKind'] == 10:
-                print("[P2P] GPU%d to GPU%d: count:%d\tpayload:%d\taccum_payload:%d" % ( df_gpu.loc[i,'pkt_src'],df_gpu.loc[i,'pkt_dst'], accum_count[src][dst], payload, accum[src][dst]))
-
-    row_str = "\tHOST\t"
-    print_title("Summary of Comm. (MB)")
-    for i in range(1,accum.shape[1]):
-            row_str = row_str + "GPU%d"%i + "\t"
-    print(row_str)
-
-    for i in range(accum.shape[0]):
-        if i == 0:
-            row_str = "HOST\t"
-        else:
-            row_str = "GPU%d\t"%i
-        for j in range(accum.shape[1]):
-            row_str = row_str + "%d"%(accum[i][j]/(1024*1024)) + "\t"
-        print(row_str)
-        #for i in range(len(df_gpu)):
-    df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload","bandwidth"] )    
-
-def gpu_profile(cfg, df_gpu):
-
-    total_kernel_time = 0.0
-    total_gpu_time = 0.0
-    total_memcopy_time = 0.0
+def comm_profile(cfg, df_gpu, given_iterations):
     total_traffic = 0.0
     total_h2d_traffic = 0.0
     total_d2h_traffic = 0.0
     total_p2p_traffic = 0.0
-    top_k = int(cfg['top_k'])
-    print_title("Task Time (MEMCPY included) for each Device (s)")
-    grouped_df = df_gpu.groupby("deviceId")["duration"]
-    total_tasktime = 0
-    for key, item in grouped_df:
-        print("[%d]: %lf" % (int(float(key)), grouped_df.get_group(key).sum()))
-        total_tasktime = total_tasktime + grouped_df.get_group(key).sum()
-    n_devices = len(grouped_df)
-    per_gpu_time = total_tasktime / n_devices
-    print("Averaged GPU time of devices: %.2lf" % per_gpu_time)
+    total_memcopy_time = 0.0
 
-    print_title("Data Traffic (bidirection) for each Device (MB)")
-    grouped_df = df_gpu.groupby("deviceId")["payload"]
-    for key, item in grouped_df:
-        print("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0))
-
+    n_gpus = 0
+    for i in range(len(df_gpu)):
+        if df_gpu.loc[i,'pkt_src'] > n_gpus:
+            n_gpus = df_gpu.loc[i,'pkt_src']
+    
     print_title("Data Traffic for each CopyKind (MB)")
     data_copyKind = grouped_df = df_gpu.groupby("copyKind")["payload"]
     for key, item in grouped_df:
@@ -130,6 +75,100 @@ def gpu_profile(cfg, df_gpu):
         else:
             total_memcopy_time = total_memcopy_time + \
                 grouped_df.get_group(key).sum()
+
+    
+    bw = (data_copyKind.sum() / 1000000) / durations_copyKind.sum() / 1000
+    avg_bw = 0.0
+
+    for i in range(len(bw)):
+        key = bw.keys()[i]
+        if cktable[key] == 'D2D':
+            continue
+        if cktable[key] == 'H2D':
+            avg_bw = avg_bw + bw.iloc[i] * float(total_h2d_traffic)/total_traffic  
+        if cktable[key] == 'D2H':
+            avg_bw = avg_bw + bw.iloc[i] * float(total_d2h_traffic)/total_traffic  
+        if cktable[key] == 'P2P':
+            avg_bw = avg_bw + bw.iloc[i] * float(total_p2p_traffic)/total_traffic  
+
+    print_title("Summary of Comm.")
+    print("Averaged Achieved Bandwidth: %.1f (GB/s)" % avg_bw)
+    print("MeasuredTotalTraffic : %lf (MB)" % total_traffic)
+    print("MeasuredTotalH2DTraffic : %lf (MB)" % total_h2d_traffic)
+    print("MeasuredTotalD2HTraffic : %lf (MB)" % total_d2h_traffic)
+    print("MeasuredTotalP2PTraffic : %lf (MB)" % total_p2p_traffic)
+    
+    accum = np.zeros((1+n_gpus, 1+n_gpus))
+    accum_count = np.zeros((1+n_gpus, 1+n_gpus))
+    
+    
+    for i in range(len(df_gpu)):
+        if df_gpu.loc[i,'copyKind'] == -1 or df_gpu.loc[i,'copyKind'] == 8:
+            continue
+        src = df_gpu.loc[i,'pkt_src']
+        dst = df_gpu.loc[i,'pkt_dst']
+        payload = df_gpu.loc[i,'payload']
+        accum[src][dst] = int(accum[src][dst] + payload)
+        accum_count[src][dst] = int(accum_count[src][dst] + 1)
+        if cfg['enable_verbose'] == "true":
+            if df_gpu.loc[i,'copyKind'] == 1:
+                print("[H2D] HOST%d to GPU%d, count:%d\tpayload:%d\taccum_payload:%d" % ( df_gpu.loc[i,'pkt_src'],df_gpu.loc[i,'pkt_dst'], accum_count[src][dst], payload, accum[src][dst]))
+            if df_gpu.loc[i,'copyKind'] == 2:
+                print("[D2H] GPU%d to HOST%d, count:%d\tpayload:%d\taccum_payload:%d" % ( df_gpu.loc[i,'pkt_src'],df_gpu.loc[i,'pkt_dst'], accum_count[src][dst], payload, accum[src][dst]))
+            if df_gpu.loc[i,'copyKind'] == 10:
+                print("[P2P] GPU%d to GPU%d: count:%d\tpayload:%d\taccum_payload:%d" % ( df_gpu.loc[i,'pkt_src'],df_gpu.loc[i,'pkt_dst'], accum_count[src][dst], payload, accum[src][dst]))
+
+    print("Traffic Matrix (MB):")
+    row_str = "\tHOST\t" 
+    for i in range(1,accum.shape[1]):
+            row_str = row_str + "GPU%d"%i + "\t"
+    print(row_str)
+
+    for i in range(accum.shape[0]):
+        if i == 0:
+            row_str = "HOST\t"
+        else:
+            row_str = "GPU%d\t"%i
+        for j in range(accum.shape[1]):
+            row_str = row_str + "%d"%(accum[i][j]/(1024*1024)) + "\t"
+        print(row_str)
+        #for i in range(len(df_gpu)):
+    df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload","bandwidth"] )    
+
+    return np.max(accum)/1024.0/avg_bw/given_iterations, avg_bw
+
+def gpu_profile(cfg, df_gpu, given_iterations, given_batch_size):
+    total_kernel_time = 0.0
+    total_gpu_time = 0.0 
+    top_k = int(cfg['top_k'])
+    
+    num_gpus = 0
+    for i in range(len(df_gpu)):
+        if df_gpu.loc[i,'deviceId']+1 > num_gpus:
+            num_gpus = df_gpu.loc[i,'deviceId']+1
+    print("Number of GPUs = %d" % num_gpus ) 
+    print("Given batch size = %d" % given_batch_size) 
+    
+    print_title("Task Time (MEMCPY included) for each Device (s)")
+    grouped_df = df_gpu.groupby("deviceId")["duration"]
+    total_tasktime = 0
+    for key, item in grouped_df:
+        print("[%d]: %lf" % (int(float(key)), grouped_df.get_group(key).sum()))
+        total_tasktime = total_tasktime + grouped_df.get_group(key).sum()
+    n_devices = len(grouped_df)
+    per_gpu_time = total_tasktime / n_devices
+    print("Averaged GPU time of devices: %.2lf" % per_gpu_time)
+
+    print_title("Data Traffic (bidirection) for each Device (MB)")
+    grouped_df = df_gpu.groupby("deviceId")["payload"]
+    for key, item in grouped_df:
+        print("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0))
+
+
+    grouped_df = df_gpu.groupby("copyKind")["duration"]
+    for key, item in grouped_df:
+        if key == -1:
+            total_kernel_time = grouped_df.get_group(key).sum()
 
     print_title("All-reduce Time (s)")
     all_reduce_time=0
@@ -164,22 +203,19 @@ def gpu_profile(cfg, df_gpu):
     print("Mean of Top-%d Stream Times = %.2lf" %
           (len(topk_streams), np.mean(topk_streams)))
 
-    print_title("Averaged Achieved Bandwidth for each CopyKind: (GB/s)")
-    bw = (data_copyKind.sum() / 1000000) / durations_copyKind.sum() / 1000
-    for i in range(len(bw)):
-        print("[%s]: %.3lf" % (cktable[bw.keys()[i]], bw.iloc[i]))
 
-    print_title("Model Performance (Meas.)")
+    t_c_elapsed, avg_bw = comm_profile(cfg, df_gpu, given_iterations)
+    t_k_elapsed = total_kernel_time / num_gpus/ given_iterations 
+    est_throughput = num_gpus * (given_batch_size/(t_k_elapsed + t_c_elapsed))
 
-
+    print_title("Summary of Kernels")
     print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
-    print("MeasuredTotalMemCopyTime : %lf (s)" % total_memcopy_time)
-    print("MeasuredTotalTraffic : %lf (MB)" % total_traffic)
-    print("MeasuredTotalH2DTraffic : %lf (MB)" % total_h2d_traffic)
-    print("MeasuredTotalD2HTraffic : %lf (MB)" % total_d2h_traffic)
-    print("MeasuredTotalP2PTraffic : %lf (MB)" % total_p2p_traffic)
     print("MeasuredAllReduceTime : %lf (s)" % all_reduce_time)
-    print_title("Model Performance (Calc.)")
+
+    
+    print_title("Performance Modeling")
+    print("Estimated Throughput (designed_bandwidth=%.1lf): %d" % ( avg_bw, est_throughput))
+
 
     if enable_overlapness:
         print_title("Overlapness for All Events (s)")
@@ -275,11 +311,37 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help='path to the directory of SOFA configuration file')
+    parser.add_argument(
+        '--given_iterations',
+        metavar="N",
+        type=int,
+        required=False,
+        help='Given the number of iterations(a.k.a. number of batches or steps) to enable behaviour analysis')
+    parser.add_argument(
+        '--given_batch_size',
+        metavar="N",
+        type=int,
+        required=False,
+        help='Given batch size for profiling DNN applications')
+
+
 
     args = parser.parse_args()
     logdir = args.logdir + "/"
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
+    
+    given_iterations = 20
+    if args.given_iterations != None:
+        given_iterations = args.give_iterations
+
+    given_batch_size = 64
+    if args.given_batch_size != None:
+        given_batch_size = args.given_batch_size
+
+
+    print("given_iterations = %d" % given_iterations )
+    print("given_batch_size = %d" % given_batch_size )
 
 
     cfg = read_config(args.config)
@@ -287,8 +349,8 @@ if __name__ == "__main__":
     try:
         df_gpu = pd.read_csv(filein_gpu)
         df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
-        gpu_profile(cfg, df_gpu)
-        comm_profile(cfg, df_gpu)
+        gpu_profile(cfg, df_gpu, given_iterations, given_batch_size)
+        
     except IOError:
         print_warning(
             "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")

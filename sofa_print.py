@@ -12,7 +12,8 @@ class bcolors:
 
 
 def print_title(content):
-    print(bcolors.TITLE + content + bcolors.ENDC)
+    print('\n')
+    print(bcolors.TITLE  + content + bcolors.ENDC)
 
 def print_warning(content):
     print(bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC)
