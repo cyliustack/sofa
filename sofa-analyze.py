@@ -78,18 +78,22 @@ def comm_profile(cfg, df_gpu, given_iterations):
 
     
     bw = (data_copyKind.sum() / 1000000) / durations_copyKind.sum() / 1000
-    avg_bw = 0.0
+    avg_bw = 1e-10
 
+    total_weights = 0
     for i in range(len(bw)):
         key = bw.keys()[i]
         if cktable[key] == 'D2D':
             continue
-        if cktable[key] == 'H2D':
-            avg_bw = avg_bw + bw.iloc[i] * float(total_h2d_traffic)/total_traffic  
-        if cktable[key] == 'D2H':
-            avg_bw = avg_bw + bw.iloc[i] * float(total_d2h_traffic)/total_traffic  
+        #if cktable[key] == 'H2D':
+        #    total_weights = total_h2d_traffic + total_weights
+        #    avg_bw = avg_bw + bw.iloc[i] * float(total_h2d_traffic)/total_weights  
+        #if cktable[key] == 'D2H':
+        #    total_weights = total_d2h_traffic + total_weights
+        #    avg_bw = avg_bw + bw.iloc[i] * float(total_d2h_traffic)/total_weights 
         if cktable[key] == 'P2P':
-            avg_bw = avg_bw + bw.iloc[i] * float(total_p2p_traffic)/total_traffic  
+            total_weights = total_p2p_traffic + total_weights
+            avg_bw = avg_bw + bw.iloc[i] * float(total_p2p_traffic)/total_weights  
 
     print_title("Summary of Comm.")
     print("Averaged Achieved Bandwidth: %.1f (GB/s)" % avg_bw)
@@ -135,7 +139,7 @@ def comm_profile(cfg, df_gpu, given_iterations):
         #for i in range(len(df_gpu)):
     df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload","bandwidth"] )    
 
-    return np.max(accum)/1024.0/avg_bw/given_iterations, avg_bw
+    return np.max(accum)/(1024.0*1024*1024)/given_iterations/avg_bw, avg_bw
 
 def gpu_profile(cfg, df_gpu, given_iterations, given_batch_size):
     total_kernel_time = 0.0
@@ -206,6 +210,9 @@ def gpu_profile(cfg, df_gpu, given_iterations, given_batch_size):
 
     t_c_elapsed, avg_bw = comm_profile(cfg, df_gpu, given_iterations)
     t_k_elapsed = total_kernel_time / num_gpus/ given_iterations 
+    
+    print("t_c_elapsed: %lf" % t_c_elapsed)
+    print("t_k_elapsed: %lf" % t_k_elapsed)
     est_throughput = num_gpus * (given_batch_size/(t_k_elapsed + t_c_elapsed))
 
     print_title("Summary of Kernels")
@@ -214,7 +221,7 @@ def gpu_profile(cfg, df_gpu, given_iterations, given_batch_size):
 
     
     print_title("Performance Modeling")
-    print("Estimated Throughput (designed_bandwidth=%.1lf): %d" % ( avg_bw, est_throughput))
+    print("Estimated Throughput (designed_bandwidth=%.1lf): %lf" % ( avg_bw, est_throughput))
 
 
     if enable_overlapness:
