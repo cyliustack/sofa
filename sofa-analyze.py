@@ -46,7 +46,7 @@ def comm_profile(cfg, df_gpu):
     accum_count = np.zeros((1+n_gpus, 1+n_gpus))
     
     for i in range(len(df_gpu)):
-        if df_gpu.loc[i,'copyKind'] == 0:
+        if df_gpu.loc[i,'copyKind'] == -1 or df_gpu.loc[i,'copyKind'] == 8:
             continue
         src = df_gpu.loc[i,'pkt_src']
         dst = df_gpu.loc[i,'pkt_dst']

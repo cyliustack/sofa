@@ -120,6 +120,7 @@
 				      .offset([-10, 0])
 				      .html(function(d) {
 					      content = xCat + ": " + d[xCat].toFixed(3) + "<br>" 
+					      content += "dest. : " + d['pkt_dst'] + "<br>" 	      
 					      content += "payload(MB) : " + (d['payload']/1024/1024).toFixed(1) + "<br>" 	      
 					      content += "bandwidth(GB/s) : " + (d['bandwidth']/1024).toFixed(1) + "<br>" 	      
 					      return content ;
