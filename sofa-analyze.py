@@ -179,10 +179,14 @@ def comm_profile(cfg, df_gpu):
         else:
             row_str = "GPU%d\t"%i
         for j in range(accum_time.shape[1]):
-            row_str = row_str + "%.2lf"%(accum_time[i][j]) + "\t"
+            row_str = row_str + "%.3lf"%(accum_time[i][j]) + "\t"
         print(row_str)
 
+    
+    print("MeasuredMaxCommStreamTime : %lf (MB)" % np.max(accum_time))
+
     df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload","bandwidth"] )    
+
 
 def gpu_profile(cfg, df_gpu):
     total_kernel_time = 0.0
@@ -249,6 +253,10 @@ def gpu_profile(cfg, df_gpu):
     print("Mean of Top-%d Stream Times = %.2lf" %
           (len(topk_streams), np.mean(topk_streams)))
 
+
+    comm_profile(cfg, df_gpu)
+    print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
+    
     print_title("Summary of Kernels")
     print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
     print("MeasuredAllReduceTime : %lf (s)" % all_reduce_time)
