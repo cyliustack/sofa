@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 import sys
 import pandas as pd
 import numpy as np
@@ -36,7 +37,7 @@ def overlap(pa, pb, pc, pd):
 cktable = {-1: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 ckindex = [1, 2, 8, 10]
 
-def comm_profile(cfg, df_gpu, given_iterations):
+def comm_profile(cfg, df_gpu):
     total_traffic = 0.0
     total_h2d_traffic = 0.0
     total_d2h_traffic = 0.0
@@ -181,11 +182,9 @@ def comm_profile(cfg, df_gpu, given_iterations):
             row_str = row_str + "%.2lf"%(accum_time[i][j]) + "\t"
         print(row_str)
 
-
     df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload","bandwidth"] )    
-    return np.max(accum_time)/given_iterations, avg_bw
 
-def gpu_profile(cfg, df_gpu, given_iterations, given_batch_size):
+def gpu_profile(cfg, df_gpu):
     total_kernel_time = 0.0
     total_gpu_time = 0.0 
     top_k = int(cfg['top_k'])
@@ -195,7 +194,6 @@ def gpu_profile(cfg, df_gpu, given_iterations, given_batch_size):
         if df_gpu.loc[i,'deviceId']+1 > num_gpus:
             num_gpus = df_gpu.loc[i,'deviceId']+1
     print("Number of GPUs = %d" % num_gpus ) 
-    print("Given batch size = %d" % given_batch_size) 
     
     print_title("Task Time (MEMCPY included) for each Device (s)")
     grouped_df = df_gpu.groupby("deviceId")["duration"]
@@ -251,21 +249,9 @@ def gpu_profile(cfg, df_gpu, given_iterations, given_batch_size):
     print("Mean of Top-%d Stream Times = %.2lf" %
           (len(topk_streams), np.mean(topk_streams)))
 
-
-    t_c_elapsed, avg_bw = comm_profile(cfg, df_gpu, given_iterations)
-    t_k_elapsed = total_kernel_time / num_gpus/ given_iterations 
-    
-    print("Elapsed Step Comm. Time: %lf" % t_c_elapsed)
-    print("Elapsed Step Kern. Time: %lf" % t_k_elapsed)
-    est_throughput = num_gpus * (given_batch_size/(t_k_elapsed + t_c_elapsed))
-
     print_title("Summary of Kernels")
     print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
     print("MeasuredAllReduceTime : %lf (s)" % all_reduce_time)
-
-    
-    print_title("Performance Modeling")
-    print("Estimated Throughput (designed_bandwidth=%.1lf): %lf" % ( avg_bw, est_throughput))
 
 
     if enable_overlapness:
@@ -338,6 +324,43 @@ def cpu_profile(cfg, df):
     print("total execution time = %.3lf" % total_exec_time)
     print("average execution time across devices = %.3lf" % avg_exec_time)
 
+class ProfiledDomainDNN:
+    domain_name = "DNN"
+    prefix = "[ProfiledDomain%s]\t" % domain_name
+    def __init__(self):
+        self.name = "general"
+        self.batch_size = 64
+        self.iterations = 21
+        self.throughput = 1
+        self.avg_cpu_time = 1
+    def get_batch_size(self,filepath):
+        with open(filepath) as f:
+            lines = f.readlines()
+            for line in lines:
+                pos = line.find("--batch_size")
+                if pos >= 0:
+                    self.batch_size = int(line[pos:].split()[0].split('=')[1])
+                    print(self.prefix + "batch_size: %d" % self.batch_size)
+                    break 
+    
+    def get_iterations(self,filepath):
+        with open(filepath) as f:
+            lines = f.readlines()
+            for line in lines:
+                pos = line.find("--num_batches") 
+                if pos >= 0:
+                    self.iterations = int(line[pos:].split()[0].split('=')[1]) + 11
+                    print( self.prefix + "iterations: %d" % self.iterations)
+                    break 
+    
+    def get_throughput(self,filepath):
+        with open(filepath) as f:
+            lines = f.readlines()
+            for line in lines:
+                if line.find("total images/sec:") != -1:
+                    self.throughput = float(line.split()[2])
+                    print( self.prefix + "Throughput: %.2lf" % self.throughput)
+                    break 
 
 if __name__ == "__main__":
     print('Number of arguments: %d arguments' % len(sys.argv))
@@ -354,57 +377,32 @@ if __name__ == "__main__":
         "--logdir",
         metavar="/path/to/logdir/",
         type=str,
-        required=True,
+        required=False,
         help='path to the directory of SOFA logged files')
     parser.add_argument(
         '--config',
         metavar="/path/to/config.cfg",
         type=str,
-        required=True,
+        required=False,
         help='path to the directory of SOFA configuration file')
-    parser.add_argument(
-        '--given_iterations',
-        metavar="N",
-        type=int,
-        required=False,
-        help='Given the number of iterations(a.k.a. number of batches or steps) to enable behaviour analysis')
-    parser.add_argument(
-        '--given_batch_size',
-        metavar="N",
-        type=int,
-        required=False,
-        help='Given batch size for profiling DNN applications')
 
 
 
     args = parser.parse_args()
-    logdir = args.logdir + "/"
+    logdir = "./sofalog/" 
+    filein_config = "./sofa.cfg"
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
-    
-    given_iterations = 20
-    if args.given_iterations != None:
-        given_iterations = args.give_iterations
+  
+    if args.logdir != None:
+        args.logdir = args.logdir
 
-    given_batch_size = 64
-    if args.given_batch_size != None:
-        given_batch_size = args.given_batch_size
+    if args.config != None:
+        args.config = args.config
 
 
-    print("given_iterations = %d" % given_iterations )
-    print("given_batch_size = %d" % given_batch_size )
+    cfg = read_config(filein_config)
 
-
-    cfg = read_config(args.config)
-
-    try:
-        df_gpu = pd.read_csv(filein_gpu)
-        df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
-        gpu_profile(cfg, df_gpu, given_iterations, given_batch_size)
-        
-    except IOError:
-        print_warning(
-            "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
 
     try:
         df_cpu = pd.read_csv(filein_cpu)
@@ -414,3 +412,14 @@ if __name__ == "__main__":
         print_warning(
             "cputrace.csv is not found")
         quit()
+    
+    try:
+        df_gpu = pd.read_csv(filein_gpu)
+        df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
+        gpu_profile(cfg, df_gpu)
+        
+    except IOError:
+        print_warning(
+            "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
+
+    
