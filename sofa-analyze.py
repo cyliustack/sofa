@@ -194,10 +194,9 @@ def gpu_profile(cfg, df_gpu):
     top_k = int(cfg['top_k'])
     
     num_gpus = 0
-    for i in range(len(df_gpu)):
-        if df_gpu.loc[i,'deviceId']+1 > num_gpus:
-            num_gpus = df_gpu.loc[i,'deviceId']+1
-    print("Number of GPUs = %d" % num_gpus ) 
+    with open( logdir + 'CUDAPROC0_CUPTI_ACTIVITY_KIND_DEVICE.csv') as f:
+        num_gpus = len(f.readlines())-1
+        print("Number of GPUs = %d" % num_gpus )
     
     print_title("Task Time (MEMCPY included) for each Device (s)")
     grouped_df = df_gpu.groupby("deviceId")["duration"]
