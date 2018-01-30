@@ -47,6 +47,31 @@ def cpu_trace_read(sample, t_offset):
      
     return trace
 
+def net_trace_read(packet, t_offset):
+    time = float(packet.split()[0]) 
+    t_begin = time + t_offset
+    t_end   = time + t_offset
+    payload = int(packet.split()[6])
+    bandwidth = 125.0e6
+    pkt_src = int(packet.split()[2].split('.')[3]) 
+    pkt_dst = int(packet.split()[4].split('.')[3])
+    trace   = [	t_begin,
+        	    payload*100+17,
+        	    float(payload/125.0e6),   
+        	    -1,
+        	    -1,
+        	    payload,
+                bandwidth,
+                pkt_src,
+        	    pkt_dst,
+        	    -1, 
+        	    -1,
+                "network:tcp:%d_to_%d_with_%d" % (pkt_src, pkt_dst, payload),
+        	    0
+                ]
+    return trace
+
+
 def gpu_kernel_trace_read(record, pid, t_base, t_glb_base):
     t_begin = (record[0] - t_base) / 1e9 + t_glb_base
     t_end   = (record[1] - t_base) / 1e9 + t_glb_base
@@ -117,32 +142,6 @@ def gpu_memcpy2_trace_read(record, t_base, t_glb_base):
     		0]
     return trace
 
-def net_trace_read(packet, t_offset):
-    trace = []
-    try:
-        time = packet[IP].time
-        t_begin = time + t_offset
-        t_end = time  + t_offset    
-        payload = packet.len
-        pkt_src = packet[IP].src.split('.')[3]
-        pkt_dst = packet[IP].dst.split('.')[3]                
-        trace = [   t_begin,
-       	            payload*100+17,
-       	            payload/125.0e6,   
-       	            -1,
-       	            -1,
-       	            payload,
-       	            125.0e6,
-       	            pkt_src,
-       	            pkt_dst,
-       	            -1, 
-       	            -1,
-                    "network:tcp:%s_to_%s_with_%d" % (pkt_src, pkt_dst, payload),
-       	            0]
-	return trace
-    except Exception as e:
-        print(e)
-	return trace
 
 class bcolors:
     HEADER = '\033[95m'
@@ -242,7 +241,7 @@ if __name__ == "__main__":
 
     with open(logdir + 'sofa_time.txt') as f:
         t_glb_base = float(f.readlines()[0])
-        t_glb_net_base = t_glb_base + 0.5
+        t_glb_net_base = t_glb_base 
         t_glb_gpu_base = t_glb_base 
         print t_glb_base
         print t_glb_net_base
@@ -313,7 +312,7 @@ if __name__ == "__main__":
     #e.g. cpu_trace_filters = [ {"keyword":"nv_", "color":"red"}, {"keyword":"idle", "color":"green"} ]
     cpu_trace_filters = cfg['filters'] 
     for cpu_trace_filter in cpu_trace_filters:
-        group = cpu_traces[ cpu_traces['name'].str.contains(cpu_trace_filter['keyword'], re.IGNORECASE)]
+        group = cpu_traces[ cpu_traces['name'].str.contains(cpu_trace_filter['keyword'])]
         filtered_groups.append({'group':group,'color':cpu_trace_filter['color'], 'keyword':cpu_trace_filter['keyword']})
 
     for i in range(0, len(cpu_traces)):
@@ -321,47 +320,19 @@ if __name__ == "__main__":
             t_glb_gpu_base = float(cpu_traces.at[i,'timestamp'])
 
 
+    ### ============ Preprocessing Network Trace ==========================
     os.system("tcpdump -q -n -tt -r " + logdir + "sofa.pcap" + " > " + logdir+ "net.tmp" ) 
     with open(logdir + 'net.tmp') as f:
-        lines = f.readlines()
-        for line in lines:
-            print(line)
-    #    net_traces = pd.DataFrame(pd.np.empty((len(packets), len(sofa_fieldnames))) * pd.np.nan)
-    #    net_traces.columns = sofa_fieldnames 
-    #    print_info("Length of net_traces = %d"%len(net_traces))
-
-    #    #pool = mp.Pool(processes=cpu_count)
-    #    #t_base = packets[0][IP].time 
-    #    #res = pool.map( partial(net_trace_read, t_offset=t_glb_net_base - t_base), packets)
-    #    #net_traces = pd.DataFrame(res)
-    #    #net_traces.columns = sofa_fieldnames
-    #    for i in range(0, len(net_traces)):
-    #        try:
-    #            time = packets[i][IP].time
-    #            if i == 0:
-    #                t_base = time
-    #            t_begin = (time - t_base) + t_glb_net_base
-    #            t_end = (time - t_base) + t_glb_net_base
-    #            payload = packets[i].len
-    #            pkt_src = packets[i][IP].src.split('.')[3]
-    #            pkt_dst = packets[i][IP].dst.split('.')[3]                
-    #            net_traces.at[i] = [	t_begin,
-    #            			payload*100+17,
-    #            			payload/125.0e6,   
-    #            			-1,
-    #            			-1,
-    #            			payload,
-    #            			125.0e6,
-    #            			pkt_src,
-    #            			pkt_dst,
-    #            			-1, 
-    #            			-1,
-    #                                    "network:tcp:%s_to_%s_with_%d" % (pkt_src, pkt_dst, payload),
-    #            			0]
-    #        except Exception as e:
-    #            print(e)
-    #    net_traces.to_csv(logdir + 'cputrace.csv', mode='a', header=False, index=False, float_format='%.6f')        
-    #
+        packets = lines = f.readlines()
+        net_traces = pd.DataFrame(pd.np.empty((len(lines), len(sofa_fieldnames))) * pd.np.nan)
+        net_traces.columns = sofa_fieldnames 
+        print_info("Length of net_traces = %d"%len(net_traces))
+        t_base = float(lines[0].split()[0]) 
+    	pool = mp.Pool(processes=cpu_count)
+        res = pool.map( partial(net_trace_read, t_offset=t_glb_net_base - t_base), packets)
+        net_traces = pd.DataFrame(res)
+        net_traces.columns = sofa_fieldnames
+        net_traces.to_csv(logdir + 'cputrace.csv', mode='a', header=False, index=False, float_format='%.6f')
 
     ### ============ Preprocessing GPU Trace ==========================
     print_progress("read and csv-transform nvprof traces -- begin")
