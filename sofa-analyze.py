@@ -46,8 +46,8 @@ def comm_profile(cfg, df_gpu):
 
     n_gpus = 0
     for i in range(len(df_gpu)):
-        if df_gpu.loc[i,'pkt_src'] > n_gpus:
-            n_gpus = df_gpu.loc[i,'pkt_src']
+        if df_gpu.loc[i,'deviceId']+1 > n_gpus:
+            n_gpus = df_gpu.loc[i,'deviceId']+1
     
     print_title("Data Traffic for each CopyKind (MB)")
     data_copyKind = grouped_df = df_gpu.groupby("copyKind")["payload"]
