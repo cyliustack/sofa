@@ -54,16 +54,24 @@ case $i in
 esac
 done
 
+# Detect empty string
 if [[ "$1" == "" ]]; then
     echo -e "${C_RED}Please specify the install directory!${C_NONE}"
     print_help
     exit 1
 fi
 
-# Get the first argument and also remove the last / if present
+# Detect white space in the path
+if [[ "$1" != "${1%[[:space:]]*}" ]]; then
+    echo -e "${C_RED}The installation path cannot contain space character.${C_NONE}"
+    exit 1
+fi
+
+# Get the first argument and also remove the tailing "/" if present
 PREFIX="${1%/}"
 # Add sofa to PREFIX if not present
 [[ $(basename "$PREFIX") != "sofa" ]] && PREFIX="${PREFIX}/sofa"
+# Resolve the abs path
 PREFIX=$(readlink -f "$PREFIX")
 
 echo -e "${C_GREEN}Installation directory is ${PREFIX}${C_NONE}"
