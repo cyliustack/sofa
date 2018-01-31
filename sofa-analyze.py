@@ -34,7 +34,7 @@ def overlap(pa, pb, pc, pd):
 
 
 # print_format_table()
-cktable = {-1: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
+cktable = {0: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 ckindex = [1, 2, 8, 10]
 
 def comm_profile(cfg, df_gpu):
@@ -44,10 +44,24 @@ def comm_profile(cfg, df_gpu):
     total_p2p_traffic = 0.0
     total_memcopy_time = 0.0
 
+    #sofa_fieldnames = [
+    #    'timestamp',
+    #    "event",
+    #    "duration",
+    #    "deviceId",
+    #    "copyKind",
+    #    "payload",
+    #    "bandwidth",
+    #    "pkt_src",
+    #    "pkt_dst",
+    #    "pid",
+    #    "tid",
+    #    "name",
+    #    "category"]
     n_gpus = 0
     for i in range(len(df_gpu)):
-        if df_gpu.loc[i,'deviceId']+1 > n_gpus:
-            n_gpus = df_gpu.loc[i,'deviceId']+1
+        if df_gpu.iat[i,3] > n_gpus:
+            n_gpus = df_gpu.iat[i,3]
     
     print_title("Data Traffic for each CopyKind (MB)")
     data_copyKind = grouped_df = df_gpu.groupby("copyKind")["payload"]
@@ -71,7 +85,7 @@ def comm_profile(cfg, df_gpu):
     durations_copyKind = grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
         print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
-        if key == -1:
+        if key == 0:
             total_kernel_time = grouped_df.get_group(key).sum()
         else:
             total_memcopy_time = total_memcopy_time + \
@@ -113,22 +127,35 @@ def comm_profile(cfg, df_gpu):
     accum_count = np.zeros((1+n_gpus, 1+n_gpus))
     accum_time = np.zeros((1+n_gpus, 1+n_gpus))
     
-    
+    #sofa_fieldnames = [
+    #    'timestamp',
+    #    "event",
+    #    "duration",
+    #    "deviceId",
+    #    "copyKind",
+    #    "payload",
+    #    "bandwidth",
+    #    "pkt_src",
+    #    "pkt_dst",
+    #    "pid",
+    #    "tid",
+    #    "name",
+    #    "category"]
     for i in range(len(df_gpu)):
-        if df_gpu.loc[i,'copyKind'] == -1 or df_gpu.loc[i,'copyKind'] == 8:
+        if df_gpu.iat[i,4] == 0 or df_gpu.iat[i,4] == 8:
             continue
-        src = df_gpu.loc[i,'pkt_src']
-        dst = df_gpu.loc[i,'pkt_dst']
-        payload = df_gpu.loc[i,'payload']
-        accum[src][dst] = int(accum[src][dst] + payload)
+        src = df_gpu.iat[i,7]
+        dst = df_gpu.iat[i,8]
+        payload = df_gpu.iat[i,5]
+        accum[src][dst] = float(accum[src][dst] + payload)
         accum_count[src][dst] = int(accum_count[src][dst] + 1)
         if cfg['enable_verbose'] == "true":
-            if df_gpu.loc[i,'copyKind'] == 1:
-                print("[H2D] HOST%d to GPU%d, count:%d\tpayload:%d\taccum_payload:%d" % ( df_gpu.loc[i,'pkt_src'],df_gpu.loc[i,'pkt_dst'], accum_count[src][dst], payload, accum[src][dst]))
-            if df_gpu.loc[i,'copyKind'] == 2:
-                print("[D2H] GPU%d to HOST%d, count:%d\tpayload:%d\taccum_payload:%d" % ( df_gpu.loc[i,'pkt_src'],df_gpu.loc[i,'pkt_dst'], accum_count[src][dst], payload, accum[src][dst]))
-            if df_gpu.loc[i,'copyKind'] == 10:
-                print("[P2P] GPU%d to GPU%d: count:%d\tpayload:%d\taccum_payload:%d" % ( df_gpu.loc[i,'pkt_src'],df_gpu.loc[i,'pkt_dst'], accum_count[src][dst], payload, accum[src][dst]))
+            if df_gpu.iat[i,4] == 1:
+                print("[H2D] HOST%d to GPU%d, count:%d\tpayload:%d\taccum_payload:%d" % ( src, dst, accum_count[src][dst], payload, accum[src][dst]))
+            if df_gpu.iat[i,4] == 2:
+                print("[D2H] GPU%d to HOST%d, count:%d\tpayload:%d\taccum_payload:%d" % ( src, dst, accum_count[src][dst], payload, accum[src][dst]))
+            if df_gpu.iat[i,4] == 10:
+                print("[P2P] GPU%d to GPU%d: count:%d\tpayload:%d\taccum_payload:%d" % (  src, dst, accum_count[src][dst], payload, accum[src][dst]))
 
 
     for i in xrange(accum_time.shape[0]):
@@ -137,7 +164,6 @@ def comm_profile(cfg, df_gpu):
         for j in xrange(accum_time.shape[1]):
             if i>0 and j>0:
                 accum_time[i][j] = accum[i][j]/(1024.0*1024*1024)/bw_p2p
-    
     
     print("Traffic Matrix (log10(B)):")
     row_str = "\tHOST\t" 
@@ -183,7 +209,7 @@ def comm_profile(cfg, df_gpu):
         print(row_str)
 
     
-    print("MeasuredMaxCommStreamTime : %lf (MB)" % np.max(accum_time))
+    print("MeasuredMaxFlowTime : %lf (MB)" % np.max(accum_time))
 
     df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload","bandwidth"] )    
 
@@ -191,12 +217,7 @@ def comm_profile(cfg, df_gpu):
 def gpu_profile(cfg, df_gpu):
     total_kernel_time = 0.0
     total_gpu_time = 0.0 
-    top_k = int(cfg['top_k'])
     
-    num_gpus = 0
-    with open( logdir + 'CUDAPROC0_CUPTI_ACTIVITY_KIND_DEVICE.csv') as f:
-        num_gpus = len(f.readlines())-1
-        print("Number of GPUs = %d" % num_gpus )
     
     print_title("Task Time (MEMCPY included) for each Device (s)")
     grouped_df = df_gpu.groupby("deviceId")["duration"]
@@ -216,7 +237,7 @@ def gpu_profile(cfg, df_gpu):
 
     grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
-        if key == -1:
+        if key == 0:
             total_kernel_time = grouped_df.get_group(key).sum()
 
     print_title("All-reduce Time (s)")
@@ -238,20 +259,6 @@ def gpu_profile(cfg, df_gpu):
         devcopytime = grouped_df = df_gpu.groupby(
             ["deviceId", "copyKind"])["duration"].sum()
         print(devcopytime)
-
-    print_title("Task Time spent on Each Stream (s)")
-    grouped_df = df_gpu.groupby("pid")["duration"]
-    
-
-    s = []
-    for key, item in grouped_df:
-        s.append( [key, grouped_df.get_group(key).sum()] )
-    topk_streams = sorted(s,key=lambda l:l[1], reverse=True)[:-top_k]
-    for s in topk_streams:   
-        print("[%d]: %.3lf" % (s[0],s[1]))
-    print("Mean of Top-%d Stream Times = %.2lf" %
-          (len(topk_streams), np.mean(topk_streams)))
-
 
     comm_profile(cfg, df_gpu)
     print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
