@@ -12,17 +12,6 @@ from functools import partial
 from sofa_config import *
 from sofa_print import *
 
-def sqlite3_read_tables(filename):
-
-    return tables
-
-
-def nvprof_db_read(logdir):
-    db = [] 
-    for sqlite_filename in glob.glob(logdir+"gputrace*[0-9].nvvp"):
-        db = sqlite3.connect(sqlite_filename)
-	print("Merging %s" % sqlite_filename)
-    return 0
 
 def cpu_trace_read(sample, t_offset):
     fields = sample.split()
@@ -51,6 +40,8 @@ def net_trace_read(packet, t_offset):
     time = float(packet.split()[0]) 
     t_begin = time + t_offset
     t_end   = time + t_offset
+    if packet.split()[1] != 'IP':
+        return []
     payload = int(packet.split()[6])
     duration = float(payload/125.0e6)
     bandwidth = 125.0e6
@@ -318,7 +309,7 @@ if __name__ == "__main__":
     gpulog_header = 'True'
     cpu_count = mp.cpu_count()
     
-    ### ============ Preprocessing Network Trace ==========================
+    ### ============ Preprocessing CPU Trace ==========================
     with open(logdir + 'perf.script') as f:
         samples = f.readlines()
         print_info("Length of cpu_traces = %d"%len(samples))       	
@@ -328,6 +319,9 @@ if __name__ == "__main__":
         cpu_traces = pd.DataFrame(res)
         cpu_traces.columns = sofa_fieldnames 
         cpu_traces.to_csv(logdir + 'cputrace.csv', mode='w', header=True, index=False,float_format='%.6f')        
+
+    #TODO: align cpu time and gpu time
+
 
     # Apply filters for cpu traces
     df_grouped = cpu_traces.groupby('name')
@@ -353,6 +347,7 @@ if __name__ == "__main__":
 
     ### ============ Preprocessing GPU Trace ==========================
     num_cudaproc = 0
+    filtered_gpu_groups = []
     for nvvp_filename in glob.glob(logdir+"gputrace*[0-9].nvvp"):
         print_progress("Read "+nvvp_filename+" -- begin")
         os.system("nvprof --csv --print-gpu-trace -i " + nvvp_filename + " 2> " + logdir+ "gputrace.tmp" ) 
@@ -383,9 +378,22 @@ if __name__ == "__main__":
             gpu_traces = pd.DataFrame(res)
             gpu_traces.columns = sofa_fieldnames 
             gpu_traces.to_csv(logdir + 'gputrace.csv', mode='w', header=True, index=False, float_format='%.6f')
+            
+            # Apply filters for cpu traces
+            df_grouped = gpu_traces.groupby('name')
+            color_of_filtered_group = []
+            #e.g. cpu_trace_filters = [ {"keyword":"nv_", "color":"red"}, {"keyword":"idle", "color":"green"} ]
+            gpu_trace_filters = cfg['gpu_filters'] 
+            for gpu_trace_filter in gpu_trace_filters:
+                group = gpu_traces[ gpu_traces['name'].str.contains(gpu_trace_filter['keyword'])]
+                filtered_gpu_groups.append({'group':group,'color':gpu_trace_filter['color'], 'keyword':gpu_trace_filter['keyword']})
+
 
     print_progress("Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
+    
+
+    
     #TODO: provide option to use absolute or relative timestamp
     #cpu_traces.loc[:,'timestamp'] -= cpu_traces.loc[0,'timestamp']
     #net_traces.loc[:,'timestamp'] -= net_traces.loc[0,'timestamp']
@@ -430,32 +438,16 @@ if __name__ == "__main__":
     sofatrace.data = gpu_traces
     traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'gpu_memcpy_h2d_trace'
-    sofatrace.title = 'GPU memcpy (H2D)'
-    sofatrace.color = 'red'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = gpu_memcpy_h2d_traces
-    traces.append(sofatrace)
+    for filtered_gpu_group in filtered_gpu_groups:
+        sofatrace = SOFATrace()
+        sofatrace.name = filtered_gpu_group['keyword']
+        sofatrace.title = 'keyword_'+sofatrace.name
+        sofatrace.color = filtered_gpu_group['color']
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = filtered_gpu_group['group'].copy()
+        traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'gpu_memcpy_d2h_trace'
-    sofatrace.title = 'GPU memcpy (D2H)'
-    sofatrace.color = 'greenyellow'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = gpu_memcpy_d2h_traces
-    traces.append(sofatrace)
-
-    sofatrace = SOFATrace()
-    sofatrace.name = 'gpu_memcpy_d2d_trace'
-    sofatrace.title = 'GPU memcpy (D2D)'
-    sofatrace.color = 'darkblue'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = gpu_memcpy_d2d_traces
-    traces.append(sofatrace)
 
     if cfg['enable_plot_bandwidth'] == 'true':
         sofatrace = SOFATrace()
@@ -464,46 +456,8 @@ if __name__ == "__main__":
         sofatrace.color = 'Crimson'
         sofatrace.x_field = 'timestamp'
         sofatrace.y_field = 'bandwidth'
-        sofatrace.data = gpu_memcpy_h2d_traces
-        traces.append(sofatrace)
+        sofatrace.data = gpu_traces
 
-        sofatrace = SOFATrace()
-        sofatrace.name = 'gpu_memcpy_d2h_bw_trace'
-        sofatrace.title = 'GPU memcpy D2H bandwidth (MB/s)'
-        sofatrace.color = 'DarkOliveGreen'
-        sofatrace.x_field = 'timestamp'
-        sofatrace.y_field = 'bandwidth'
-        sofatrace.data = gpu_memcpy_d2h_traces
-        traces.append(sofatrace)
-
-        sofatrace = SOFATrace()
-        sofatrace.name = 'gpu_memcpy_d2d_bw_trace'
-        sofatrace.title = 'GPU memcpy D2D bandwidth (MB/s)'
-        sofatrace.color = 'DarkMagenta'
-        sofatrace.x_field = 'timestamp'
-        sofatrace.y_field = 'bandwidth'
-        sofatrace.data = gpu_memcpy_d2d_traces
-        traces.append(sofatrace)
-
-
-    sofatrace = SOFATrace()
-    sofatrace.name = 'gpu_memcpy2_trace'
-    sofatrace.title = 'GPU memcpy2'
-    sofatrace.color = 'brown'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = gpu_memcpy2_traces
-    traces.append(sofatrace)
-
-    if cfg['enable_plot_bandwidth'] == 'true':
-        sofatrace = SOFATrace()
-        sofatrace.name = 'gpu_memcpy2_bw_trace'
-        sofatrace.title = 'GPU memcpy2 bandwidth (MB/s)'
-        sofatrace.color = 'DarkSeaGreen'
-        sofatrace.x_field = 'timestamp'
-        sofatrace.y_field = 'bandwidth'
-        sofatrace.data = gpu_memcpy2_traces
-        traces.append(sofatrace)
 
     traces_to_json(traces, logdir+'report.js')
     traces_to_json(traces, logdir+'overhead.js')
