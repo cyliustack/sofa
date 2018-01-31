@@ -6,6 +6,27 @@ C_NONE="\033[0;00m"
 C_RED="\033[1;31m"
 C_GREEN="\033[1;32m"
 
+INSTALL_DIRS=(bin
+              sofaboard
+              plugins
+              tools
+              )
+BIN_FILES=(bin/sofa
+           bin/sofa-analyze.py
+           bin/sofa_config.py
+           bin/sofa-preprocess.py
+           bin/sofa_print.py
+           )
+PLUGIN_FILES=(plugins/.placeholder
+              )
+SOFABOARD_FILES=(sofaboard/index.html
+                 sofaboard/cpu-report.html
+                 sofaboard/gpu-report.html
+                 sofaboard/comm-report.html
+                 sofaboard/overhead.html
+                 sofaboard/timeline.js
+                 )
+
 print_help(){
     echo "This script will install the sofa scripts to your system under the specified <PREFIX> directory."
     echo ""
@@ -16,13 +37,17 @@ print_help(){
 
 function clear_install_dir()
 {
+    # Use uninstall script to safely remove old files
+    if [[ -f ${PREFIX}/tools/uninstall.sh ]]; then
+        echo "Uninstalling SOFA..."
+        bash ${PREFIX}/tools/uninstall.sh
+    fi
     echo "Creating directories..."
     mkdir -p ${PREFIX}
     mkdir -p ${PREFIX}/bin
     mkdir -p ${PREFIX}/sofaboard
     mkdir -p ${PREFIX}/plugins
     mkdir -p ${PREFIX}/tools
-    rm -f ${PREFIX}/bin/*.pyc
 }
 
 function install_sofa()
@@ -32,11 +57,32 @@ function install_sofa()
     cp -rf ${SCRIPT_PATH}/plugins   ${PREFIX}
     cp -rf ${SCRIPT_PATH}/sofaboard ${PREFIX}
 
-    # Create a new file for configurations
+    # Create a new file for SOFA environment
 ################## heredoc style
     cat > ${PREFIX}/tools/activate.sh <<EOF
 export PATH=${PREFIX}/bin:\$PATH
 export PATH=\$PATH:/usr/local/cuda/bin
+EOF
+##################
+
+    # Create an uninstall script
+################## heredoc style
+    cat > ${PREFIX}/tools/uninstall.sh <<EOF
+# Change the directory
+cd ${PREFIX}
+[[ \$(pwd) != ${PREFIX} ]] && echo "Fail to change directory. Stop uninstalling..." && exit 1
+# Remove installed files
+rm -f ${BIN_FILES[@]}
+rm -f ${PLUGIN_FILES[@]}
+rm -f ${SOFABOARD_FILES[@]}
+# Remove all python caches
+rm -rf __pycache__ plugins/__pycache__ bin/__pycache__
+# Remove generated files
+rm -f tools/activate.sh
+rm -f tools/uninstall.sh
+# Remove directory only if it is empty!
+rmdir --ignore-fail-on-non-empty ${INSTALL_DIRS[@]}
+rmdir --ignore-fail-on-non-empty ${PREFIX}
 EOF
 ##################
 }

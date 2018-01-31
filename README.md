@@ -17,6 +17,9 @@ Run the following simple tests to verify the permission settings of executing tc
 2. Then, run `source </PATH/TO/INSTALL>/sofa/tools/activate.sh` to activate SOFA running environment. (Need to be executed on each new shell.)
 3. [ALTERNATIVE] Add `source </PATH/TO/INSTALL>/sofa/tools/activate.sh` in your `~/.bashrc` to make this environment available on every shells.
 
+## Uninstall
+Run `bash </PATH/TO/INSTALL>/sofa/tools/uninstall.sh` to safely remove/uninstall files of SOFA.
+
 # Usages
 SOFA supports serveral different usages, like how one can use perf.
 
