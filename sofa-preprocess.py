@@ -72,13 +72,13 @@ def net_trace_read(packet, t_offset):
                 ]
     return trace
 
-def gpu_trace_read(record, n_cudaproc, t_offset):
-    idx_name = len(record.split(',')) - 1 
-    time =  float(record.split(',')[0]) + t_offset
+def gpu_trace_read(record, n_cudaproc, ts_rescale, dt_rescale, t_offset):
+    idx_name = len(record.split(',')) - 1
+    time =  float(record.split(',')[0])/ts_rescale + t_offset
+    duration = float(record.split(',')[1])/dt_rescale
     t_begin = time
-    t_end   = float(record.split(',')[1]) + t_offset
+    t_end   = time + duration 
     kernel_name = "%s"%(record.split(',')[idx_name].replace('"','')[:-1])
-    duration = float(record.split(',')[1])/1000.0
     payload = 0 if record.split(',')[11] == '' else int(float(record.split(',')[11])*1024*1024)
     bandwidth = 1e-6 if record.split(',')[12] == '' else float(record.split(',')[12])
     pid = n_cudaproc
@@ -360,24 +360,37 @@ if __name__ == "__main__":
         num_cudaproc = num_cudaproc + 1 
         with open(logdir + 'gputrace.tmp') as f:
             records = f.readlines()
-            if len(records) > 3:
-                records = records[3:]
-                print_info("Length of gpu_traces = %d"%len(records))
-                t_base = float(records[0].split(',')[0]) 
-                t_offset = t_glb_gpu_base - t_base
-    	        
-                pool = mp.Pool(processes=cpu_count)
-                res = pool.map( partial(gpu_trace_read, n_cudaproc=num_cudaproc, t_offset=t_glb_gpu_base - t_base), records)
-                gpu_traces = pd.DataFrame(res)
-                gpu_traces.columns = sofa_fieldnames 
-                gpu_traces.to_csv(logdir + 'gputrace.csv', mode='w', header=True, index=False, float_format='%.6f')
+            
+            #ms,ms,,,,,,,,B,B,MB,GB/s,,,,
+            ts_rescale = 1.0
+            if records[2].split(',')[0] == 'ms':
+               ts_rescale = 1.0e3 
+            elif records[2].split(',')[0] == 'us':
+               ts_rescale = 1.0e6 
+
+            dt_rescale = 1.0
+            if records[2].split(',')[1] == 'ms':
+               dt_rescale = 1.0e3 
+            elif records[2].split(',')[1] == 'us':
+               dt_rescale = 1.0e6 
+
+            records = records[3:]
+            print_info("Length of gpu_traces = %d"%len(records))
+            t_base = float(records[0].split(',')[0]) 
+            t_offset = t_glb_gpu_base - t_base
+            pool = mp.Pool(processes=cpu_count)
+            res = pool.map( partial(gpu_trace_read, ts_rescale=ts_rescale, dt_rescale=dt_rescale, n_cudaproc=num_cudaproc, t_offset=t_glb_gpu_base - t_base), records)
+            gpu_traces = pd.DataFrame(res)
+            gpu_traces.columns = sofa_fieldnames 
+            gpu_traces.to_csv(logdir + 'gputrace.csv', mode='w', header=True, index=False, float_format='%.6f')
 
     print_progress("Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
     #TODO: provide option to use absolute or relative timestamp
-    cpu_traces.loc[:,'timestamp'] -= cpu_traces.loc[0,'timestamp']
-    net_traces.loc[:,'timestamp'] -= net_traces.loc[0,'timestamp']
-    gpu_traces.loc[:,'timestamp'] -= gpu_traces.loc[0,'timestamp']
+    #cpu_traces.loc[:,'timestamp'] -= cpu_traces.loc[0,'timestamp']
+    #net_traces.loc[:,'timestamp'] -= net_traces.loc[0,'timestamp']
+    #gpu_traces.loc[:,'timestamp'] -= gpu_traces.loc[0,'timestamp']
+
 
     traces = []
     sofatrace = SOFATrace()
@@ -414,7 +427,7 @@ if __name__ == "__main__":
     sofatrace.color = 'rgba(0,180,0,0.8)'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
-    sofatrace.data = gpu_kernel_traces
+    sofatrace.data = gpu_traces
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()
