@@ -14,6 +14,10 @@ from sofa_print import *
 from sofa_config import *
 
 
+def payload_sum(df):
+    print(len(df))
+
+
 class Event:
 
     def __init__(self, name, ttype, timestamp, duration):
@@ -31,6 +35,11 @@ class Event:
 def overlap(pa, pb, pc, pd):
     if pb - pc >= 0 and pd - pa >= 0:
         return min(pb, pd) - max(pa, pc)
+
+def partial_sum(df):
+    psum = 0
+
+
 
 
 # print_format_table()
@@ -126,21 +135,14 @@ def comm_profile(cfg, df_gpu):
     accum = np.zeros((1+n_gpus, 1+n_gpus))
     accum_count = np.zeros((1+n_gpus, 1+n_gpus))
     accum_time = np.zeros((1+n_gpus, 1+n_gpus))
-    
-    #sofa_fieldnames = [
-    #    'timestamp',
-    #    "event",
-    #    "duration",
-    #    "deviceId",
-    #    "copyKind",
-    #    "payload",
-    #    "bandwidth",
-    #    "pkt_src",
-    #    "pkt_dst",
-    #    "pid",
-    #    "tid",
-    #    "name",
-    #    "category"]
+
+    #TODO: Parallelize payload accumulatoin
+    #print("df length: %d" % len(df_gpu))
+    #cpu_count = mp.cpu_count()
+    #pool = mp.Pool(processes=cpu_count)
+    #res_accum = pool.map( partial(payload_sum), df_gpu)
+        
+
     for i in range(len(df_gpu)):
         if df_gpu.iat[i,4] == 0 or df_gpu.iat[i,4] == 8:
             continue
@@ -149,7 +151,15 @@ def comm_profile(cfg, df_gpu):
         payload = df_gpu.iat[i,5]
         accum[src][dst] = float(accum[src][dst] + payload)
         accum_count[src][dst] = int(accum_count[src][dst] + 1)
-        if cfg['enable_verbose'] == "true":
+
+
+    if cfg['enable_verbose'] == "true":   
+        for i in range(len(df_gpu)):
+            if df_gpu.iat[i,4] == 0 or df_gpu.iat[i,4] == 8:
+                continue
+            src = df_gpu.iat[i,7]
+            dst = df_gpu.iat[i,8]
+            payload = df_gpu.iat[i,5]
             if df_gpu.iat[i,4] == 1:
                 print("[H2D] HOST%d to GPU%d, count:%d\tpayload:%d\taccum_payload:%d" % ( src, dst, accum_count[src][dst], payload, accum[src][dst]))
             if df_gpu.iat[i,4] == 2:
