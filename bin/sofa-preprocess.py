@@ -292,6 +292,7 @@ if __name__ == "__main__":
          
     net_traces = []
     cpu_traces = []
+    gpu_traces = []
     gpu_kernel_traces = []
     gpu_memcpy_traces = []
     gpu_memcpy2_traces = []
