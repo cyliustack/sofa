@@ -31,8 +31,8 @@ print_help(){
     echo "This script will install the sofa scripts to your system under the specified <PREFIX> directory."
     echo ""
     echo "Usage: $0 PREFIX"
-    echo "Examples: $0 ~/bin/sofa"
-    echo "          sudo $0 /opt/bin/sofa"
+    echo "Examples: $0 ~/third-parties/sofa"
+    echo "          sudo $0 /opt/sofa"
 }
 
 function clear_install_dir()
