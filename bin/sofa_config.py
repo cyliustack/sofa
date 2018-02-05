@@ -9,6 +9,6 @@ def read_config(path_cfg):
         with open( 'sofa.cfg', "w") as f:
             json.dump(cfg,f)
             f.write("\n")
-    print_info("SOFA Configuration: ")    
-    print(cfg)
+    #print_info("SOFA Configuration: ")    
+    #print(cfg)
     return cfg
