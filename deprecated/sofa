@@ -1,0 +1,204 @@
+#!/bin/bash
+# Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
+SOFA_BIN=$(dirname "$0")
+SOFA_HOME="`echo "$SOFA_BIN" | rev | cut -d/ -f2- | rev`"
+logdir="$(pwd)/sofalog"
+config_file=./sofa.cfg
+C_NONE="\033[0m"
+C_CYAN="\033[36m"
+C_RED="\033[31m"
+C_GREEN="\033[32m"
+C_ORANGE="\033[33m"
+C_BLUE="\033[34m"
+C_PURPLE="\033[35m"
+C_CYAN="\033[36m"
+C_LIGHT_GRAY="\033[37m"
+
+print_misc() {
+    echo -e "${C_PURPLE} $1 ${C_NONE}"
+}
+
+print_info() {
+    echo -e "${C_BLUE} $1 ${C_NONE}"
+}
+
+print_error() {
+    echo -e "${C_RED} $1 ${C_NONE}"
+}
+
+print_warning() {
+    echo -e "${C_ORANGE} $1 ${C_NONE}"
+}
+
+
+
+function collect_trace(){
+    echo "SOFA_HOME = ${SOFA_HOME}"
+    traced_storage=sdb
+    args=$*
+    #args=$(echo $* | sed "s/\"//g")
+    print_info "[collect_trace] Trace Command: ""${args}"
+
+    if [[ "$(cat /proc/sys/kernel/kptr_restrict)" != "0" ]]; then 
+        print_info "$(sysctl kernel.kptr_restrict)"
+        print_error "/proc/kallsyms permission is restricted, please try the command below:"
+        print_error "sudo sysctl -w kernel.kptr_restrict=0"
+	exit -1
+    fi
+    
+    if [[ "$(cat /proc/sys/kernel/perf_event_paranoid)" == "-1" ]]; then 
+        mkdir -p ${logdir}
+        rm -f ${logdir}/perf.data 2> /dev/null
+        rm -f ${logdir}/sofa.pcap 2> /dev/null
+        tcpdump -i any -v tcp -w ${logdir}/sofa.pcap & 
+        date +%s > ${logdir}/sofa_time.txt
+        if [[ $(command -v nvprof) ]]; then 
+            rm ${logdir}/gputrace*.nvvp 2> ${logdir}/sofa.log
+            rm ${logdir}/*.csv 2> ${logdir}/sofa.log
+            nvprof --profile-child-processes -o ${logdir}/gputrace%p.nvvp perf record -o ${logdir}/perf.data -F 99 -a -- ${args}  
+        else
+            perf record -o ${logdir}/perf.data -F 99 -a -- ${args} 
+        fi 
+        pkill  tcpdump
+        echo "sofa record is done."
+    else
+        print_info "$(sysctl kernel.perf_event_paranoid)"
+        print_error "PerfEvent is not avaiable, please try the command below:"
+        print_error "sudo sysctl -w kernel.perf_event_paranoid=-1"
+        exit -1 
+    fi 
+}
+
+function sofa_preprocess(){
+    echo "SOFA_HOME = ${SOFA_HOME}"
+    print_info "SOFA Configuration File: ${config_file}"
+    perf script -i ${logdir}/perf.data -F time,cpu,pid,tid,ip,sym,period > ${logdir}/perf.script
+    ${SOFA_BIN}/sofa-preprocess.py --logdir=${logdir} --config=${config_file}
+}
+
+function sofa_apply_plugin(){
+    echo "SOFA_HOME = ${SOFA_HOME}"
+    # TODO: By Wei
+    # ${SOFA_HOME}/sofa-analyze-overlapness.py ${logdir}
+}
+
+
+function sofa_analyze(){
+    echo "SOFA_HOME = ${SOFA_HOME}"
+    print_info "SOFA Configuration File: ${config_file}"
+    ${SOFA_BIN}/sofa-analyze.py --logdir=${logdir} --config=${config_file}
+    sofa_apply_plugin
+}
+
+function sofa_visualize(){
+    echo "SOFA_HOME = ${SOFA_HOME}"
+    cp ${SOFA_HOME}/sofaboard/cpu-report.html ${logdir}
+    cp ${SOFA_HOME}/sofaboard/gpu-report.html ${logdir}
+    cp ${SOFA_HOME}/sofaboard/comm-report.html ${logdir}
+    cp ${SOFA_HOME}/sofaboard/overhead.html ${logdir}
+    cp ${SOFA_HOME}/sofaboard/index.html ${logdir}
+    cp ${SOFA_HOME}/sofaboard/timeline.js ${logdir}
+    pushd ${logdir}; python -m SimpleHTTPServer; popd
+}
+
+
+
+function print_help()
+{
+    echo "SOFA_HOME = ${SOFA_HOME}"
+    echo "sofa [--config yourconfig.cfg] [--logdir /path/to/logdir] [help|stat|record|report|analyze|preprocess] command"
+}
+
+
+function main()
+{
+    if [[ "$*" == "" ]]; then
+	print_help
+	exit -1
+    fi
+
+    #args=$*
+    print_info "SOFA: Function Swarms Analysis"
+    
+    until [ $# -eq 0 ]
+    do
+        case "$1" in
+            "help" )
+                print_help
+                exit 0
+                ;;
+	    "--help" )
+                print_help
+                exit 0
+                ;;
+            "-h" )
+                print_help
+                exit 0
+                ;;
+            "record" )
+                shift
+                print_info "Traced Command: $*"
+		        if [[ "$*" == "" ]]; then
+			        print_help
+		            exit -1
+		        else
+                    collect_trace $*
+                    exit 0
+                fi
+		;;
+            "preprocess" )
+                sofa_preprocess
+                exit 0 
+                ;;
+            "report" )
+                sofa_preprocess
+                sofa_analyze
+                sofa_visualize
+                exit 0 
+                ;;
+            "stat" )
+                shift
+                print_info "Traced Command: $*"
+		        if [[ "$*" == "" ]]; then
+			        print_help
+		            exit -1
+		        else
+                    collect_trace $*
+                    sofa_preprocess
+                    sofa_analyze
+                    exit 0
+                fi
+                ;;
+            "analyze" )
+                sofa_analyze
+                exit 0 
+                ;;
+            "visualize" )
+                sofa_visualize
+                exit 0 
+                ;;
+# TODO: Support distributed analysis 
+#            "dist" )
+#                shift
+#                sofa_dist $* 
+#                exit 0 
+#                ;;
+            "--logdir" )
+                shift
+                logdir=$1
+                ;;
+            "--config" )
+                shift
+                config_file=$1
+                ;;
+            *)
+                print_help
+                exit 0
+                ;;
+        esac
+        shift
+    done
+}
+
+##### Main() ##### 
+main $*

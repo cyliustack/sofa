@@ -121,6 +121,11 @@ PREFIX="${1%/}"
 PREFIX="$(readlink -f "$(dirname  "$PREFIX")")/$(basename "$PREFIX")"
 #PREFIX="$(readlink -f "$PREFIX")"
 echo -e "${C_GREEN}Installation directory is ${PREFIX}${C_NONE}"
+if [[ $(pwd) == $PREFIX ]]; then 
+    echo -e "${C_RED}Warning! Installation directory is the same as the source code directory.${C_NONE}"
+    echo -e "${C_RED}Please try another installation direcotry.${C_NONE}"
+    exit 1
+fi
 
 # Print every executed command for debugging
 set -x -e

@@ -13,10 +13,8 @@ from functools import partial
 from sofa_print import *
 from sofa_config import *
 
-
 def payload_sum(df):
     print(len(df))
-
 
 class Event:
 
@@ -29,9 +27,6 @@ class Event:
     def __repr__(self):
         return repr((self.name, self.ttype, self.timestamp, self.duration))
 
-# Assume pa<pb, pc<pd:
-
-
 def overlap(pa, pb, pc, pd):
     if pb - pc >= 0 and pd - pa >= 0:
         return min(pb, pd) - max(pa, pc)
@@ -39,14 +34,11 @@ def overlap(pa, pb, pc, pd):
 def partial_sum(df):
     psum = 0
 
-
-
-
 # print_format_table()
 cktable = {0: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 ckindex = [1, 2, 8, 10]
 
-def comm_profile(cfg, df_gpu):
+def comm_profile(logdir, cfg, df_gpu):
     total_traffic = 0.0
     total_h2d_traffic = 0.0
     total_d2h_traffic = 0.0
@@ -224,7 +216,7 @@ def comm_profile(cfg, df_gpu):
     df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload","bandwidth"] )    
 
 
-def gpu_profile(cfg, df_gpu):
+def gpu_profile(logdir, cfg, df_gpu):
     total_kernel_time = 0.0
     total_gpu_time = 0.0 
     
@@ -270,57 +262,12 @@ def gpu_profile(cfg, df_gpu):
             ["deviceId", "copyKind"])["duration"].sum()
         print(devcopytime)
 
-    comm_profile(cfg, df_gpu)
+    comm_profile(logdir, cfg, df_gpu)
     print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
     
     print_title("Summary of Kernels")
     print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
     print("MeasuredAllReduceTime : %lf (s)" % all_reduce_time)
-
-
-    if enable_overlapness:
-        print_title("Overlapness for All Events (s)")
-        events = []
-        for i in range(len(df_gpu)):
-            t_begin = df_gpu.iloc[i]['timestamp']
-            d = df_gpu.iloc[i]['duration']
-            t_end = t_begin + d
-            e = Event(i, 0, t_begin, d)
-            events.append(e)
-            e = Event(i, 1, t_end, d)
-            events.append(e)
-        # for i in range(3):
-        # print("df_gpu[%d]=%lf" % (i,df_gpu.iloc[i]['timestamp']))
-        #    t_begin =   i
-        #    d = 0.5 * random.randint(1, 10)
-        #    t_end = t_begin + d
-        #    e = Event(i, 0, t_begin, d)
-        #    events.append(e)
-        #    e = Event(i, 1, t_end, d)
-        #    events.append(e)
-        events.sort(key=attrgetter('timestamp'))
-
-        event_stack = []
-        overlaptime = 0
-        for e in events:
-            # print(event_stack)
-            if e.ttype == 0:
-                event_stack.append(e)
-            if e.ttype == 1:
-                # print("reach end of time for event-%d" % (e.name))
-                # find all the previous event with
-                for es in event_stack:
-                    if es.name != e.name:
-                        # print("n:%d t:%lf d:%lf overlaptime:%lf" % (es.name,
-                        # es.timestamp, es.duration, overlaptime))
-                        overlaptime = overlaptime + overlap(
-                            es.timestamp,
-                            es.timestamp + es.duration,
-                            e.timestamp - e.duration,
-                            e.timestamp)
-                # print("pop out %d" % e.name)
-                event_stack = [es for es in event_stack if es.name != e.name]
-        print("Measured Overlapped time of Events: %lf" % (overlaptime))
 
 def net_profile(cfg, df):
     print_title("Network Profiling: Communication Time (s)")
@@ -388,16 +335,11 @@ class ProfiledDomainDNN:
 
 def sofa_analyze(logdir, cfg):
     filein = []
-    enable_verbose = False
-    enable_overlapness = False
     df_gpu = []
     df_cpu = []
-    
 
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
-
-    cfg = read_config(filein_config)
 
     try:
         df_cpu = pd.read_csv(filein_cpu)
@@ -411,7 +353,7 @@ def sofa_analyze(logdir, cfg):
     try:
         df_gpu = pd.read_csv(filein_gpu)
         df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
-        gpu_profile(cfg, df_gpu)
+        gpu_profile(logdir, cfg, df_gpu)
         
     except IOError:
         print_warning(
