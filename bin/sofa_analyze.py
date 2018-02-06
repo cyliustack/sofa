@@ -269,7 +269,7 @@ def gpu_profile(logdir, cfg, df_gpu):
     print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
     print("MeasuredAllReduceTime : %lf (s)" % all_reduce_time)
 
-def net_profile(cfg, df):
+def net_profile(logdir, cfg, df):
     print_title("Network Profiling: Communication Time (s)")
     grouped_df = df.groupby("name")["duration"]
     total_net_time = 0
@@ -282,7 +282,7 @@ def net_profile(cfg, df):
     print("total network time = %.3lf" % total_net_time)
     print("total amount of network packets  = %d" % n_packets)
 
-def cpu_profile(cfg, df):
+def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling: Task Time (IO included) for each Cores (s)")
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
@@ -343,8 +343,8 @@ def sofa_analyze(logdir, cfg):
 
     try:
         df_cpu = pd.read_csv(filein_cpu)
-        cpu_profile(cfg, df_cpu)
-        net_profile(cfg, df_cpu)
+        cpu_profile(logdir, cfg, df_cpu)
+        net_profile(logdir, cfg, df_cpu)
     except IOError:
         print_warning(
             "cputrace.csv is not found")

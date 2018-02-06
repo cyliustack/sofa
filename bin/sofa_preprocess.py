@@ -280,6 +280,7 @@ def sofa_preprocess(logdir, cfg):
          
     net_traces = []
     cpu_traces = []
+    mpstat_traces = []
     gpu_traces = []
     gpu_kernel_traces = []
     gpu_memcpy_traces = []
@@ -310,9 +311,68 @@ def sofa_preprocess(logdir, cfg):
             cpu_traces.columns = sofa_fieldnames 
             cpu_traces.to_csv(logdir + 'cputrace.csv', mode='w', header=True, index=False,float_format='%.6f')        
 
+    ### ============ Preprocessing MPSTAT Trace ==========================
+    with open('%s/mpstat.txt'%logdir) as f:
+        lines = f.readlines()[1:]
+        print_info("Length of mpstat_traces = %d"%len(lines))
+        traces = []
+        traces.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+        t_base = t = 0
+        #mprec = np.zeros((len(lines),11))
+        for i in xrange(len(lines)):
+            print(lines[i])
+            if len(lines[i].split())>2 :
+                cpuid = lines[i].split()[2]
+                if cpuid != 'CPU' and cpuid != 'all':
+                    cpuid = int(cpuid) 
+                    usr=float(lines[i].split()[3])
+                    iowait=float(lines[i].split()[6])
+                    t_begin = t - t_base + t_glb_base 
+                    duration = usr
+                    deviceId = cpuid
+                    copyKind = -1
+                    payload = iowait
+                    bandwidth = iowait
+                    pkt_src = pkt_dst = -1
+                    pid = tid = -1
+                    trace   = [	t_begin,
+        	                    cpuid,
+        	                    duration,   
+        	                    deviceId,
+        	                    copyKind,
+        	                    payload,
+                                bandwidth,
+                                pkt_src,
+        	                    pkt_dst,
+        	                    pid, 
+        	                    tid,
+                                "mpstat[%d]_usr%.1lf_iowait_%.1lf" % (cpuid, duration, payload),
+        	                    0
+                                ]
+                    print("t_begin:%d cpuid:%d usr:%.1lf"%(t_begin,cpuid,usr))
+                    traces.append(trace)
+            else:
+                t = t + 1
+        mpstat_traces = pd.DataFrame(traces[1:])
+        mpstat_traces.columns = sofa_fieldnames 
+        mpstat_traces.to_csv(logdir + 'cputrace.csv', mode='a', header=False, index=False, float_format='%.6f')
+    
+    #Linux 4.4.0-81-generic (ubuntu1404) 	02/06/2018 	_x86_64_	(40 CPU)
+    #
+    #06:32:01 AM  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
+    #06:32:02 AM  all    0.15    0.00    0.59    0.02    0.00    0.02    0.00    0.00    0.00   99.21
+    #06:32:02 AM    0    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00    0.00  100.00
+    
+    
     #TODO: align cpu time and gpu time
-
-
+    #t_nv = sys.maxint
+    #for i in xrange(len(cpu_traces)):
+    #    print("name:%s"%cpu_traces.loc[i,'name'])
+    #    if cpu_traces.loc[i,'name'].find('testHostToDevice')!=-1 and int(cpu_traces.loc[i,'timestamp']) < t_nv:
+    #        t_nv = int(cpu_traces.loc[i,'timestamp']) 
+    #if t_nv < sys.maxint:
+    #    t_glb_gpu_base = t_nv
+    
     # Apply filters for cpu traces
     df_grouped = cpu_traces.groupby('name')
     filtered_groups = []
@@ -322,6 +382,10 @@ def sofa_preprocess(logdir, cfg):
     for cpu_trace_filter in cpu_trace_filters:
         group = cpu_traces[ cpu_traces['name'].str.contains(cpu_trace_filter['keyword'])]
         filtered_groups.append({'group':group,'color':cpu_trace_filter['color'], 'keyword':cpu_trace_filter['keyword']})
+    for cpu_trace_filter in cpu_trace_filters:
+        group = mpstat_traces[ mpstat_traces['name'].str.contains(cpu_trace_filter['keyword'])]
+        filtered_groups.append({'group':group,'color':cpu_trace_filter['color'], 'keyword':cpu_trace_filter['keyword']})
+    
 
     ### ============ Preprocessing Network Trace ==========================
     os.system("tcpdump -q -n -tt -r " + logdir + "sofa.pcap" + " > " + logdir+ "net.tmp" ) 
