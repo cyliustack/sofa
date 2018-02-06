@@ -53,20 +53,20 @@ function install_packages()
         sudo apt-get install \
             libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
             linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic \
-            cmake tcpdump python-pip python-dev
+            cmake tcpdump python-pip python-dev sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "CentOS"* ]]; then
         sudo yum install \
             perf cmake tcpdump libpcap-devel libconfig-devel boost-devel \
-            centos-release-scl devtoolset-4-gcc* python-pip python-devel
+            centos-release-scl devtoolset-4-gcc* python-pip python-devel sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "Fedora"* ]]; then
         sudo dnf -y install \
-            perf cmake tcpdump boost-devel libconfig-devel libpcap-devel cmake python-pip python-devel
+            perf cmake tcpdump boost-devel libconfig-devel libpcap-devel cmake python-pip python-devel sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "Arch"* ]]; then
         sudo pacman -S \
-            linux-tools cmake boost cmake python-pip python2-pip tcpdump
+            linux-tools cmake boost cmake python-pip python2-pip tcpdump sysstat
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"
     fi

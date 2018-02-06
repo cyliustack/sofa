@@ -12,9 +12,11 @@ INSTALL_DIRS=(bin
               tools
               )
 BIN_FILES=(bin/sofa
-           bin/sofa-analyze.py
+           bin/sofa_record.py
+           bin/sofa_preprocess.py
+           bin/sofa_analyze.py
+           bin/sofa_viz.py
            bin/sofa_config.py
-           bin/sofa-preprocess.py
            bin/sofa_print.py
            )
 PLUGIN_FILES=(plugins/.placeholder

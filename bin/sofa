@@ -22,7 +22,7 @@ if __name__ == "__main__":
     sys.stdout.flush() 
  
     parser = argparse.ArgumentParser(description='SOFA')
-    parser.add_argument("--logdir", metavar="/path/to/logdir/", type=str, required=False, 
+    parser.add_argument('--logdir', metavar='/path/to/logdir/', type=str, required=False, 
                     help='path to the directory of SOFA logged files')
     parser.add_argument('--config', metavar="/path/to/sofa.cfg", type=str, required=False,
                     help='path to the directory of SOFA configuration file')
@@ -39,7 +39,6 @@ if __name__ == "__main__":
         command = args.command[0]
     if args.usr_command != None:
         usr_command = args.usr_command
-
     print_info("logdir = %s" % logdir )
     print_info("config = %s" % cfg_file )
     cfg = read_config(cfg_file)
