@@ -295,6 +295,20 @@ def cpu_profile(logdir, cfg, df):
     print("total execution time = %.3lf" % total_exec_time)
     print("average execution time across devices = %.3lf" % avg_exec_time)
 
+def mpstat_profile(logdir, cfg, df):
+    print_title("MPSTAT Profiling:")
+    grouped_df = df.groupby("deviceId")["duration"]
+    total_exec_time = 0
+    for key, item in grouped_df:
+        if cfg['enable_verbose'] == "true":
+            print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
+        total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
+    n_devices = len(grouped_df)
+    avg_exec_time = total_exec_time / n_devices
+    print("total execution time = %.3lf" % total_exec_time)
+    print("average execution time across devices = %.3lf" % avg_exec_time)
+
+
 class ProfiledDomainDNN:
     domain_name = "DNN"
     prefix = "[ProfiledDomain%s]\t" % domain_name
@@ -337,13 +351,17 @@ def sofa_analyze(logdir, cfg):
     filein = []
     df_gpu = []
     df_cpu = []
+    df_mpstat = []
 
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
+    filein_mpstat = logdir + "mpstat_trace.csv"
 
     try:
         df_cpu = pd.read_csv(filein_cpu)
+        df_mpstat = pd.read_csv(filein_mpstat)
         cpu_profile(logdir, cfg, df_cpu)
+        mpstat_profile(logdir, cfg, df_mpstat)
         net_profile(logdir, cfg, df_cpu)
     except IOError:
         print_warning(

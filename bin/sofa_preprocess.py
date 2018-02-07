@@ -252,21 +252,26 @@ def traces_to_json(traces, path):
         f.write(" ]")        
             
 sofa_fieldnames = [
-        'timestamp',
-        "event",
-        "duration",
-        "deviceId",
-        "copyKind",
-        "payload",
-        "bandwidth",
-        "pkt_src",
-        "pkt_dst",
-        "pid",
-        "tid",
-        "name",
-        "category"]
+        'timestamp',    #0
+        "event",        #1
+        "duration",     #2
+        "deviceId",     #3
+        "copyKind",     #4
+        "payload",      #5
+        "bandwidth",    #6
+        "pkt_src",      #7
+        "pkt_dst",      #8
+        "pid",          #9
+        "tid",          #10
+        "name",         #11
+        "category"]     #12
 
 def sofa_preprocess(logdir, cfg):
+    t_glb_base = 0 
+    t_glb_net_base = 0  
+    t_glb_gpu_base = 0
+
+
     with open('%s/perf.script'%logdir, 'w') as logfile:
         subprocess.call(['perf', 'script', '-i', '%s/perf.data'%logdir, '-F', 'time,cpu,pid,tid,ip,sym,period'],stdout=logfile)
     #sys.stdout.flush() 
@@ -280,7 +285,9 @@ def sofa_preprocess(logdir, cfg):
          
     net_traces = []
     cpu_traces = []
-    mpstat_traces = []
+    mpstat_usr_traces = []
+    mpstat_sys_traces = []
+    mpstat_iowait_traces = []
     gpu_traces = []
     gpu_kernel_traces = []
     gpu_memcpy_traces = []
@@ -315,48 +322,98 @@ def sofa_preprocess(logdir, cfg):
     with open('%s/mpstat.txt'%logdir) as f:
         lines = f.readlines()[1:]
         print_info("Length of mpstat_traces = %d"%len(lines))
-        traces = []
-        traces.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-        t_base = t = 0
-        #mprec = np.zeros((len(lines),11))
-        for i in xrange(len(lines)):
-            print(lines[i])
-            if len(lines[i].split())>2 :
-                cpuid = lines[i].split()[2]
-                if cpuid != 'CPU' and cpuid != 'all':
-                    cpuid = int(cpuid) 
-                    usr=float(lines[i].split()[3])
-                    iowait=float(lines[i].split()[6])
-                    t_begin = t - t_base + t_glb_base 
-                    duration = usr
-                    deviceId = cpuid
-                    copyKind = -1
-                    payload = iowait
-                    bandwidth = iowait
-                    pkt_src = pkt_dst = -1
-                    pid = tid = -1
-                    trace   = [	t_begin,
-        	                    cpuid,
-        	                    duration,   
-        	                    deviceId,
-        	                    copyKind,
-        	                    payload,
-                                bandwidth,
-                                pkt_src,
-        	                    pkt_dst,
-        	                    pid, 
-        	                    tid,
-                                "mpstat[%d]_usr%.1lf_iowait_%.1lf" % (cpuid, duration, payload),
-        	                    0
-                                ]
-                    print("t_begin:%d cpuid:%d usr:%.1lf"%(t_begin,cpuid,usr))
-                    traces.append(trace)
-            else:
-                t = t + 1
-        mpstat_traces = pd.DataFrame(traces[1:])
-        mpstat_traces.columns = sofa_fieldnames 
-        mpstat_traces.to_csv(logdir + 'cputrace.csv', mode='a', header=False, index=False, float_format='%.6f')
+        if len(lines) > 0: 
+            usr_list = []
+            sys_list = []
+            iowait_list = []
+            usr_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            sys_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            iowait_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            t_base = t = 0
+            #mprec = np.zeros((len(lines),11))
+            for i in xrange(len(lines)):
+                #print(lines[i])
+                if len(lines[i].split())>2 :
+                    cpuid = lines[i].split()[2]
+                    if cpuid != 'CPU':
+                        if cpuid == 'all':
+                            event = -1 
+                        else:
+                            event = int(cpuid) 
+                        mpst_usr=float(lines[i].split()[3])
+                        mpst_sys=float(lines[i].split()[5])
+                        mpst_iowait=float(lines[i].split()[6])
+                        t_begin = t - t_base + t_glb_base
+                        duration = mpst_usr
+                        deviceId = cpuid
+                        copyKind = -1
+                        payload = mpst_sys
+                        bandwidth = mpst_iowait
+                        pkt_src = pkt_dst = -1
+                        pid = tid = -1
+                        trace   = [	t_begin,
+            	                    event,
+            	                    mpst_usr,   
+            	                    deviceId,
+            	                    copyKind,
+            	                    payload,
+                                    bandwidth,
+                                    pkt_src,
+            	                    pkt_dst,
+            	                    pid, 
+            	                    tid,
+                                    "mpstat_usr[%s]=%.1lf" % (cpuid, mpst_usr),
+            	                    cpuid
+                                    ]
+                        usr_list.append(trace)
+                        
+                        trace   = [	t_begin,
+            	                    event,
+            	                    mpst_sys,   
+            	                    deviceId,
+            	                    copyKind,
+            	                    payload,
+                                    bandwidth,
+                                    pkt_src,
+            	                    pkt_dst,
+            	                    pid, 
+            	                    tid,
+                                    "mpstat_sys[%s]=%.1lf" % (cpuid, mpst_sys),
+            	                    cpuid
+                                    ]
+                        sys_list.append(trace)
+
+                        trace   = [	t_begin,
+            	                    event,
+            	                    mpst_iowait,   
+            	                    deviceId,
+            	                    copyKind,
+            	                    payload,
+                                    bandwidth,
+                                    pkt_src,
+            	                    pkt_dst,
+            	                    pid, 
+            	                    tid,
+                                    "mpstat_iowait[%s]=%.1lf" % (cpuid, mpst_iowait),
+            	                    cpuid
+                                    ]
+                        iowait_list.append(trace)
+                else:
+                    t = t + 1
+            mpstat_usr_traces = pd.DataFrame(usr_list[1:])
+            mpstat_usr_traces.columns = sofa_fieldnames 
+            mpstat_usr_traces.to_csv(logdir + 'mpstat_trace.csv', mode='w', header=True, index=False, float_format='%.6f')
+            
+            mpstat_sys_traces = pd.DataFrame(sys_list[1:])
+            mpstat_sys_traces.columns = sofa_fieldnames 
+            mpstat_sys_traces.to_csv(logdir + 'mpstat_trace.csv', mode='a', header=False, index=False, float_format='%.6f')
+            
+            mpstat_iowait_traces = pd.DataFrame(iowait_list[1:])
+            mpstat_iowait_traces.columns = sofa_fieldnames 
+            mpstat_iowait_traces.to_csv(logdir + 'mpstat_trace.csv', mode='a', header=False, index=False, float_format='%.6f')
     
+
+
     #Linux 4.4.0-81-generic (ubuntu1404) 	02/06/2018 	_x86_64_	(40 CPU)
     #
     #06:32:01 AM  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
@@ -365,13 +422,14 @@ def sofa_preprocess(logdir, cfg):
     
     
     #TODO: align cpu time and gpu time
-    #t_nv = sys.maxint
-    #for i in xrange(len(cpu_traces)):
-    #    print("name:%s"%cpu_traces.loc[i,'name'])
-    #    if cpu_traces.loc[i,'name'].find('testHostToDevice')!=-1 and int(cpu_traces.loc[i,'timestamp']) < t_nv:
-    #        t_nv = int(cpu_traces.loc[i,'timestamp']) 
-    #if t_nv < sys.maxint:
-    #    t_glb_gpu_base = t_nv
+    t_nv = sys.float_info.max
+    for i in xrange(len(cpu_traces)):
+        #print("name:%s"%cpu_traces.loc[i,'name'])
+        if cpu_traces.iat[i,11].find('nv_alloc_system_pages')!=-1 and float(cpu_traces.iat[i,0]) < t_nv:
+            t_nv = float(cpu_traces.iat[i,0]) 
+    if t_nv < sys.maxint:
+        t_glb_gpu_base = t_nv + 0.1
+        print("t_base: cpu=%lf gpu=%lf" % ( t_glb_base, t_glb_gpu_base))
     
     # Apply filters for cpu traces
     df_grouped = cpu_traces.groupby('name')
@@ -379,13 +437,11 @@ def sofa_preprocess(logdir, cfg):
     color_of_filtered_group = []
     #e.g. cpu_trace_filters = [ {"keyword":"nv_", "color":"red"}, {"keyword":"idle", "color":"green"} ]
     cpu_trace_filters = cfg['filters'] 
-    for cpu_trace_filter in cpu_trace_filters:
-        group = cpu_traces[ cpu_traces['name'].str.contains(cpu_trace_filter['keyword'])]
-        filtered_groups.append({'group':group,'color':cpu_trace_filter['color'], 'keyword':cpu_trace_filter['keyword']})
-    for cpu_trace_filter in cpu_trace_filters:
-        group = mpstat_traces[ mpstat_traces['name'].str.contains(cpu_trace_filter['keyword'])]
-        filtered_groups.append({'group':group,'color':cpu_trace_filter['color'], 'keyword':cpu_trace_filter['keyword']})
-    
+    if len(cpu_traces) > 0:
+        for cpu_trace_filter in cpu_trace_filters:
+            group = cpu_traces[ cpu_traces['name'].str.contains(cpu_trace_filter['keyword'])]
+            filtered_groups.append({'group':group,'color':cpu_trace_filter['color'], 'keyword':cpu_trace_filter['keyword']})
+   
 
     ### ============ Preprocessing Network Trace ==========================
     os.system("tcpdump -q -n -tt -r " + logdir + "sofa.pcap" + " > " + logdir+ "net.tmp" ) 
@@ -446,19 +502,16 @@ def sofa_preprocess(logdir, cfg):
     print_progress("Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
     
-
-    
     #TODO: provide option to use absolute or relative timestamp
     #cpu_traces.loc[:,'timestamp'] -= cpu_traces.loc[0,'timestamp']
     #net_traces.loc[:,'timestamp'] -= net_traces.loc[0,'timestamp']
     #gpu_traces.loc[:,'timestamp'] -= gpu_traces.loc[0,'timestamp']
 
-
     traces = []
     sofatrace = SOFATrace()
     sofatrace.name = 'cpu_trace'
     sofatrace.title = 'CPU'
-    sofatrace.color = 'orange'
+    sofatrace.color = 'DarkGray'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = cpu_traces
@@ -473,6 +526,33 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.y_field = 'duration'
         sofatrace.data = filtered_group['group'].copy()
         traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'mpstat_usr'
+    sofatrace.title = 'MPSTAT_USR'
+    sofatrace.color = 'LightBlue'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = mpstat_usr_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'mpstat_sys'
+    sofatrace.title = 'MPSTAT_SYS'
+    sofatrace.color = 'LightCoral'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = mpstat_sys_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'mpstat_iowait'
+    sofatrace.title = 'MPSTAT_IOWAIT'
+    sofatrace.color = 'LightSeaGreen'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = mpstat_iowait_traces
+    traces.append(sofatrace)
 
     sofatrace = SOFATrace()
     sofatrace.name = 'net_trace'
@@ -502,17 +582,5 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.data = filtered_gpu_group['group'].copy()
         traces.append(sofatrace)
 
-
-    if cfg['enable_plot_bandwidth'] == 'true':
-        sofatrace = SOFATrace()
-        sofatrace.name = 'gpu_memcpy_h2d_bw_trace'
-        sofatrace.title = 'GPU memcpy H2D bandwidth (MB/s)'
-        sofatrace.color = 'Crimson'
-        sofatrace.x_field = 'timestamp'
-        sofatrace.y_field = 'bandwidth'
-        sofatrace.data = gpu_traces
-
-
     traces_to_json(traces, logdir+'report.js')
-    traces_to_json(traces, logdir+'overhead.js')
     print_progress("Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- end")
