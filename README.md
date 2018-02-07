@@ -57,12 +57,10 @@ To be edited. (How to add new items)
 
 # Examples of Visualization Results:
 `sofa record "~/cuda_samples/1_Utilities/bandwidthTest/bandwidthTest"`
-![Alt text](./figures/demo0.png)
-`sofa record "./tools/gpu-train.sh resnet50 64 8 --num_warmup_batches=0 --num_batches=1"`
-![Alt text](./figures/demo1.png)
-`sofa record "./tools/gpu-train.sh resnet50 64 8 --num_warmup_batches=0 --num_batches=1"`
-![Alt text](./figures/demo2.png)
+![Alt text](./figures/bandwidth.png)
+`sofa record "python tf_cnn_benchmarks.py --num_gpus=8 --batch_size=64 --model=resnet50 --variable_update=parameter_server --num_warmup_batches=1 --num_batches=3"`
+![Alt text](./figures/timeline.png)
+`sofa record "python tf_cnn_benchmarks.py --num_gpus=8 --batch_size=64 --model=resnet50 --variable_update=parameter_server --num_warmup_batches=1 --num_batches=3"`
+![Alt text](./figures/timeline_zoomin.png)
 `sofa record "mpirun -f hosts.txt -n 4 ./compute_pi"`
-![Alt text](./figures/demo3.png)
-`sofa record "./tools/gpu-train.sh resnet50 32 1 --num_batches=10"`
-![Alt text](./figures/demo4.png)
+![Alt text](./figures/mpi.png)

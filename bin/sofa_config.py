@@ -8,9 +8,9 @@ def read_config(path_cfg):
                         "enable_plot_bandwidth":"false",\
                         "top_k":"20",\
                         "gpu_filters":[\
-                            {"keyword":"copyKind1","color":"Red"},\
-                            {"keyword":"copyKind2", "color":"Peru"} ,\
-                            {"keyword":"copyKind10", "color":"Purple"}]\
+                            {"keyword":"copyKind_1_","color":"Red"},\
+                            {"keyword":"copyKind_2_", "color":"Peru"} ,\
+                            {"keyword":"copyKind_10_", "color":"Purple"}]\
                         }')
     try:
         with open(path_cfg) as f:

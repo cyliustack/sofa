@@ -78,22 +78,22 @@ def gpu_trace_read(record, n_cudaproc, ts_rescale, dt_rescale, t_offset):
         copyKind = 1
         pkt_src = 0 
         pkt_dst = deviceId
-        kernel_name = "gpu%d_copyKind%d_%dB" % ( deviceId, copyKind, payload )
+        kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
     elif kernel_name.find('DtoH') != -1:
         copyKind = 2
         pkt_src = deviceId 
         pkt_dst = 0
-        kernel_name = "gpu%d_copyKind%d_%dB" % ( deviceId, copyKind, payload )
+        kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
     elif kernel_name.find('DtoD') != -1:
         copyKind = 8
         pkt_src = deviceId 
         pkt_dst = deviceId
-        kernel_name = "gpu%d_copyKind%d_%dB" % ( deviceId, copyKind, payload )
+        kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
     elif kernel_name.find('PtoP') != -1:
         copyKind = 10
         pkt_src = 0 if record.split(',')[17] == '' else int(record.split(',')[17].replace('"','')) 
         pkt_dst = 0 if record.split(',')[19] == '' else int(record.split(',')[19].replace('"',''))     
-        kernel_name = "gpu%d_copyKind%d_%dB" % ( deviceId, copyKind, payload )
+        kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
     else:
         copyKind = 0
 
