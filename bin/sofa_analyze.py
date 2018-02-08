@@ -299,6 +299,8 @@ def mpstat_profile(logdir, cfg, df):
     print_title("MPSTAT Profiling:")
     mpstat_class=['USR','SYS','IOWAIT']
     #df = df.sort(['deviceId'])
+    gdf = df.groupby("event")["duration"]
+    print("Number of Cores: %d" % (len(gdf)-1) )
     gdf = df.groupby("copyKind")["duration"]
     print("Class\tMax.\tAvg.\tStd.")
     for key, item in gdf:
