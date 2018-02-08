@@ -62,5 +62,7 @@ To be edited. (How to add new items)
 ![Alt text](./figures/timeline.png)
 `sofa record "python tf_cnn_benchmarks.py --num_gpus=8 --batch_size=64 --model=resnet50 --variable_update=parameter_server --num_warmup_batches=1 --num_batches=3"`
 ![Alt text](./figures/timeline_zoomin.png)
+`sofa record "python tf_cnn_benchmarks.py --num_gpus=8 --batch_size=64 --model=alexnet --variable_update=replicated --all_reduce_spec=xring --num_warmup_batches=1 --num_batches=3"`
+![Alt text](./figures/parcord.png)
 `sofa record "mpirun -f hosts.txt -n 4 ./compute_pi"`
 ![Alt text](./figures/mpi.png)
