@@ -297,18 +297,16 @@ def cpu_profile(logdir, cfg, df):
 
 def mpstat_profile(logdir, cfg, df):
     print_title("MPSTAT Profiling:")
-    grouped_df = df.groupby("deviceId")["duration"]
-    total_exec_time = 0
-    for key, item in grouped_df:
-        if cfg['enable_verbose'] == "true":
-            print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
-        total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
-    n_devices = len(grouped_df)
-    avg_exec_time = total_exec_time / n_devices
-    print("total execution time = %.3lf" % total_exec_time)
-    print("average execution time across devices = %.3lf" % avg_exec_time)
-
-
+    mpstat_class=['USR','SYS','IOWAIT']
+    #df = df.sort(['deviceId'])
+    gdf = df.groupby("copyKind")["duration"]
+    print("Class\tMax.\tAvg.\tStd.")
+    for key, item in gdf:
+        print("%s\t%3d\t%3d\t%3d" % ( mpstat_class[key],\
+                        int(gdf.get_group(key).max()),\
+                        int(gdf.get_group(key).mean()),\
+                        int(gdf.get_group(key).std()) ))
+        
 class ProfiledDomainDNN:
     domain_name = "DNN"
     prefix = "[ProfiledDomain%s]\t" % domain_name
