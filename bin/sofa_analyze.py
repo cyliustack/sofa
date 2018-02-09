@@ -145,21 +145,6 @@ def comm_profile(logdir, cfg, df_gpu):
         accum_count[src][dst] = int(accum_count[src][dst] + 1)
 
 
-    if cfg['enable_verbose'] == "true":   
-        for i in range(len(df_gpu)):
-            if df_gpu.iat[i,4] == 0 or df_gpu.iat[i,4] == 8:
-                continue
-            src = df_gpu.iat[i,7]
-            dst = df_gpu.iat[i,8]
-            payload = df_gpu.iat[i,5]
-            if df_gpu.iat[i,4] == 1:
-                print("[H2D] HOST%d to GPU%d, count:%d\tpayload:%d\taccum_payload:%d" % ( src, dst, accum_count[src][dst], payload, accum[src][dst]))
-            if df_gpu.iat[i,4] == 2:
-                print("[D2H] GPU%d to HOST%d, count:%d\tpayload:%d\taccum_payload:%d" % ( src, dst, accum_count[src][dst], payload, accum[src][dst]))
-            if df_gpu.iat[i,4] == 10:
-                print("[P2P] GPU%d to GPU%d: count:%d\tpayload:%d\taccum_payload:%d" % (  src, dst, accum_count[src][dst], payload, accum[src][dst]))
-
-
     for i in xrange(accum_time.shape[0]):
         accum_time[0][i] = accum[0][i]/(1024.0*1024*1024)/bw_h2d
         accum_time[i][0] = accum[i][0]/(1024.0*1024*1024)/bw_d2h
@@ -251,17 +236,6 @@ def gpu_profile(logdir, cfg, df_gpu):
             all_reduce_time = all_reduce_time +  grouped_df.get_group(key).sum()
                 
 
-    if cfg['enable_verbose'] == "true":
-        print_title("Data Traffic for Each Pair of deviceId and CopyKind (MB)")
-        devcopy = grouped_df = df_gpu.groupby(["deviceId", "copyKind"])[
-            "payload"].sum() / 1000000
-        print(devcopy)
-        print_title(
-            "Data Communication Time for Each Pair of deviceId and CopyKind (s)")
-        devcopytime = grouped_df = df_gpu.groupby(
-            ["deviceId", "copyKind"])["duration"].sum()
-        print(devcopytime)
-
     comm_profile(logdir, cfg, df_gpu)
     print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
     
@@ -297,18 +271,39 @@ def cpu_profile(logdir, cfg, df):
 
 def mpstat_profile(logdir, cfg, df):
     print_title("MPSTAT Profiling:")
-    mpstat_class=['USR','SYS','IOWAIT']
-    #df = df.sort(['deviceId'])
-    gdf = df.groupby("event")["duration"]
+    df.rename(columns = {'event':'cpuid'}, inplace=True)
+    df.rename(columns = {'copyKind':'class'}, inplace=True)
+    df.rename(columns = {'duration':'usage'}, inplace=True)
+    z = {0: 'USR', 1: 'SYS', 2: 'IOW'}
+    df['class'] = df['class'].map(z)
+    
+    gdf = df.groupby("cpuid")["usage"]
     print("Number of Cores: %d" % (len(gdf)-1) )
-    gdf = df.groupby("copyKind")["duration"]
+    gdf = df.groupby("class")["usage"]   
     print("Class\tMax.\tAvg.\tStd.")
     for key, item in gdf:
-        print("%s\t%3d\t%3d\t%3d" % ( mpstat_class[key],\
+        print("%s\t%3d\t%3d\t%3d" % ( key,\
                         int(gdf.get_group(key).max()),\
                         int(gdf.get_group(key).mean()),\
                         int(gdf.get_group(key).std()) ))
-        
+    print("For more info. about each core, please enable verbose mode.")
+    
+    gdf = df.groupby("cpuid")["usage"]
+    if cfg['enable_verbose'] == 'true':
+        print("===== Max. of Usages for Each Core =====")
+        table = df.pivot_table(index='cpuid',columns='class', values='usage', aggfunc=np.max)
+        print(table[1:].astype(int)) 
+
+        print("===== Avg. of Usages for Each Core =====")
+        table = df.pivot_table(index='cpuid',columns='class', values='usage', aggfunc=np.mean)
+        print(table[1:].astype(int))  
+ 
+        print("===== Std. of Usages for Each Core =====")
+        table = df.pivot_table(index='cpuid',columns='class', values='usage', aggfunc=np.std)
+        print(table[1:].astype(int))  
+
+
+
 class ProfiledDomainDNN:
     domain_name = "DNN"
     prefix = "[ProfiledDomain%s]\t" % domain_name
