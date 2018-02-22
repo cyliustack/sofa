@@ -35,7 +35,7 @@ def partial_sum(df):
     psum = 0
 
 # print_format_table()
-cktable = {0: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
+cktable = {-1:"NON", 0: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 ckindex = [1, 2, 8, 10]
 
 def comm_profile(logdir, cfg, df_gpu):
@@ -62,8 +62,12 @@ def comm_profile(logdir, cfg, df_gpu):
     n_gpus = 0
     for i in range(len(df_gpu)):
         if df_gpu.iat[i,3] > n_gpus:
-            n_gpus = df_gpu.iat[i,3]
+            n_gpus = int(df_gpu.iat[i,3])
     
+    if n_gpus == 0:
+	print_warning("No GPU communication traces are collected.")
+	return 
+  
     print_title("Data Traffic for each CopyKind (MB)")
     data_copyKind = grouped_df = df_gpu.groupby("copyKind")["payload"]
     for key, item in grouped_df:

@@ -337,10 +337,13 @@ def sofa_preprocess(logdir, cfg):
                     cpuid = lines[i].split()[2]
                     if cpuid != 'CPU':
                         if cpuid == 'all':
-                            event = -1 
-                        else:
-                            event = int(cpuid) 
-                        mpst_usr=float(lines[i].split()[3])
+                        	event = -1 
+			else:
+				try:
+				    event = int(cpuid)
+				except ValueError:
+                        		continue
+			mpst_usr=float(lines[i].split()[3])
                         mpst_sys=float(lines[i].split()[5])
                         mpst_iowait=float(lines[i].split()[6])
                         t_begin = t - t_base + t_glb_base
