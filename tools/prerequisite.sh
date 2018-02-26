@@ -36,7 +36,7 @@ function install_python_packages()
     # Install Python packages
     echo -e "${C_GREEN}Installing python packages...${C_NONE}"
     # Install for Python2
-    pip2 install --user cxxfilt pandas scapy
+    pip2 install --user cxxfilt pandas 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 
     # Install for Python3
