@@ -43,8 +43,11 @@ def net_trace_read(packet, t_offset):
     payload = int(packet.split()[6])
     duration = float(payload/125.0e6)
     bandwidth = 125.0e6
-    pkt_src = int(packet.split()[2].split('.')[3]) 
-    pkt_dst = int(packet.split()[4].split('.')[3])
+    pkt_src = 0
+    pkt_dst = 0
+    for i in xrange(4):
+        pkt_src = pkt_src + int(packet.split()[2].split('.')[i])*np.power(1000,3-i)
+        pkt_dst = pkt_dst + int(packet.split()[4].split('.')[i])*np.power(1000,3-i)
     trace   = [	t_begin,
         	    payload*100+17,
         	    duration,   
