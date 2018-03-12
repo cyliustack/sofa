@@ -64,57 +64,83 @@ def net_trace_read(packet, t_offset):
                 ]
     return trace
 
-def gpu_trace_read(record, n_cudaproc, ts_rescale, dt_rescale, t_offset):
-    idx_name = len(record.split(',')) - 1
-    time =  float(record.split(',')[0])/ts_rescale + t_offset
-    duration = float(record.split(',')[1])/dt_rescale
-    t_begin = time
-    t_end   = time + duration 
-    kernel_name = "%s"%(record.split(',')[idx_name].replace('"','')[:-1])
-    payload = 0 if record.split(',')[11] == '' else int(float(record.split(',')[11])*1024*1024)
-    bandwidth = 1e-6 if record.split(',')[12] == '' else float(record.split(',')[12])
-    pid = n_cudaproc
-    deviceId = 0 if record.split(',')[14] == '' else int(record.split(',')[14].replace('"','')) 
-    tid = streamId = -1 if record.split(',')[15] == '' else int(record.split(',')[15].replace('"','')) 
-    pkt_src = pkt_dst = copyKind = 0
-    if kernel_name.find('HtoD') != -1:
-        copyKind = 1
-        pkt_src = 0 
-        pkt_dst = deviceId
-        kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
-    elif kernel_name.find('DtoH') != -1:
-        copyKind = 2
-        pkt_src = deviceId 
-        pkt_dst = 0
-        kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
-    elif kernel_name.find('DtoD') != -1:
-        copyKind = 8
-        pkt_src = deviceId 
-        pkt_dst = deviceId
-        kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
-    elif kernel_name.find('PtoP') != -1:
-        copyKind = 10
-        pkt_src = 0 if record.split(',')[17] == '' else int(record.split(',')[17].replace('"','')) 
-        pkt_dst = 0 if record.split(',')[19] == '' else int(record.split(',')[19].replace('"',''))     
-        kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
-    else:
-        copyKind = 0
+def gpu_trace_read(record, indices, n_cudaproc, ts_rescale, dt_rescale, t_offset):
+	values = record.replace('"','').split(',')
+	kernel_name = values[indices.index('Name')]
+        #print("kernel name = %s" % kernel_name)
+	time =  float(values[indices.index('Start')])/ts_rescale + t_offset
+    	duration = float(values[indices.index('Duration')])/dt_rescale
+    	t_begin = time
+    	t_end   = time + duration 
+    	try:
+		payload = int(float(values[indices.index('Size')])*1024*1024)
+	except:
+		payload = 0
 
-    #print("%d:%d [%s] ck:%d, %lf,%lf: %d -> %d: payload:%d, bandwidth:%lf, duration:%lf "%(deviceId, streamId, kernel_name, copyKind, t_begin,t_end, pkt_src, pkt_dst, payload, bandwidth, duration))
-    trace = [ t_begin,
-            payload*100+17,
-            duration,   
-            deviceId,
-            copyKind,
-            payload,
-            bandwidth,
-            pkt_src,
-            pkt_dst,
-            pid, 
-            tid,
-            kernel_name,
-            0]
-    return trace
+    	try:
+		bandwidth = float(values[indices.index('Throughput')])
+	except:
+		bandwidth = 1e-6
+
+    	pid = n_cudaproc
+
+    	try:
+		deviceId = int(float(values[indices.index('Context')]))
+	except:
+		deviceId = -1
+
+	try:
+		tid = streamId =  int(float(values[indices.index('Stream')])) 
+	except:
+		tid = streamId = -1
+
+	pkt_src = pkt_dst = copyKind = 0
+    	if kernel_name.find('HtoD') != -1:
+    	    copyKind = 1
+    	    pkt_src = 0 
+    	    pkt_dst = deviceId
+    	    kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
+    	elif kernel_name.find('DtoH') != -1:
+    	    copyKind = 2
+    	    pkt_src = deviceId 
+    	    pkt_dst = 0
+    	    kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
+    	elif kernel_name.find('DtoD') != -1:
+    	    copyKind = 8
+    	    pkt_src = deviceId 
+    	    pkt_dst = deviceId
+    	    kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
+    	elif kernel_name.find('PtoP') != -1:
+    	    copyKind = 10
+	    try:
+		pkt_src = int(values[indices.index('Src Ctx')]) 
+	    except:
+		pkt_src = 0
+    	    
+	    try:
+		pkt_dst = int(values[indices.index('Dst Ctx')]) 
+	    except:
+		pkt_dst = 0 
+		
+    	    kernel_name = "gpu%d_copyKind_%d_%dB" % ( deviceId, copyKind, payload )
+    	else:
+    	    copyKind = 0
+
+    	#print("%d:%d [%s] ck:%d, %lf,%lf: %d -> %d: payload:%d, bandwidth:%lf, duration:%lf "%(deviceId, streamId, kernel_name, copyKind, t_begin,t_end, pkt_src, pkt_dst, payload, bandwidth, duration))
+    	trace = [ t_begin,
+    	        payload*100+17,
+    	        duration,   
+    	        deviceId,
+    	        copyKind,
+    	        payload,
+    	        bandwidth,
+    	        pkt_src,
+    	        pkt_dst,
+    	        pid, 
+    	        tid,
+    	        kernel_name,
+    	        0]
+    	return trace
 
 def gpu_kernel_trace_read(record, pid, t_base, t_glb_base):
     t_begin = (record[0] - t_base) / 1e9 + t_glb_base
@@ -465,6 +491,7 @@ def sofa_preprocess(logdir, cfg):
     ### ============ Preprocessing GPU Trace ==========================
     num_cudaproc = 0
     filtered_gpu_groups = []
+    indices = []
     for nvvp_filename in glob.glob(logdir+"gputrace*[0-9].nvvp"):
         print_progress("Read "+nvvp_filename+" -- begin")
         os.system("nvprof --csv --print-gpu-trace -i " + nvvp_filename + " 2> " + logdir+ "gputrace.tmp" ) 
@@ -472,6 +499,11 @@ def sofa_preprocess(logdir, cfg):
         num_cudaproc = num_cudaproc + 1 
         with open(logdir + 'gputrace.tmp') as f:
             records = f.readlines()
+	    print(records[1])
+	    if records[1].split(',')[0] == '"Start"':
+		indices = records[1].replace('"','').split(',')
+
+	    print(indices)
             #ms,ms,,,,,,,,B,B,MB,GB/s,,,,
             ts_rescale = 1.0
             if records[2].split(',')[0] == 'ms':
@@ -490,7 +522,7 @@ def sofa_preprocess(logdir, cfg):
             t_base = float(records[0].split(',')[0]) 
             t_offset = t_glb_gpu_base - t_base
             pool = mp.Pool(processes=cpu_count)
-            res = pool.map( partial(gpu_trace_read, ts_rescale=ts_rescale, dt_rescale=dt_rescale, n_cudaproc=num_cudaproc, t_offset=t_glb_gpu_base - t_base), records)
+            res = pool.map( partial(gpu_trace_read, indices=indices, ts_rescale=ts_rescale, dt_rescale=dt_rescale, n_cudaproc=num_cudaproc, t_offset=t_glb_gpu_base - t_base), records)
             gpu_traces = pd.DataFrame(res)
             gpu_traces.columns = sofa_fieldnames 
             gpu_traces.to_csv(logdir + 'gputrace.csv', mode='w', header=True, index=False, float_format='%.6f')
