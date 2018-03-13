@@ -44,11 +44,9 @@ SOFA supports serveral different usages, like how one can use perf.
 
 # Configurations
 
-SOFA provides sample configuration flags. Examples are shown below,  
+SOFA provides options for configurations. Some examples are shown below. Please use `sofa --help` to see more info.  
 1. `sofa --cpu_filters="idle:black,tensorflow:orange" record "python tf_cnn_benchmarks.py"`   
-2. `sofa --cpu_filters="tensorflow:orange" --verbose=True record "python tf_cnn_benchmarks.py"`   
-## Add items in filter lists
-To be edited. (How to add new items)
+2. `sofa --gpu_filters="tensorflow:orange" --verbose=True record "python tf_cnn_benchmarks.py"`   
 
 
 # Examples of Visualization Results:
