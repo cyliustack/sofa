@@ -14,9 +14,8 @@ Run the following simple tests to verify the permission settings of executing tc
 # Installation
 
 1. Simply run `./install.sh </PATH/TO/INSTALL>` to install SOFA on your system. Note that `sofa` will be appended to the path if the last directory is not sofa.
-2. Create custom config file in your project directory or home directory. To get started, run `cp ./examples/conf/default.cfg ~/sofa.cfg`. Please refer to [Configurations](#configurations) for further details.
-3. Then, run `source </PATH/TO/INSTALL>/sofa/tools/activate.sh` to activate SOFA running environment. (Need to be executed on each new shell.)
-4. [ALTERNATIVE] Add `source </PATH/TO/INSTALL>/sofa/tools/activate.sh` in your `~/.bashrc` to make this environment available on every shell.
+2. Then, run `source </PATH/TO/INSTALL>/sofa/tools/activate.sh` to activate SOFA running environment. (Need to be executed on each new shell.)
+3. [ALTERNATIVE] Add `source </PATH/TO/INSTALL>/sofa/tools/activate.sh` in your `~/.bashrc` to make this environment available on every shell.
 
 ## Uninstall
 Run `bash </PATH/TO/INSTALL>/sofa/tools/uninstall.sh` to safely remove/uninstall files of SOFA.
@@ -45,12 +44,9 @@ SOFA supports serveral different usages, like how one can use perf.
 
 # Configurations
 
-SOFA provides sample configuration files in `examples/conf`, please copy/modify them to fit your needs.
-
-## Where to place my configuration file?
-When running SOFA, the script will search the current working directory for the configuration file, `sofa.cfg`.
-User can specify the path where `sofa.cfg` locates by option `--config=/path/to/sofa.cfg`.
-
+SOFA provides sample configuration flags. Examples are shown below,  
+1. `sofa --cpu_filters="idle:black,tensorflow:orange" record "python tf_cnn_benchmarks.py"`   
+2. `sofa --cpu_filters="tensorflow:orange" --verbose=True record "python tf_cnn_benchmarks.py"`   
 ## Add items in filter lists
 To be edited. (How to add new items)
 

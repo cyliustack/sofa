@@ -13,35 +13,70 @@ from sofa_record import *
 from sofa_preprocess import *
 from sofa_analyze import *
 from sofa_viz import *
+
 if __name__ == "__main__":
     
     logdir   = './sofalog/' 
-    cfg_file = './sofa.cfg'
     command = None
     usr_command = None
     sys.stdout.flush() 
- 
+
     parser = argparse.ArgumentParser(description='SOFA')
     parser.add_argument('--logdir', metavar='/path/to/logdir/', type=str, required=False, 
                     help='path to the directory of SOFA logged files')
-    parser.add_argument('--config', metavar="/path/to/sofa.cfg", type=str, required=False,
-                    help='path to the directory of SOFA configuration file')
+    parser.add_argument('--gpu_filters', metavar='"keyword1:color1,keyword2:color2"', type=str, required=False,
+                    help='A string of list of pairs of keyword and color')
+    parser.add_argument('--cpu_filters', metavar='"keyword1:color1,keyword2:color2"', type=str, required=False,
+                    help='A string of list of pairs of keyword and color')
+    parser.add_argument('--cpu_top_k', metavar='K', type=int, required=False,
+                    help='K functions of the highest overheads')
+    parser.add_argument('--verbose', metavar='True/False', type=bool, required=False,
+                    help='Enable/Disable verbose mode')
     parser.add_argument('command', type=str, nargs=1, metavar='<stat|record|report|preprocess|analyze|viz>')
     parser.add_argument('usr_command', type=str, nargs='?', metavar='<PROFILED_COMMAND>')
+
+    cfg = SOFA_Config()
 
     args = parser.parse_args()
     if args.logdir != None:
         logdir = args.logdir + '/'
     
-    if args.config != None:
-        cfg_file = args.config
     if args.command != None:
         command = args.command[0]
     if args.usr_command != None:
         usr_command = args.usr_command
+    
+    if args.verbose != None:
+        cfg.verbose = args.verbose
+    
+
+    cfg.cpu_filters.append( Filter('nv_alloc_system_pages','Chartreuse') )
+    if args.cpu_filters != None:
+        pairs = args.cpu_filters.split(',')
+        for pair in pairs:
+            cfg.cpu_filters.append( Filter( str(pair.split(':')[0]), str(pair.split(':')[1])) )
+    else:
+        cfg.cpu_filters.append( Filter('nv_alloc_system_pages','red') )
+        cfg.cpu_filters.append( Filter('idle','black') )
+
+    
+    if args.gpu_filters != None:
+        pairs = args.gpu_filters.split(',')
+        for pair in pairs:
+            cfg.gpu_filters.append( Filter( str(pair.split(':')[0]), str(pair.split(':')[1])) )
+    else:
+        cfg.gpu_filters.append( Filter('copyKind_1_','Red') )
+        cfg.gpu_filters.append( Filter('copyKind_2_','Peru') )
+        cfg.gpu_filters.append( Filter('copyKind_10_','Purple') )
+
+    
+    for filter in cfg.cpu_filters:
+        print_info("CPU filter = %s:%s" % (filter.keyword,filter.color))
+    for filter in cfg.gpu_filters:
+        print_info("GPU filter = %s:%s" % (filter.keyword,filter.color))
+    
+
     print_info("logdir = %s" % logdir )
-    print_info("config = %s" % cfg_file )
-    cfg = read_config(cfg_file)
         
     if command == 'stat':
         sofa_record(usr_command, logdir, cfg)

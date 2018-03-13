@@ -7,7 +7,6 @@ import argparse
 import multiprocessing as mp 
 import glob, os 
 from functools import partial
-from sofa_config import *
 from sofa_print import *
 import subprocess
 from time import sleep
@@ -43,10 +42,10 @@ def sofa_record(command, logdir, cfg):
             print_info("Recording...")
             if int(os.system('command -v nvprof')) == 0:
                 print_info('Profile with NVPROF')
-                os.system('nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -o %s/perf.data -F 99 -a -- %s' % (logdir, logdir, command))  
+                os.system('nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -o %s/perf.data -F 200 -a -- %s' % (logdir, logdir, command))  
             else:
                 print_info('Profile without NVPROF')
-                os.system('perf record -o %s/perf.data -F 99 -a -- %s' % (logdir, command))  
+                os.system('perf record -o %s/perf.data -F 200 -a -- %s' % (logdir, command))  
             
             print_info("Epilog of Recording...")
             os.system('pkill tcpdump')

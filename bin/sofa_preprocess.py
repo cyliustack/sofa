@@ -527,15 +527,13 @@ def sofa_preprocess(logdir, cfg):
     df_grouped = cpu_traces.groupby('name')
     filtered_groups = []
     color_of_filtered_group = []
-    #e.g. cpu_trace_filters = [ {"keyword":"nv_", "color":"red"}, {"keyword":"idle", "color":"green"} ]
-    cpu_trace_filters = cfg['filters']
     if len(cpu_traces) > 0:
-        for cpu_trace_filter in cpu_trace_filters:
+        for filter in cfg.cpu_filters:
             group = cpu_traces[cpu_traces['name'].str.contains(
-                cpu_trace_filter['keyword'])]
+                filter.keyword)]
             filtered_groups.append({'group': group,
-                                    'color': cpu_trace_filter['color'],
-                                    'keyword': cpu_trace_filter['keyword']})
+                                    'color': filter.color,
+                                    'keyword': filter.keyword})
 
     # ============ Preprocessing Network Trace ==========================
     os.system(
@@ -628,13 +626,12 @@ def sofa_preprocess(logdir, cfg):
             df_grouped = gpu_traces.groupby('name')
             color_of_filtered_group = []
             #e.g. cpu_trace_filters = [ {"keyword":"nv_", "color":"red"}, {"keyword":"idle", "color":"green"} ]
-            gpu_trace_filters = cfg['gpu_filters']
-            for gpu_trace_filter in gpu_trace_filters:
+            for filter in cfg.gpu_filters:
                 group = gpu_traces[gpu_traces['name'].str.contains(
-                    gpu_trace_filter['keyword'])]
+                    filter.keyword)]
                 filtered_gpu_groups.append({'group': group,
-                                            'color': gpu_trace_filter['color'],
-                                            'keyword': gpu_trace_filter['keyword']})
+                                            'color': filter.color,
+                                            'keyword': filter.keyword})
 
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")

@@ -265,7 +265,7 @@ def cpu_profile(logdir, cfg, df):
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
     for key, item in grouped_df:
-        if cfg['enable_verbose'] == "true":
+        if cfg.verbose :
             print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
         total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
@@ -293,7 +293,7 @@ def mpstat_profile(logdir, cfg, df):
     print("For more info. about each core, please enable verbose mode.")
     
     gdf = df.groupby("cpuid")["usage"]
-    if cfg['enable_verbose'] == 'true':
+    if cfg.verbose:
         print("===== Max. of Usages for Each Core =====")
         table = df.pivot_table(index='cpuid',columns='class', values='usage', aggfunc=np.max)
         print(table[1:].astype(int)) 
