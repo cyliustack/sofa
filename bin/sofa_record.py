@@ -14,7 +14,7 @@ from time import sleep
 def sofa_record(command, logdir, cfg):
 
         print_info('SOFA_COMMAND: %s' % command )
-        
+	sample_freq = 99        
         if int(subprocess.check_output(["cat","/proc/sys/kernel/kptr_restrict"])) != 0:
             print_error("/proc/kallsyms permission is restricted, please try the command below:")
             print_error("sudo sysctl -w kernel.kptr_restrict=0")
@@ -42,10 +42,10 @@ def sofa_record(command, logdir, cfg):
             print_info("Recording...")
             if int(os.system('command -v nvprof')) == 0:
                 print_info('Profile with NVPROF')
-                os.system('nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -o %s/perf.data -F 200 -a -- %s' % (logdir, logdir, command))  
+                os.system('nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -o %s/perf.data -F %s -a -- %s' % (logdir, logdir, sample_freq, command))  
             else:
                 print_info('Profile without NVPROF')
-                os.system('perf record -o %s/perf.data -F 200 -a -- %s' % (logdir, command))  
+                os.system('perf record -o %s/perf.data -F %s -a -- %s' % (logdir, sample_freq, command))  
             
             print_info("Epilog of Recording...")
             os.system('pkill tcpdump')
