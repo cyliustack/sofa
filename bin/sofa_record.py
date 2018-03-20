@@ -35,7 +35,9 @@ def sofa_record(command, logdir, cfg):
             with open(os.devnull, 'w') as FNULL:
                 subprocess.Popen(["tcpdump",'-i','any', '-v', 'tcp', '-w','%s/sofa.pcap'%logdir], stderr=FNULL)
             with open('%s/mpstat.txt'%logdir, 'w') as logfile:
-                subprocess.Popen(['mpstat','-P','ALL', '1', '3600'], stdout=logfile)
+                subprocess.Popen(['mpstat','-P','ALL', '1', '600'], stdout=logfile)
+            with open('%s/vmstat.txt'%logdir, 'w') as logfile:
+                subprocess.Popen(['vmstat','-w', '1', '600'], stdout=logfile)
             with open('%s/sofa_time.txt'%logdir, 'w') as logfile:
                 subprocess.Popen(['date', '+%s'], stdout=logfile)
 
@@ -50,11 +52,12 @@ def sofa_record(command, logdir, cfg):
             print_info("Epilog of Recording...")
             os.system('pkill tcpdump')
             os.system('pkill mpstat')
+            os.system('pkill vmstat')
         except:
             print "Unexpected error:", sys.exc_info()[0]
-            while os.system('pkill tcpdump') != 0 or os.system('pkill mpstat') != 0:
-                print_warning("Try to kill tcpdump and mpstat. If not, Ctrl+C to stop the action.")
+            while os.system('pkill tcpdump') != 0 or os.system('pkill mpstat') != 0 or os.system('pkill vmstat') != 0:
+                print_warning("Try to kill tcpdump, mpstat and vmstat. If not, Ctrl+C to stop the action.")
                 sleep(0.5)
-            print_info("tcpdump and mpstat are killed.")
+            print_info("tcpdump, mpstat and vmstat are killed.")
             raise
         print_info("End of Recording")

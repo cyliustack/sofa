@@ -14,6 +14,20 @@ from sofa_config import *
 from sofa_print import *
 
 
+def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
+	traces = pd.DataFrame(_list)
+	traces.columns = sofa_fieldnames
+	_header = True if _mode == 'w' else False
+	traces.to_csv( logdir +
+	    csvfile,
+	    mode = _mode,
+	    header = _header,
+	    index = False,
+	    float_format = '%.6f')
+	return traces
+
+
+
 def cpu_trace_read(sample, t_offset):
     fields = sample.split()
     time = float(fields[2].split(':')[0])
@@ -42,7 +56,7 @@ def net_trace_read(packet, t_offset):
     t_begin = time + t_offset
     t_end = time + t_offset
     if packet.split()[1] != 'IP':
-        return []
+    	return []
     payload = int(packet.split()[6])
     duration = float(payload / 125.0e6)
     bandwidth = 125.0e6
@@ -348,6 +362,12 @@ def sofa_preprocess(logdir, cfg):
     mpstat_usr_traces = []
     mpstat_sys_traces = []
     mpstat_iowait_traces = []
+    vm_bi_traces = []
+    vm_b0_traces = []
+    vm_in_traces = []
+    vm_cs_traces = []
+    vm_wa_traces = []
+    vm_st_traces = []
     gpu_traces = []
     gpu_kernel_traces = []
     gpu_memcpy_traces = []
@@ -505,12 +525,86 @@ def sofa_preprocess(logdir, cfg):
                 index=False,
                 float_format='%.6f')
 
-    # Linux 4.4.0-81-generic (ubuntu1404) 	02/06/2018 	_x86_64_	(40 CPU)
-    #
-    # 06:32:01 AM  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
-    # 06:32:02 AM  all    0.15    0.00    0.59    0.02    0.00    0.02    0.00    0.00    0.00   99.21
-    # 06:32:02 AM    0    0.00    0.00    0.00    0.00    0.00    0.00    0.00
-    # 0.00    0.00  100.00
+	# procs -----------------------memory---------------------- ---swap-- -----io---- -system-- --------cpu--------
+	#  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
+	#  2  0            0    400091552       936896    386150912    0    0     3    18    0    1   5   0  95   0   0
+	#  0  0            0    400123328       936896    386150752    0    0     0   124 2070 2034   0   2  98   0   0
+	#  0  0            0    400126528       936896    386150400    0    0     0   256  338 1343   0   0 100   0   0
+	#  
+    # ============ Preprocessing VMSTAT Trace ==========================
+    with open('%s/vmstat.txt' % logdir) as f:
+        lines = f.readlines()
+        print_info("Length of vmstat_traces = %d" % len(lines))
+        if len(lines) > 0:
+            vm_bi_list = []
+            vm_bo_list = []
+            vm_in_list = []
+            vm_cs_list = []
+            vm_wa_list = []
+            vm_st_list = []
+            vm_bi_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            vm_bo_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            vm_in_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            vm_cs_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            vm_wa_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            vm_st_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            t_base = t = 0
+            #mprec = np.zeros((len(lines),11))
+            for i in xrange(len(lines)):
+		if lines[i].find('procs')==-1 and lines[i].find('swpd') ==-1:
+                    fields = lines[i].split()
+                    vm_bi = int(float(fields[8]))
+		    vm_bo = int(float(fields[9]))
+		    vm_in = int(float(fields[10]))
+		    vm_cs = int(float(fields[11]))
+		    vm_wa = int(float(fields[15]))
+		    vm_st = int(float(fields[16]))
+
+                    t_begin = t - t_base + t_glb_base
+                    deviceId = cpuid = -1
+		    duration = 0
+                    copyKind = -1
+                    payload = -1 
+                    bandwidth = -1  
+                    pkt_src = pkt_dst = -1
+                    pid = tid = -1
+                    trace = [ t_begin,
+                              event,
+                              duration,
+                              deviceId,
+                              0,
+                              payload,
+                              bandwidth,
+                              pkt_src,
+                              pkt_dst,
+                              pid,
+                              tid,
+                              "vmstat=%d_%d_%d_%d_%d_%d" % (vm_bi, vm_bo, vm_in, vm_cs, vm_wa, vm_st),
+                              cpuid
+                              ]
+                    trace[2] = vm_bi
+                    vm_bi_list.append(trace)
+                    trace[2] = vm_bo
+                    vm_bo_list.append(trace)
+                    trace[2] = vm_in
+                    vm_in_list.append(trace)
+                    trace[2] = vm_cs
+                    vm_cs_list.append(trace)
+                    trace[2] = vm_wa
+                    vm_wa_list.append(trace)
+                    trace[2] = vm_st
+                    vm_st_list.append(trace)
+		    t = t + 1
+		    print(trace)
+
+	    print(vm_bi_traces)
+	    vm_bi_traces = list_to_csv_and_traces(logdir, vm_bi_list, 'vmstat_trace.csv', 'w')
+	    vm_bo_traces = list_to_csv_and_traces(logdir, vm_bo_list, 'vmstat_trace.csv', 'a')
+	    vm_in_traces = list_to_csv_and_traces(logdir, vm_in_list, 'vmstat_trace.csv', 'a')
+	    vm_cs_traces = list_to_csv_and_traces(logdir, vm_cs_list, 'vmstat_trace.csv', 'a')
+	    vm_wa_traces = list_to_csv_and_traces(logdir, vm_wa_list, 'vmstat_trace.csv', 'a')
+	    vm_st_traces = list_to_csv_and_traces(logdir, vm_st_list, 'vmstat_trace.csv', 'a')
+
 
     # TODO: align cpu time and gpu time
     t_nv = sys.float_info.max
@@ -680,12 +774,21 @@ def sofa_preprocess(logdir, cfg):
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()
-    sofatrace.name = 'mpstat_iowait'
-    sofatrace.title = 'MPSTAT_IOWAIT'
+    sofatrace.name = 'vmstat_in'
+    sofatrace.title = 'VMSTAT_IN'
     sofatrace.color = 'LightSeaGreen'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
-    sofatrace.data = mpstat_iowait_traces
+    sofatrace.data = vm_in_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'vmstat_cs'
+    sofatrace.title = 'VMSTAT_CS'
+    sofatrace.color = 'DarkSeaGreen'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = vm_cs_traces
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()
