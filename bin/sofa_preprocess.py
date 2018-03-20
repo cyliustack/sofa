@@ -15,16 +15,18 @@ from sofa_print import *
 
 
 def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
-	traces = pd.DataFrame(_list)
-	traces.columns = sofa_fieldnames
-	_header = True if _mode == 'w' else False
-	traces.to_csv( logdir +
+    print(_list)
+    traces = pd.DataFrame(_list[1:])
+    traces.columns = sofa_fieldnames
+    _header = True if _mode == 'w' else False
+    traces.to_csv( logdir +
 	    csvfile,
 	    mode = _mode,
 	    header = _header,
 	    index = False,
 	    float_format = '%.6f')
-	return traces
+    #print traces 
+    return traces
 
 
 
@@ -437,14 +439,14 @@ def sofa_preprocess(logdir, cfg):
                         mpst_sys = float(lines[i].split()[5])
                         mpst_iowait = float(lines[i].split()[6])
                         t_begin = t - t_base + t_glb_base
-                        duration = mpst_usr
+                        duration = mpst_usr + 1e-10
                         deviceId = cpuid
                         copyKind = -1
                         payload = mpst_sys
                         bandwidth = mpst_iowait
                         pkt_src = pkt_dst = -1
                         pid = tid = -1
-                        trace = [	t_begin,
+                        trace = [ t_begin,
                                   event,
                                   mpst_usr,
                                   deviceId,
@@ -460,7 +462,7 @@ def sofa_preprocess(logdir, cfg):
                                   ]
                         usr_list.append(trace)
 
-                        trace = [	t_begin,
+                        trace = [ t_begin,
                                   event,
                                   mpst_sys,
                                   deviceId,
@@ -549,62 +551,50 @@ def sofa_preprocess(logdir, cfg):
             vm_wa_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             vm_st_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             t_base = t = 0
-            #mprec = np.zeros((len(lines),11))
             for i in xrange(len(lines)):
 		if lines[i].find('procs')==-1 and lines[i].find('swpd') ==-1:
                     fields = lines[i].split()
-                    vm_bi = int(float(fields[8]))
-		    vm_bo = int(float(fields[9]))
-		    vm_in = int(float(fields[10]))
-		    vm_cs = int(float(fields[11]))
-		    vm_wa = int(float(fields[15]))
-		    vm_st = int(float(fields[16]))
+                    vm_bi = float(fields[8]) + 1e-10
+		    vm_bo = float(fields[9]) + 1e-10
+		    vm_in = float(fields[10]) + 1e-10
+		    vm_cs = float(fields[11]) + 1e-10
+		    vm_wa = float(fields[15]) + 1e-10
+		    vm_st = float(fields[16]) + 1e-10
 
                     t_begin = t - t_base + t_glb_base
                     deviceId = cpuid = -1
-		    duration = 0
                     copyKind = -1
                     payload = -1 
                     bandwidth = -1  
                     pkt_src = pkt_dst = -1
                     pid = tid = -1
-                    trace = [ t_begin,
-                              event,
-                              duration,
-                              deviceId,
-                              0,
-                              payload,
-                              bandwidth,
-                              pkt_src,
-                              pkt_dst,
-                              pid,
-                              tid,
-                              "vmstat=%d_%d_%d_%d_%d_%d" % (vm_bi, vm_bo, vm_in, vm_cs, vm_wa, vm_st),
-                              cpuid
-                              ]
-                    trace[2] = vm_bi
+
+                    trace = [ t_begin, event, vm_bi, deviceId, copyKind, payload, bandwidth, pkt_src, pkt_dst, pid, tid, "vmstat=%d_%d_%d_%d_%d_%d" % (vm_bi, vm_bo, vm_in, vm_cs, vm_wa, vm_st), cpuid]
                     vm_bi_list.append(trace)
-                    trace[2] = vm_bo
+
+                    trace = [ t_begin, event, vm_bo, deviceId, copyKind, payload, bandwidth, pkt_src, pkt_dst, pid, tid, "vmstat=%d_%d_%d_%d_%d_%d" % (vm_bi, vm_bo, vm_in, vm_cs, vm_wa, vm_st), cpuid]
                     vm_bo_list.append(trace)
-                    trace[2] = vm_in
+               
+                    trace = [ t_begin, event, vm_in, deviceId, copyKind, payload, bandwidth, pkt_src, pkt_dst, pid, tid, "vmstat=%d_%d_%d_%d_%d_%d" % (vm_bi, vm_bo, vm_in, vm_cs, vm_wa, vm_st), cpuid]
                     vm_in_list.append(trace)
-                    trace[2] = vm_cs
+                    
+                    trace = [ t_begin, event, vm_cs, deviceId, copyKind, payload, bandwidth, pkt_src, pkt_dst, pid, tid, "vmstat=%d_%d_%d_%d_%d_%d" % (vm_bi, vm_bo, vm_in, vm_cs, vm_wa, vm_st), cpuid]
                     vm_cs_list.append(trace)
-                    trace[2] = vm_wa
+                    
+                    trace = [ t_begin, event, vm_wa, deviceId, copyKind, payload, bandwidth, pkt_src, pkt_dst, pid, tid, "vmstat=%d_%d_%d_%d_%d_%d" % (vm_bi, vm_bo, vm_in, vm_cs, vm_wa, vm_st), cpuid]
                     vm_wa_list.append(trace)
-                    trace[2] = vm_st
+                    
+                    trace = [ t_begin, event, vm_st, deviceId, copyKind, payload, bandwidth, pkt_src, pkt_dst, pid, tid, "vmstat=%d_%d_%d_%d_%d_%d" % (vm_bi, vm_bo, vm_in, vm_cs, vm_wa, vm_st), cpuid]
                     vm_st_list.append(trace)
 		    t = t + 1
-		    print(trace)
 
-	    print(vm_bi_traces)
 	    vm_bi_traces = list_to_csv_and_traces(logdir, vm_bi_list, 'vmstat_trace.csv', 'w')
 	    vm_bo_traces = list_to_csv_and_traces(logdir, vm_bo_list, 'vmstat_trace.csv', 'a')
 	    vm_in_traces = list_to_csv_and_traces(logdir, vm_in_list, 'vmstat_trace.csv', 'a')
 	    vm_cs_traces = list_to_csv_and_traces(logdir, vm_cs_list, 'vmstat_trace.csv', 'a')
 	    vm_wa_traces = list_to_csv_and_traces(logdir, vm_wa_list, 'vmstat_trace.csv', 'a')
 	    vm_st_traces = list_to_csv_and_traces(logdir, vm_st_list, 'vmstat_trace.csv', 'a')
-
+	    #print(vm_bo_traces)
 
     # TODO: align cpu time and gpu time
     t_nv = sys.float_info.min
@@ -776,19 +766,37 @@ def sofa_preprocess(logdir, cfg):
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_in'
     sofatrace.title = 'VMSTAT_IN'
-    sofatrace.color = 'LightSeaGreen'
+    sofatrace.color = 'DarkMagenta'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = vm_in_traces
     traces.append(sofatrace)
-
+    
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_cs'
     sofatrace.title = 'VMSTAT_CS'
-    sofatrace.color = 'DarkSeaGreen'
+    sofatrace.color = 'DarkOliveGreen'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = vm_cs_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'vmstat_bi'
+    sofatrace.title = 'VMSTAT_BI'
+    sofatrace.color = 'DarkOrange'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = vm_bi_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'vmstat_bo'
+    sofatrace.title = 'VMSTAT_BO'
+    sofatrace.color = 'DarkOrchid'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = vm_bo_traces
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()
