@@ -15,7 +15,6 @@ from sofa_print import *
 
 
 def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
-    print(_list)
     traces = pd.DataFrame(_list[1:])
     traces.columns = sofa_fieldnames
     _header = True if _mode == 'w' else False
@@ -25,7 +24,6 @@ def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
 	    header = _header,
 	    index = False,
 	    float_format = '%.6f')
-    #print traces 
     return traces
 
 
