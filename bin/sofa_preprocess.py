@@ -607,11 +607,11 @@ def sofa_preprocess(logdir, cfg):
 
 
     # TODO: align cpu time and gpu time
-    t_nv = sys.float_info.max
+    t_nv = sys.float_info.min
     for i in xrange(len(cpu_traces)):
         # print("name:%s"%cpu_traces.loc[i,'name'])
         if cpu_traces.iat[i, 11].find(
-                'nv_alloc_system_pages') != -1 and float(cpu_traces.iat[i, 0]) < t_nv:
+                'nv_alloc_system_pages') != -1 and float(cpu_traces.iat[i, 0]) > t_nv:
             t_nv = float(cpu_traces.iat[i, 0])
     if t_nv < sys.maxint:
         t_glb_gpu_base = t_nv + 0.1
