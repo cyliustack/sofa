@@ -9,28 +9,30 @@ class bcolors:
     UNDERLINE = '\033[4m'
     DATA = '\033[5;30;47m'
     TITLE = '\033[7;34;47m'
-    C_NONE='\033[0;00m'
-    C_RED='\033[1;31m'
-    C_GREEN='\033[1;32m'
-
+    C_NONE = '\033[0;00m'
+    C_RED = '\033[1;31m'
+    C_GREEN = '\033[1;32m'
 
 
 def print_title(content):
     print('\n')
-    print(bcolors.TITLE  + content + bcolors.ENDC)
+    print(bcolors.TITLE + content + bcolors.ENDC)
+
 
 def print_error(content):
     print(bcolors.C_RED + "[ERROR] " + content + bcolors.ENDC)
 
+
 def print_warning(content):
     print(bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC)
+
 
 def print_info(content):
     print(bcolors.OKGREEN + "[INFO] " + content + bcolors.ENDC)
 
+
 def print_progress(content):
     print(bcolors.OKBLUE + "[INFO] " + content + bcolors.ENDC)
-
 
 
 def print_data(content):

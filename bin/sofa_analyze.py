@@ -13,8 +13,10 @@ from functools import partial
 from sofa_print import *
 from sofa_config import *
 
+
 def payload_sum(df):
     print(len(df))
+
 
 class Event:
 
@@ -27,16 +29,20 @@ class Event:
     def __repr__(self):
         return repr((self.name, self.ttype, self.timestamp, self.duration))
 
+
 def overlap(pa, pb, pc, pd):
     if pb - pc >= 0 and pd - pa >= 0:
         return min(pb, pd) - max(pa, pc)
 
+
 def partial_sum(df):
     psum = 0
 
+
 # print_format_table()
-cktable = {-1:"NON", 0: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
+cktable = {-1: "NON", 0: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 ckindex = [1, 2, 8, 10]
+
 
 def comm_profile(logdir, cfg, df_gpu):
     total_traffic = 0.0
@@ -45,7 +51,7 @@ def comm_profile(logdir, cfg, df_gpu):
     total_p2p_traffic = 0.0
     total_memcopy_time = 0.0
 
-    #sofa_fieldnames = [
+    # sofa_fieldnames = [
     #    'timestamp',
     #    "event",
     #    "duration",
@@ -61,13 +67,13 @@ def comm_profile(logdir, cfg, df_gpu):
     #    "category"]
     n_gpus = 0
     for i in range(len(df_gpu)):
-        if df_gpu.iat[i,3] > n_gpus:
-            n_gpus = int(df_gpu.iat[i,3])
-    
+        if df_gpu.iat[i, 3] > n_gpus:
+            n_gpus = int(df_gpu.iat[i, 3])
+
     if n_gpus == 0:
-	print_warning("No GPU communication traces are collected.")
-	return 
-  
+        print_warning("No GPU communication traces are collected.")
+        return
+
     print_title("Data Traffic for each CopyKind (MB)")
     data_copyKind = grouped_df = df_gpu.groupby("copyKind")["payload"]
     for key, item in grouped_df:
@@ -85,7 +91,6 @@ def comm_profile(logdir, cfg, df_gpu):
                 grouped_df.get_group(key).sum() / 1000000.0
     print("Total traffic: %.2lf" % total_traffic)
 
-       
     print_title("Data Communication Time for each CopyKind (s)")
     durations_copyKind = grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
@@ -96,10 +101,8 @@ def comm_profile(logdir, cfg, df_gpu):
             total_memcopy_time = total_memcopy_time + \
                 grouped_df.get_group(key).sum()
 
-    
     bw = (data_copyKind.sum() / 1000000) / durations_copyKind.sum() / 1000
     bw_h2d = bw_d2h = bw_p2p = avg_bw = 1e-10
-    
 
     total_weights = 0
     for i in range(len(bw)):
@@ -108,15 +111,18 @@ def comm_profile(logdir, cfg, df_gpu):
             continue
         if cktable[key] == 'H2D':
             total_weights = total_h2d_traffic + total_weights
-            avg_bw = avg_bw + bw.iloc[i] * float(total_h2d_traffic)/total_weights
+            avg_bw = avg_bw + bw.iloc[i] * \
+                float(total_h2d_traffic) / total_weights
             bw_h2d = bw.iloc[i]
         if cktable[key] == 'D2H':
             total_weights = total_d2h_traffic + total_weights
-            avg_bw = avg_bw + bw.iloc[i] * float(total_d2h_traffic)/total_weights 
+            avg_bw = avg_bw + bw.iloc[i] * \
+                float(total_d2h_traffic) / total_weights
             bw_d2h = bw.iloc[i]
         if cktable[key] == 'P2P':
             total_weights = total_p2p_traffic + total_weights
-            avg_bw = avg_bw + bw.iloc[i] * float(total_p2p_traffic)/total_weights  
+            avg_bw = avg_bw + bw.iloc[i] * \
+                float(total_p2p_traffic) / total_weights
             bw_p2p = bw.iloc[i]
 
     print_title("Summary of Comm.")
@@ -127,89 +133,92 @@ def comm_profile(logdir, cfg, df_gpu):
     print("MeasuredTotalH2DTraffic : %lf (MB)" % total_h2d_traffic)
     print("MeasuredTotalD2HTraffic : %lf (MB)" % total_d2h_traffic)
     print("MeasuredTotalP2PTraffic : %lf (MB)" % total_p2p_traffic)
-    
-    accum = np.zeros((1+n_gpus, 1+n_gpus))
-    accum_count = np.zeros((1+n_gpus, 1+n_gpus))
-    accum_time = np.zeros((1+n_gpus, 1+n_gpus))
 
-    #TODO: Parallelize payload accumulatoin
+    accum = np.zeros((1 + n_gpus, 1 + n_gpus))
+    accum_count = np.zeros((1 + n_gpus, 1 + n_gpus))
+    accum_time = np.zeros((1 + n_gpus, 1 + n_gpus))
+
+    # TODO: Parallelize payload accumulatoin
     #print("df length: %d" % len(df_gpu))
     #cpu_count = mp.cpu_count()
     #pool = mp.Pool(processes=cpu_count)
     #res_accum = pool.map( partial(payload_sum), df_gpu)
-        
 
     for i in range(len(df_gpu)):
-        if df_gpu.iat[i,4] == 0 or df_gpu.iat[i,4] == 8:
+        if df_gpu.iat[i, 4] == 0 or df_gpu.iat[i, 4] == 8:
             continue
-        src = df_gpu.iat[i,7]
-        dst = df_gpu.iat[i,8]
-        payload = df_gpu.iat[i,5]
+        src = df_gpu.iat[i, 7]
+        dst = df_gpu.iat[i, 8]
+        payload = df_gpu.iat[i, 5]
         accum[src][dst] = float(accum[src][dst] + payload)
         accum_count[src][dst] = int(accum_count[src][dst] + 1)
 
-
     for i in xrange(accum_time.shape[0]):
-        accum_time[0][i] = accum[0][i]/(1024.0*1024*1024)/bw_h2d
-        accum_time[i][0] = accum[i][0]/(1024.0*1024*1024)/bw_d2h
+        accum_time[0][i] = accum[0][i] / (1024.0 * 1024 * 1024) / bw_h2d
+        accum_time[i][0] = accum[i][0] / (1024.0 * 1024 * 1024) / bw_d2h
         for j in xrange(accum_time.shape[1]):
-            if i>0 and j>0:
-                accum_time[i][j] = accum[i][j]/(1024.0*1024*1024)/bw_p2p
-    
+            if i > 0 and j > 0:
+                accum_time[i][j] = accum[i][j] / \
+                    (1024.0 * 1024 * 1024) / bw_p2p
+
     print("Traffic Matrix (log10(B)):")
-    row_str = "\tHOST\t" 
-    for i in range(1,accum.shape[1]):
-            row_str = row_str + "GPU%d"%i + "\t"
+    row_str = "\tHOST\t"
+    for i in range(1, accum.shape[1]):
+        row_str = row_str + "GPU%d" % i + "\t"
     print(row_str)
     for i in range(accum.shape[0]):
         if i == 0:
             row_str = "HOST\t"
         else:
-            row_str = "GPU%d\t"%i
+            row_str = "GPU%d\t" % i
         for j in range(accum.shape[1]):
-            row_str = row_str + "%d"%(int(np.log10(1+accum[i][j]))) + "\t"
+            row_str = row_str + "%d" % (int(np.log10(1 + accum[i][j]))) + "\t"
         print(row_str)
 
     print("Traffic Matrix (MB):")
-    row_str = "\tHOST\t" 
-    for i in range(1,accum.shape[1]):
-            row_str = row_str + "GPU%d"%i + "\t"
+    row_str = "\tHOST\t"
+    for i in range(1, accum.shape[1]):
+        row_str = row_str + "GPU%d" % i + "\t"
     print(row_str)
     for i in range(accum.shape[0]):
         if i == 0:
             row_str = "HOST\t"
         else:
-            row_str = "GPU%d\t"%i
+            row_str = "GPU%d\t" % i
         for j in range(accum.shape[1]):
-            row_str = row_str + "%d"%(accum[i][j]/(1024*1024)) + "\t"
+            row_str = row_str + "%d" % (accum[i][j] / (1024 * 1024)) + "\t"
         print(row_str)
 
-
     print("Traffic Time Matrix (s):")
-    row_str = "\tHOST\t" 
-    for i in range(1,accum_time.shape[1]):
-            row_str = row_str + "GPU%d"%i + "\t"
+    row_str = "\tHOST\t"
+    for i in range(1, accum_time.shape[1]):
+        row_str = row_str + "GPU%d" % i + "\t"
     print(row_str)
     for i in range(accum_time.shape[0]):
         if i == 0:
             row_str = "HOST\t"
         else:
-            row_str = "GPU%d\t"%i
+            row_str = "GPU%d\t" % i
         for j in range(accum_time.shape[1]):
-            row_str = row_str + "%.3lf"%(accum_time[i][j]) + "\t"
+            row_str = row_str + "%.3lf" % (accum_time[i][j]) + "\t"
         print(row_str)
 
-    
     print("MeasuredMaxFlowTime : %lf (MB)" % np.max(accum_time))
 
-    df_gpu.to_csv(logdir+'/'+'comm.csv', columns =  ["timestamp", "pkt_src", "pkt_dst", "payload","bandwidth"] )    
+    df_gpu.to_csv(
+        logdir + '/' + 'comm.csv',
+        columns=[
+            "timestamp",
+            "pkt_src",
+            "pkt_dst",
+            "payload",
+            "bandwidth"])
 
 
 def gpu_profile(logdir, cfg, df_gpu):
     total_kernel_time = 0.0
-    total_gpu_time = 0.0 
-    
-    
+    total_gpu_time = 0.0
+
     print_title("Task Time (MEMCPY included) for each Device (s)")
     grouped_df = df_gpu.groupby("deviceId")["duration"]
     total_tasktime = 0
@@ -225,33 +234,32 @@ def gpu_profile(logdir, cfg, df_gpu):
     for key, item in grouped_df:
         print("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0))
 
-
     grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
         if key == 0:
             total_kernel_time = grouped_df.get_group(key).sum()
 
     print_title("All-reduce Time (s)")
-    all_reduce_time=0
+    all_reduce_time = 0
     grouped_df = df_gpu.groupby("name")["duration"]
     for key, item in grouped_df:
         #print("[%s]: %lf" % (key, grouped_df.get_group(key).sum()))
         if key.find("AllReduce") != -1:
-            all_reduce_time = all_reduce_time +  grouped_df.get_group(key).sum()
-                
+            all_reduce_time = all_reduce_time + grouped_df.get_group(key).sum()
 
     comm_profile(logdir, cfg, df_gpu)
     print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
-    
+
     print_title("Summary of Kernels")
     print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
     print("MeasuredAllReduceTime : %lf (s)" % all_reduce_time)
+
 
 def net_profile(logdir, cfg, df):
     print_title("Network Profiling: Communication Time (s)")
     grouped_df = df.groupby("name")["duration"]
     total_net_time = 0
-    n_packets = 0 
+    n_packets = 0
     for key, item in grouped_df:
         #print("[%s]: %lf" % (key, grouped_df.get_group(key).sum()))
         if key.find("network:tcp:") != -1:
@@ -260,12 +268,13 @@ def net_profile(logdir, cfg, df):
     print("total network time = %.3lf" % total_net_time)
     print("total amount of network packets  = %d" % n_packets)
 
+
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling: Task Time (IO included) for each Cores (s)")
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
     for key, item in grouped_df:
-        if cfg.verbose :
+        if cfg.verbose:
             print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
         total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
@@ -273,51 +282,65 @@ def cpu_profile(logdir, cfg, df):
     print("total execution time = %.3lf" % total_exec_time)
     print("average execution time across devices = %.3lf" % avg_exec_time)
 
+
 def mpstat_profile(logdir, cfg, df):
     print_title("MPSTAT Profiling:")
-    df.rename(columns = {'event':'cpuid'}, inplace=True)
-    df.rename(columns = {'copyKind':'class'}, inplace=True)
-    df.rename(columns = {'duration':'usage'}, inplace=True)
+    df.rename(columns={'event': 'cpuid'}, inplace=True)
+    df.rename(columns={'copyKind': 'class'}, inplace=True)
+    df.rename(columns={'duration': 'usage'}, inplace=True)
     z = {0: 'USR', 1: 'SYS', 2: 'IOW'}
     df['class'] = df['class'].map(z)
-    
+
     gdf = df.groupby("cpuid")["usage"]
-    print("Number of Cores: %d" % (len(gdf)-1) )
-    gdf = df.groupby("class")["usage"]   
+    print("Number of Cores: %d" % (len(gdf) - 1))
+    gdf = df.groupby("class")["usage"]
     print("Class\tMax.\tAvg.\tStd.")
     for key, item in gdf:
-        print("%s\t%3d\t%3d\t%3d" % ( key,\
-                        int(gdf.get_group(key).max()),\
-                        int(gdf.get_group(key).mean()),\
-                        int(gdf.get_group(key).std()) ))
+        print("%s\t%3d\t%3d\t%3d" % (key,
+                                     int(gdf.get_group(key).max()),
+                                     int(gdf.get_group(key).mean()),
+                                     int(gdf.get_group(key).std())))
     print("For more info. about each core, please enable verbose mode.")
-    
+
     gdf = df.groupby("cpuid")["usage"]
     if cfg.verbose:
         print("===== Max. of Usages for Each Core =====")
-        table = df.pivot_table(index='cpuid',columns='class', values='usage', aggfunc=np.max)
-        print(table[1:].astype(int)) 
+        table = df.pivot_table(
+            index='cpuid',
+            columns='class',
+            values='usage',
+            aggfunc=np.max)
+        print(table[1:].astype(int))
 
         print("===== Avg. of Usages for Each Core =====")
-        table = df.pivot_table(index='cpuid',columns='class', values='usage', aggfunc=np.mean)
-        print(table[1:].astype(int))  
- 
-        print("===== Std. of Usages for Each Core =====")
-        table = df.pivot_table(index='cpuid',columns='class', values='usage', aggfunc=np.std)
-        print(table[1:].astype(int))  
+        table = df.pivot_table(
+            index='cpuid',
+            columns='class',
+            values='usage',
+            aggfunc=np.mean)
+        print(table[1:].astype(int))
 
+        print("===== Std. of Usages for Each Core =====")
+        table = df.pivot_table(
+            index='cpuid',
+            columns='class',
+            values='usage',
+            aggfunc=np.std)
+        print(table[1:].astype(int))
 
 
 class ProfiledDomainDNN:
     domain_name = "DNN"
     prefix = "[ProfiledDomain%s]\t" % domain_name
+
     def __init__(self):
         self.name = "general"
         self.batch_size = 64
         self.iterations = 21
         self.throughput = 1
         self.avg_cpu_time = 1
-    def get_batch_size(self,filepath):
+
+    def get_batch_size(self, filepath):
         with open(filepath) as f:
             lines = f.readlines()
             for line in lines:
@@ -325,26 +348,28 @@ class ProfiledDomainDNN:
                 if pos >= 0:
                     self.batch_size = int(line[pos:].split()[0].split('=')[1])
                     print(self.prefix + "batch_size: %d" % self.batch_size)
-                    break 
-    
-    def get_iterations(self,filepath):
+                    break
+
+    def get_iterations(self, filepath):
         with open(filepath) as f:
             lines = f.readlines()
             for line in lines:
-                pos = line.find("--num_batches") 
+                pos = line.find("--num_batches")
                 if pos >= 0:
-                    self.iterations = int(line[pos:].split()[0].split('=')[1]) + 11
-                    print( self.prefix + "iterations: %d" % self.iterations)
-                    break 
-    
-    def get_throughput(self,filepath):
+                    self.iterations = int(
+                        line[pos:].split()[0].split('=')[1]) + 11
+                    print(self.prefix + "iterations: %d" % self.iterations)
+                    break
+
+    def get_throughput(self, filepath):
         with open(filepath) as f:
             lines = f.readlines()
             for line in lines:
                 if line.find("total images/sec:") != -1:
                     self.throughput = float(line.split()[2])
-                    print( self.prefix + "Throughput: %.2lf" % self.throughput)
-                    break 
+                    print(self.prefix + "Throughput: %.2lf" % self.throughput)
+                    break
+
 
 def sofa_analyze(logdir, cfg):
     filein = []
@@ -366,14 +391,12 @@ def sofa_analyze(logdir, cfg):
         print_warning(
             "cputrace.csv is not found")
         quit()
-    
+
     try:
         df_gpu = pd.read_csv(filein_gpu)
-        df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
+        df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         gpu_profile(logdir, cfg, df_gpu)
-        
+
     except IOError:
         print_warning(
             "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
-
-    
