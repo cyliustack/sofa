@@ -42,9 +42,13 @@ def cpu_trace_read(sample, t_offset):
     func_name = fields[5]
     t_begin = time + t_offset
     t_end = time + t_offset
+    if ''+fields[4] == '0':
+	event = 0
+    else:
+	event = np.log(int("0x" + fields[4], 16))
 
     trace = [t_begin,
-             np.log(int("0x" + fields[4], 16)),  # % 1000000
+             event,  # % 1000000
              float(fields[3]) / 1.5e9,
              int(fields[1].split('[')[1].split(']')[0]),
              -1,
@@ -365,9 +369,6 @@ def sofa_preprocess(logdir, cfg):
 
     net_traces = []
     cpu_traces = []
-    mpstat_usr_traces = []
-    mpstat_sys_traces = []
-    mpstat_iowait_traces = []
     vm_bi_traces = []
     vm_b0_traces = []
     vm_in_traces = []
@@ -416,129 +417,11 @@ def sofa_preprocess(logdir, cfg):
             res_viz = list_downsample(res, cfg.plot_ratio)
             cpu_traces_viz = pd.DataFrame(res_viz)
             cpu_traces_viz.columns = sofa_fieldnames
-    # ============ Preprocessing MPSTAT Trace ==========================
-    with open('%s/mpstat.txt' % logdir) as f:
-        lines = f.readlines()[1:]
-        print_info("Length of mpstat_traces = %d" % len(lines))
-        if len(lines) > 0:
-            usr_list = []
-            sys_list = []
-            iowait_list = []
-            usr_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            sys_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            iowait_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            t_base = t = 0
-            #mprec = np.zeros((len(lines),11))
-            for i in xrange(len(lines)):
-                # print(lines[i])
-                if len(lines[i].split()) > 2:
-                    cpuid = lines[i].split()[2]
-                    if cpuid != 'CPU':
-                        if cpuid == 'all':
-                            event = -1
-                        else:
-                            try:
-                                event = int(cpuid)
-                            except ValueError:
-                                continue
-                        mpst_usr = float(lines[i].split()[3])
-                        mpst_sys = float(lines[i].split()[5])
-                        mpst_iowait = float(lines[i].split()[6])
-                        t_begin = t - t_base + t_glb_base
-                        duration = mpst_usr + 1e-5
-                        deviceId = cpuid
-                        copyKind = -1
-                        payload = mpst_sys
-                        bandwidth = mpst_iowait
-                        pkt_src = pkt_dst = -1
-                        pid = tid = -1
-                        trace = [t_begin,
-                                 event,
-                                 mpst_usr,
-                                 deviceId,
-                                 0,
-                                 payload,
-                                 bandwidth,
-                                 pkt_src,
-                                 pkt_dst,
-                                 pid,
-                                 tid,
-                                 "mpstat_usr[%s]=%.1lf" % (cpuid, mpst_usr),
-                                 cpuid
-                                 ]
-                        usr_list.append(trace)
+ 
 
-                        trace = [t_begin,
-                                 event,
-                                 mpst_sys,
-                                 deviceId,
-                                 1,
-                                 payload,
-                                 bandwidth,
-                                 pkt_src,
-                                 pkt_dst,
-                                 pid,
-                                 tid,
-                                 "mpstat_sys[%s]=%.1lf" % (cpuid, mpst_sys),
-                                 cpuid
-                                 ]
-                        sys_list.append(trace)
-
-                        trace = [
-                            t_begin,
-                            event,
-                            mpst_iowait,
-                            deviceId,
-                            2,
-                            payload,
-                            bandwidth,
-                            pkt_src,
-                            pkt_dst,
-                            pid,
-                            tid,
-                            "mpstat_iowait[%s]=%.1lf" %
-                            (cpuid,
-                             mpst_iowait),
-                            cpuid]
-                        iowait_list.append(trace)
-                else:
-                    t = t + 1
-            mpstat_usr_traces = pd.DataFrame(usr_list[1:])
-            mpstat_usr_traces.columns = sofa_fieldnames
-            mpstat_usr_traces.to_csv(
-                logdir +
-                'mpstat_trace.csv',
-                mode='w',
-                header=True,
-                index=False,
-                float_format='%.6f')
-
-            mpstat_sys_traces = pd.DataFrame(sys_list[1:])
-            mpstat_sys_traces.columns = sofa_fieldnames
-            mpstat_sys_traces.to_csv(
-                logdir +
-                'mpstat_trace.csv',
-                mode='a',
-                header=False,
-                index=False,
-                float_format='%.6f')
-
-            mpstat_iowait_traces = pd.DataFrame(iowait_list[1:])
-            mpstat_iowait_traces.columns = sofa_fieldnames
-            mpstat_iowait_traces.to_csv(
-                logdir +
-                'mpstat_trace.csv',
-                mode='a',
-                header=False,
-                index=False,
-                float_format='%.6f')
-
-        # procs -----------------------memory---------------------- ---swap-- -
-        #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
-        #  2  0            0    400091552       936896    386150912    0    0     3    18    0    1   5   0  95   0   0
-        #  0  0            0    400123328       936896    386150752    0    0     0   124 2070 2034   0   2  98   0   0
-        #  0  0            0    400126528       936896    386150400    0    0     0   256  338 1343   0   0 100   0   0
-        #
+    # procs -----------------------memory---------------------- ---swap-- -
+    #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
+    #  2  0            0    400091552       936896    386150912    0    0     3    18    0    1   5   0  95   0   0
     # ============ Preprocessing VMSTAT Trace ==========================
     with open('%s/vmstat.txt' % logdir) as f:
         lines = f.readlines()
@@ -570,7 +453,8 @@ def sofa_preprocess(logdir, cfg):
 
                     t_begin = t - t_base + t_glb_base
                     deviceId = cpuid = -1
-                    copyKind = -1
+                    event = -1
+		    copyKind = -1
                     payload = -1
                     bandwidth = -1
                     pkt_src = pkt_dst = -1
@@ -876,23 +760,6 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.data = filtered_group['group'].copy()
         traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'mpstat_usr'
-    sofatrace.title = 'MPSTAT_USR'
-    sofatrace.color = 'LightBlue'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = mpstat_usr_traces
-    traces.append(sofatrace)
-
-    sofatrace = SOFATrace()
-    sofatrace.name = 'mpstat_sys'
-    sofatrace.title = 'MPSTAT_SYS'
-    sofatrace.color = 'LightCoral'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = mpstat_sys_traces
-    traces.append(sofatrace)
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_in'
