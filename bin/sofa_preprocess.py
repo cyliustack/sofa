@@ -369,6 +369,7 @@ def sofa_preprocess(logdir, cfg):
 
     net_traces = []
     cpu_traces = []
+    cpu_traces_viz = []
     vm_bi_traces = []
     vm_b0_traces = []
     vm_in_traces = []
@@ -376,6 +377,7 @@ def sofa_preprocess(logdir, cfg):
     vm_wa_traces = []
     vm_st_traces = []
     gpu_traces = []
+    gpu_traces_viz = []
     gpu_kernel_traces = []
     gpu_memcpy_traces = []
     gpu_memcpy2_traces = []
