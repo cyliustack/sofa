@@ -41,11 +41,11 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help='A string of list of pairs of keyword and color')
-    parser.add_argument('--cpu_top_k', metavar='K', type=int, required=False,
+    parser.add_argument('--cpu_top_k', metavar='N', type=int, required=False,
                         help='K functions of the highest overheads')
     parser.add_argument(
         '--plot_ratio',
-        metavar='D',
+        metavar='N',
         type=int,
         required=False,
         help='Down-sample ratio for points in scatter plot: 1, 10, 100, etc..')
