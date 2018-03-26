@@ -677,63 +677,64 @@ def sofa_preprocess(logdir, cfg):
         num_cudaproc = num_cudaproc + 1
         with open(logdir + 'gputrace.tmp') as f:
             records = f.readlines()
-            # print(records[1])
-            if records[1].split(',')[0] == '"Start"':
+            #print(records[1])
+            
+	    if records[1].split(',')[0] == '"Start"':
                 indices = records[1].replace(
                     '"', '').replace(
                     '\n', '').split(',')
+            	print(indices)
+            	# ms,ms,,,,,,,,B,B,MB,GB/s,,,,
+            	ts_rescale = 1.0
+            	if records[2].split(',')[0] == 'ms':
+            	    ts_rescale = 1.0e3
+            	elif records[2].split(',')[0] == 'us':
+            	    ts_rescale = 1.0e6
 
-            print(indices)
-            # ms,ms,,,,,,,,B,B,MB,GB/s,,,,
-            ts_rescale = 1.0
-            if records[2].split(',')[0] == 'ms':
-                ts_rescale = 1.0e3
-            elif records[2].split(',')[0] == 'us':
-                ts_rescale = 1.0e6
+            	dt_rescale = 1.0
+            	if records[2].split(',')[1] == 'ms':
+            	    dt_rescale = 1.0e3
+            	elif records[2].split(',')[1] == 'us':
+            	    dt_rescale = 1.0e6
 
-            dt_rescale = 1.0
-            if records[2].split(',')[1] == 'ms':
-                dt_rescale = 1.0e3
-            elif records[2].split(',')[1] == 'us':
-                dt_rescale = 1.0e6
+            	records = records[3:]
+            	print_info("Length of gpu_traces = %d" % len(records))
+            	t_base = float(records[0].split(',')[0])
+            	t_offset = t_glb_gpu_base - t_base
+            	pool = mp.Pool(processes=cpu_count)
+            	res = pool.map(
+            	    partial(
+            	        gpu_trace_read,
+            	        indices=indices,
+            	        ts_rescale=ts_rescale,
+            	        dt_rescale=dt_rescale,
+            	        n_cudaproc=num_cudaproc,
+            	        t_offset=t_glb_gpu_base -
+            	        t_base),
+            	    records)
+            	gpu_traces = pd.DataFrame(res)
+            	gpu_traces.columns = sofa_fieldnames
+            	gpu_traces.to_csv(
+            	    logdir + 'gputrace.csv',
+            	    mode='w',
+            	    header=True,
+            	    index=False,
+            	    float_format='%.6f')
+            	res_viz = list_downsample(res, cfg.plot_ratio)
+            	gpu_traces_viz = pd.DataFrame(res_viz)
+            	gpu_traces_viz.columns = sofa_fieldnames
 
-            records = records[3:]
-            print_info("Length of gpu_traces = %d" % len(records))
-            t_base = float(records[0].split(',')[0])
-            t_offset = t_glb_gpu_base - t_base
-            pool = mp.Pool(processes=cpu_count)
-            res = pool.map(
-                partial(
-                    gpu_trace_read,
-                    indices=indices,
-                    ts_rescale=ts_rescale,
-                    dt_rescale=dt_rescale,
-                    n_cudaproc=num_cudaproc,
-                    t_offset=t_glb_gpu_base -
-                    t_base),
-                records)
-            gpu_traces = pd.DataFrame(res)
-            gpu_traces.columns = sofa_fieldnames
-            gpu_traces.to_csv(
-                logdir + 'gputrace.csv',
-                mode='w',
-                header=True,
-                index=False,
-                float_format='%.6f')
-            res_viz = list_downsample(res, cfg.plot_ratio)
-            gpu_traces_viz = pd.DataFrame(res_viz)
-            gpu_traces_viz.columns = sofa_fieldnames
-
-            # Apply filters for cpu traces
-            df_grouped = gpu_traces.groupby('name')
-            color_of_filtered_group = []
-            for filter in cfg.gpu_filters:
-                group = gpu_traces[gpu_traces['name'].str.contains(
-                    filter.keyword)]
-                filtered_gpu_groups.append({'group': group,
-                                            'color': filter.color,
-                                            'keyword': filter.keyword})
-
+            	# Apply filters for GPU traces
+            	df_grouped = gpu_traces.groupby('name')
+            	color_of_filtered_group = []
+            	for filter in cfg.gpu_filters:
+            	    group = gpu_traces[gpu_traces['name'].str.contains(
+            	        filter.keyword)]
+            	    filtered_gpu_groups.append({'group': group,
+            	                                'color': filter.color,
+            	                                'keyword': filter.keyword})
+	    else:
+		print_warning("gputrace existed, but no kernel traces were recorded.")	
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
