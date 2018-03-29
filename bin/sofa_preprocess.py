@@ -42,10 +42,10 @@ def cpu_trace_read(sample, t_offset):
     func_name = fields[5]
     t_begin = time + t_offset
     t_end = time + t_offset
-    if ''+fields[4] == '0':
-	event = 0
+    if '' + fields[4] == '0':
+        event = 0
     else:
-	event = np.log(int("0x" + fields[4], 16))
+        event = np.log(int("0x" + fields[4], 16))
 
     trace = [t_begin,
              event,  # % 1000000
@@ -105,7 +105,7 @@ def gpu_trace_read(
         t_offset):
     values = record.replace('"', '').split(',')
     kernel_name = values[indices.index('Name')]
-    #print("kernel name = %s" % kernel_name)
+    # print("kernel name = %s" % kernel_name)
     time = float(values[indices.index('Start')]) / ts_rescale + t_offset
     duration = float(values[indices.index('Duration')]) / dt_rescale
     t_begin = time
@@ -164,7 +164,9 @@ def gpu_trace_read(
     else:
         copyKind = 0
 
-    #print("%d:%d [%s] ck:%d, %lf,%lf: %d -> %d: payload:%d, bandwidth:%lf, duration:%lf "%(deviceId, streamId, kernel_name, copyKind, t_begin,t_end, pkt_src, pkt_dst, payload, bandwidth, duration))
+    # print("%d:%d [%s] ck:%d, %lf,%lf: %d -> %d: payload:%d, bandwidth:%lf,
+    # duration:%lf "%(deviceId, streamId, kernel_name, copyKind,
+    # t_begin,t_end, pkt_src, pkt_dst, payload, bandwidth, duration))
     trace = [t_begin,
              payload * 100 + 17,
              duration,
@@ -370,6 +372,8 @@ def sofa_preprocess(logdir, cfg):
     net_traces = []
     cpu_traces = []
     cpu_traces_viz = []
+    vm_usr_traces = []
+    vm_sys_traces = []
     vm_bi_traces = []
     vm_b0_traces = []
     vm_in_traces = []
@@ -419,7 +423,6 @@ def sofa_preprocess(logdir, cfg):
             res_viz = list_downsample(res, cfg.plot_ratio)
             cpu_traces_viz = pd.DataFrame(res_viz)
             cpu_traces_viz.columns = sofa_fieldnames
- 
 
     # procs -----------------------memory---------------------- ---swap-- -
     #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
@@ -429,12 +432,16 @@ def sofa_preprocess(logdir, cfg):
         lines = f.readlines()
         print_info("Length of vmstat_traces = %d" % len(lines))
         if len(lines) > 0:
+            vm_usr_list = []
+            vm_sys_list = []
             vm_bi_list = []
             vm_bo_list = []
             vm_in_list = []
             vm_cs_list = []
             vm_wa_list = []
             vm_st_list = []
+            vm_usr_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            vm_sys_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             vm_bi_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             vm_bo_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             vm_in_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
@@ -450,17 +457,27 @@ def sofa_preprocess(logdir, cfg):
                     vm_bo = float(fields[9]) + 1e-5
                     vm_in = float(fields[10]) + 1e-5
                     vm_cs = float(fields[11]) + 1e-5
+                    vm_usr = float(fields[12]) + 1e-5
+                    vm_sys = float(fields[13]) + 1e-5
                     vm_wa = float(fields[15]) + 1e-5
                     vm_st = float(fields[16]) + 1e-5
 
                     t_begin = t - t_base + t_glb_base
                     deviceId = cpuid = -1
                     event = -1
-		    copyKind = -1
+                    copyKind = -1
                     payload = -1
                     bandwidth = -1
                     pkt_src = pkt_dst = -1
                     pid = tid = -1
+                    vmstat_info = "bi.bo.in.cs.us.sy.wa.st=%d_%d_%d_%d_%d_%d_%d_%d" % (vm_bi,
+                                                                                       vm_bo,
+                                                                                       vm_in,
+                                                                                       vm_cs,
+                                                                                       vm_usr,
+                                                                                       vm_sys,
+                                                                                       vm_wa,
+                                                                                       vm_st)
 
                     trace = [
                         t_begin,
@@ -474,13 +491,7 @@ def sofa_preprocess(logdir, cfg):
                         pkt_dst,
                         pid,
                         tid,
-                        "vmstat=%d_%d_%d_%d_%d_%d" %
-                        (vm_bi,
-                         vm_bo,
-                         vm_in,
-                         vm_cs,
-                         vm_wa,
-                         vm_st),
+                        vmstat_info,
                         cpuid]
                     vm_bi_list.append(trace)
 
@@ -496,13 +507,7 @@ def sofa_preprocess(logdir, cfg):
                         pkt_dst,
                         pid,
                         tid,
-                        "vmstat=%d_%d_%d_%d_%d_%d" %
-                        (vm_bi,
-                         vm_bo,
-                         vm_in,
-                         vm_cs,
-                         vm_wa,
-                         vm_st),
+                        vmstat_info,
                         cpuid]
                     vm_bo_list.append(trace)
 
@@ -518,13 +523,7 @@ def sofa_preprocess(logdir, cfg):
                         pkt_dst,
                         pid,
                         tid,
-                        "vmstat=%d_%d_%d_%d_%d_%d" %
-                        (vm_bi,
-                         vm_bo,
-                         vm_in,
-                         vm_cs,
-                         vm_wa,
-                         vm_st),
+                        vmstat_info,
                         cpuid]
                     vm_in_list.append(trace)
 
@@ -540,13 +539,7 @@ def sofa_preprocess(logdir, cfg):
                         pkt_dst,
                         pid,
                         tid,
-                        "vmstat=%d_%d_%d_%d_%d_%d" %
-                        (vm_bi,
-                         vm_bo,
-                         vm_in,
-                         vm_cs,
-                         vm_wa,
-                         vm_st),
+                        vmstat_info,
                         cpuid]
                     vm_cs_list.append(trace)
 
@@ -562,13 +555,7 @@ def sofa_preprocess(logdir, cfg):
                         pkt_dst,
                         pid,
                         tid,
-                        "vmstat=%d_%d_%d_%d_%d_%d" %
-                        (vm_bi,
-                         vm_bo,
-                         vm_in,
-                         vm_cs,
-                         vm_wa,
-                         vm_st),
+                        vmstat_info,
                         cpuid]
                     vm_wa_list.append(trace)
 
@@ -584,15 +571,42 @@ def sofa_preprocess(logdir, cfg):
                         pkt_dst,
                         pid,
                         tid,
-                        "vmstat=%d_%d_%d_%d_%d_%d" %
-                        (vm_bi,
-                         vm_bo,
-                         vm_in,
-                         vm_cs,
-                         vm_wa,
-                         vm_st),
+                        vmstat_info,
                         cpuid]
                     vm_st_list.append(trace)
+
+                    trace = [
+                        t_begin,
+                        event,
+                        vm_usr,
+                        deviceId,
+                        copyKind,
+                        payload,
+                        bandwidth,
+                        pkt_src,
+                        pkt_dst,
+                        pid,
+                        tid,
+                        vmstat_info,
+                        cpuid]
+                    vm_usr_list.append(trace)
+
+                    trace = [
+                        t_begin,
+                        event,
+                        vm_sys,
+                        deviceId,
+                        copyKind,
+                        payload,
+                        bandwidth,
+                        pkt_src,
+                        pkt_dst,
+                        pid,
+                        tid,
+                        vmstat_info,
+                        cpuid]
+                    vm_sys_list.append(trace)
+
                     t = t + 1
 
             vm_bi_traces = list_to_csv_and_traces(
@@ -607,6 +621,11 @@ def sofa_preprocess(logdir, cfg):
                 logdir, vm_wa_list, 'vmstat_trace.csv', 'a')
             vm_st_traces = list_to_csv_and_traces(
                 logdir, vm_st_list, 'vmstat_trace.csv', 'a')
+            vm_usr_traces = list_to_csv_and_traces(
+                logdir, vm_usr_list, 'vmstat_trace.csv', 'a')
+            vm_sys_traces = list_to_csv_and_traces(
+                logdir, vm_sys_list, 'vmstat_trace.csv', 'a')
+
             # print(vm_bo_traces)
 
     # TODO: align cpu time and gpu time
@@ -677,71 +696,72 @@ def sofa_preprocess(logdir, cfg):
         num_cudaproc = num_cudaproc + 1
         with open(logdir + 'gputrace.tmp') as f:
             records = f.readlines()
-            #print(records[1])
-            
-	    if records[1].split(',')[0] == '"Start"':
+            # print(records[1])
+
+            if records[1].split(',')[0] == '"Start"':
                 indices = records[1].replace(
                     '"', '').replace(
                     '\n', '').split(',')
-            	print(indices)
-            	# ms,ms,,,,,,,,B,B,MB,GB/s,,,,
-            	ts_rescale = 1.0
-            	if records[2].split(',')[0] == 'ms':
-            	    ts_rescale = 1.0e3
-            	elif records[2].split(',')[0] == 'us':
-            	    ts_rescale = 1.0e6
+                print(indices)
+                # ms,ms,,,,,,,,B,B,MB,GB/s,,,,
+                ts_rescale = 1.0
+                if records[2].split(',')[0] == 'ms':
+                    ts_rescale = 1.0e3
+                elif records[2].split(',')[0] == 'us':
+                    ts_rescale = 1.0e6
 
-            	dt_rescale = 1.0
-            	if records[2].split(',')[1] == 'ms':
-            	    dt_rescale = 1.0e3
-            	elif records[2].split(',')[1] == 'us':
-            	    dt_rescale = 1.0e6
+                dt_rescale = 1.0
+                if records[2].split(',')[1] == 'ms':
+                    dt_rescale = 1.0e3
+                elif records[2].split(',')[1] == 'us':
+                    dt_rescale = 1.0e6
 
-            	records = records[3:]
-            	print_info("Length of gpu_traces = %d" % len(records))
-            	t_base = float(records[0].split(',')[0])
-            	t_offset = t_glb_gpu_base - t_base
-            	pool = mp.Pool(processes=cpu_count)
-            	res = pool.map(
-            	    partial(
-            	        gpu_trace_read,
-            	        indices=indices,
-            	        ts_rescale=ts_rescale,
-            	        dt_rescale=dt_rescale,
-            	        n_cudaproc=num_cudaproc,
-            	        t_offset=t_glb_gpu_base -
-            	        t_base),
-            	    records)
-            	gpu_traces = pd.DataFrame(res)
-            	gpu_traces.columns = sofa_fieldnames
-            	gpu_traces.to_csv(
-            	    logdir + 'gputrace.csv',
-            	    mode='w',
-            	    header=True,
-            	    index=False,
-            	    float_format='%.6f')
-            	res_viz = list_downsample(res, cfg.plot_ratio)
-            	gpu_traces_viz = pd.DataFrame(res_viz)
-            	gpu_traces_viz.columns = sofa_fieldnames
+                records = records[3:]
+                print_info("Length of gpu_traces = %d" % len(records))
+                t_base = float(records[0].split(',')[0])
+                t_offset = t_glb_gpu_base - t_base
+                pool = mp.Pool(processes=cpu_count)
+                res = pool.map(
+                    partial(
+                        gpu_trace_read,
+                        indices=indices,
+                        ts_rescale=ts_rescale,
+                        dt_rescale=dt_rescale,
+                        n_cudaproc=num_cudaproc,
+                        t_offset=t_glb_gpu_base -
+                        t_base),
+                    records)
+                gpu_traces = pd.DataFrame(res)
+                gpu_traces.columns = sofa_fieldnames
+                gpu_traces.to_csv(
+                    logdir + 'gputrace.csv',
+                    mode='w',
+                    header=True,
+                    index=False,
+                    float_format='%.6f')
+                res_viz = list_downsample(res, cfg.plot_ratio)
+                gpu_traces_viz = pd.DataFrame(res_viz)
+                gpu_traces_viz.columns = sofa_fieldnames
 
-            	# Apply filters for GPU traces
-            	df_grouped = gpu_traces.groupby('name')
-            	color_of_filtered_group = []
-            	for filter in cfg.gpu_filters:
-            	    group = gpu_traces[gpu_traces['name'].str.contains(
-            	        filter.keyword)]
-            	    filtered_gpu_groups.append({'group': group,
-            	                                'color': filter.color,
-            	                                'keyword': filter.keyword})
-	    else:
-		print_warning("gputrace existed, but no kernel traces were recorded.")	
+                # Apply filters for GPU traces
+                df_grouped = gpu_traces.groupby('name')
+                color_of_filtered_group = []
+                for filter in cfg.gpu_filters:
+                    group = gpu_traces[gpu_traces['name'].str.contains(
+                        filter.keyword)]
+                    filtered_gpu_groups.append({'group': group,
+                                                'color': filter.color,
+                                                'keyword': filter.keyword})
+            else:
+                print_warning(
+                    "gputrace existed, but no kernel traces were recorded.")
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
     # TODO: provide option to use absolute or relative timestamp
-    #cpu_traces.loc[:,'timestamp'] -= cpu_traces.loc[0,'timestamp']
-    #net_traces.loc[:,'timestamp'] -= net_traces.loc[0,'timestamp']
-    #gpu_traces.loc[:,'timestamp'] -= gpu_traces.loc[0,'timestamp']
+    # cpu_traces.loc[:,'timestamp'] -= cpu_traces.loc[0,'timestamp']
+    # net_traces.loc[:,'timestamp'] -= net_traces.loc[0,'timestamp']
+    # gpu_traces.loc[:,'timestamp'] -= gpu_traces.loc[0,'timestamp']
 
     traces = []
     sofatrace = SOFATrace()
@@ -763,6 +783,23 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.data = filtered_group['group'].copy()
         traces.append(sofatrace)
 
+    sofatrace = SOFATrace()
+    sofatrace.name = 'vmstat_usr'
+    sofatrace.title = 'VMSTAT_USR'
+    sofatrace.color = 'Magenta'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = vm_usr_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'vmstat_sys'
+    sofatrace.title = 'VMSTAT_SYS'
+    sofatrace.color = 'LightBlue'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = vm_sys_traces
+    traces.append(sofatrace)
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_in'
