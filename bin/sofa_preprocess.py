@@ -380,6 +380,8 @@ def sofa_preprocess(logdir, cfg):
     vm_cs_traces = []
     vm_wa_traces = []
     vm_st_traces = []
+    nvsmi_sm_traces = []
+    nvsmi_mem_traces = []
     gpu_traces = []
     gpu_traces_viz = []
     gpu_kernel_traces = []
@@ -625,8 +627,78 @@ def sofa_preprocess(logdir, cfg):
                 logdir, vm_usr_list, 'vmstat_trace.csv', 'a')
             vm_sys_traces = list_to_csv_and_traces(
                 logdir, vm_sys_list, 'vmstat_trace.csv', 'a')
+    
+    ## gpu    sm   mem   enc   dec
+    ## Idx     %     %     %     %
+    #        0     0     0     0     0
+    #        1     0     0     0     0
+    #        2     0     0     0     0
+    with open('%s/nvsmi.txt' % logdir) as f:
+        lines = f.readlines()
+        print_info("Length of nvsmi_traces = %d" % len(lines))
+        if len(lines) > 0:
+            nvsmi_sm_list = []
+            nvsmi_mem_list = []
+            nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            t_base = t = 0
+            for i in xrange(len(lines)):
+                if lines[i].find('gpu') == -1 \
+                         and lines[i].find('Idx') == -1:
+                    fields = lines[i].split()
+                    nvsmi_id  = int(fields[0])  
+                    nvsmi_sm  = float(fields[1]) + 1e-5
+                    nvsmi_mem = float(fields[2]) + 1e-5
 
-            # print(vm_bo_traces)
+                    t_begin = t - t_base + t_glb_base
+                    deviceId = cpuid = nvsmi_id
+                    event = -1
+                    copyKind = -1
+                    payload = -1
+                    bandwidth = -1
+                    pkt_src = pkt_dst = -1
+                    pid = tid = -1
+                    nvsmi_info = "GPUID.sm.mem=%d_%lf_%lf" % (nvsmi_id, nvsmi_sm, nvsmi_mem)
+
+                    trace = [
+                        t_begin,
+                        event,
+                        nvsmi_sm,
+                        deviceId,
+                        copyKind,
+                        payload,
+                        bandwidth,
+                        pkt_src,
+                        pkt_dst,
+                        pid,
+                        tid,
+                        nvsmi_info,
+                        cpuid]
+                    nvsmi_sm_list.append(trace)
+
+                    trace = [
+                        t_begin,
+                        event,
+                        nvsmi_mem,
+                        deviceId,
+                        copyKind,
+                        payload,
+                        bandwidth,
+                        pkt_src,
+                        pkt_dst,
+                        pid,
+                        tid,
+                        nvsmi_info,
+                        cpuid]
+                    nvsmi_mem_list.append(trace)
+                    if nvsmi_id == 0:
+                        t = t + 1
+    nvsmi_sm_traces = list_to_csv_and_traces(
+                logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
+    nvsmi_mem_traces = list_to_csv_and_traces(
+                logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
+
+
 
     # TODO: align cpu time and gpu time
     t_nv = sys.float_info.min
@@ -835,6 +907,24 @@ def sofa_preprocess(logdir, cfg):
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = vm_bo_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'nvsmi_mem'
+    sofatrace.title = 'GPU_MEM_Util.'
+    sofatrace.color = 'lightblue'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = nvsmi_mem_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'nvsmi_sm'
+    sofatrace.title = 'GPU_SM_Util.'
+    sofatrace.color = 'red'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = nvsmi_sm_traces
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()
