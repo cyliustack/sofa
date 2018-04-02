@@ -698,7 +698,7 @@ def sofa_preprocess(logdir, cfg):
             records = f.readlines()
             # print(records[1])
 
-            if records[1].split(',')[0] == '"Start"':
+            if len(records)>0 and records[1].split(',')[0] == '"Start"':
                 indices = records[1].replace(
                     '"', '').replace(
                     '\n', '').split(',')
@@ -755,6 +755,8 @@ def sofa_preprocess(logdir, cfg):
             else:
                 print_warning(
                     "gputrace existed, but no kernel traces were recorded.")
+		
+    		os.system('cat %s/gputrace.tmp' % logdir)
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
