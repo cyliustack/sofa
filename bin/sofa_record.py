@@ -35,6 +35,7 @@ def sofa_record(command, logdir, cfg):
     os.system('rm %s/sofa.pcap > /dev/null 2> /dev/null' % logdir)
     os.system('rm %s/gputrace*.nvvp > /dev/null 2> /dev/null' % logdir)
     os.system('rm %s/*.csv > /dev/null 2> /dev/null' % logdir)
+    os.system('rm %s/*.txt > /dev/null 2> /dev/null' % logdir)
     try:
         print_info("Prolog of Recording...")
         with open(os.devnull, 'w') as FNULL:
@@ -51,6 +52,8 @@ def sofa_record(command, logdir, cfg):
                 ['mpstat', '-P', 'ALL', '1', '600'], stdout=logfile)
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
             subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
+        with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
+            subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
             subprocess.Popen(['date', '+%s'], stdout=logfile)
 
@@ -70,13 +73,16 @@ def sofa_record(command, logdir, cfg):
         os.system('pkill tcpdump')
         os.system('pkill mpstat')
         os.system('pkill vmstat')
+        os.system('pkill nvidia-smi')
     except BaseException:
         print "Unexpected error:", sys.exc_info()[0]
-        while os.system('pkill tcpdump') != 0 or os.system(
-                'pkill mpstat') != 0 or os.system('pkill vmstat') != 0:
+        while os.system('pkill tcpdump')  != 0 or \
+                os.system('pkill mpstat') != 0 or \
+                os.system('pkill vmstat') != 0 or \
+                os.system('pkill nvidia-smi') != 0:
             print_warning(
-                "Try to kill tcpdump, mpstat and vmstat. If not, Ctrl+C to stop the action.")
+                "Try to kill tcpdump, mpstat, vmstat and nvidia-smi. If not, Ctrl+C to stop the action.")
             sleep(0.5)
-        print_info("tcpdump, mpstat and vmstat are killed.")
+        print_info("tcpdump, mpstat, vmstat and nvidia-smi are killed.")
         raise
     print_info("End of Recording")
