@@ -455,12 +455,23 @@ def sofa_preprocess(logdir, cfg):
                 if lines[i].find('procs') == - \
                         1 and lines[i].find('swpd') == -1:
                     fields = lines[i].split()
+                    if len(fields) < 17:
+                        continue
+                    vm_r = float(fields[0]) + 1e-5
+                    vm_b = float(fields[1]) + 1e-5
+                    vm_sw = float(fields[2]) + 1e-5
+                    vm_fr = float(fields[3]) + 1e-5
+                    vm_bu = float(fields[4]) + 1e-5
+                    vm_ca = float(fields[5]) + 1e-5
+                    vm_si = float(fields[6]) + 1e-5
+                    vm_so = float(fields[7]) + 1e-5
                     vm_bi = float(fields[8]) + 1e-5
                     vm_bo = float(fields[9]) + 1e-5
                     vm_in = float(fields[10]) + 1e-5
                     vm_cs = float(fields[11]) + 1e-5
                     vm_usr = float(fields[12]) + 1e-5
                     vm_sys = float(fields[13]) + 1e-5
+                    vm_idl = float(fields[14]) + 1e-5
                     vm_wa = float(fields[15]) + 1e-5
                     vm_st = float(fields[16]) + 1e-5
 
@@ -472,14 +483,24 @@ def sofa_preprocess(logdir, cfg):
                     bandwidth = -1
                     pkt_src = pkt_dst = -1
                     pid = tid = -1
-                    vmstat_info = "bi.bo.in.cs.us.sy.wa.st=%d_%d_%d_%d_%d_%d_%d_%d" % (vm_bi,
-                                                                                       vm_bo,
-                                                                                       vm_in,
-                                                                                       vm_cs,
-                                                                                       vm_usr,
-                                                                                       vm_sys,
-                                                                                       vm_wa,
-                                                                                       vm_st)
+                    vmstat_info = 'r=' + str(int(vm_r)) + '|'\
+                                + 'b=' + str(int(vm_b)) + '|'\
+                                + 'sw=' + str(int(vm_sw)) + '|'\
+                                + 'fr=' + str(int(vm_fr)) + '|'\
+                                + 'bu=' + str(int(vm_bu)) + '|'\
+                                + 'ca=' + str(int(vm_ca)) + '|'\
+                                + 'si=' + str(int(vm_si)) + '|'\
+                                + 'so=' + str(int(vm_so)) + '|'\
+                                + 'bi=' + str(int(vm_bi)) + '|'\
+                                + 'bo=' + str(int(vm_bo)) + '|'\
+                                + 'in=' + str(int(vm_in)) + '|'\
+                                + 'cs=' + str(int(vm_cs)) + '|'\
+                                + 'usr=' + str(int(vm_usr)) + '|'\
+                                + 'sys=' + str(int(vm_sys)) + '|'\
+                                + 'idl=' + str(int(vm_idl)) + '|'\
+                                + 'wa=' + str(int(vm_wa)) + '|'\
+                                + 'st=' + str(int(vm_st)) 
+
 
                     trace = [
                         t_begin,
@@ -644,8 +665,10 @@ def sofa_preprocess(logdir, cfg):
             t_base = t = 0
             for i in xrange(len(lines)):
                 if lines[i].find('gpu') == -1 \
-                         and lines[i].find('Idx') == -1:
+                        and lines[i].find('Idx') == -1 :
                     fields = lines[i].split()
+                    if len(fields) < 5:
+                        continue
                     nvsmi_id  = int(fields[0])  
                     nvsmi_sm  = float(fields[1]) + 1e-5
                     nvsmi_mem = float(fields[2]) + 1e-5
