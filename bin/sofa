@@ -92,15 +92,17 @@ if __name__ == "__main__":
     else:
         cfg.cpu_filters.append(Filter('idle', 'black'))
 
+    cfg.gpu_filters.append(Filter('copyKind_1_', 'Red'))
+    cfg.gpu_filters.append(Filter('copyKind_2_', 'Reru'))
+    cfg.gpu_filters.append(Filter('copyKind_10_', 'Purple'))
     if args.gpu_filters is not None:
         pairs = args.gpu_filters.split(',')
         for pair in pairs:
             cfg.gpu_filters.append(
                 Filter(str(pair.split(':')[0]), str(pair.split(':')[1])))
     else:
-        cfg.gpu_filters.append(Filter('copyKind_1_', 'Red'))
-        cfg.gpu_filters.append(Filter('copyKind_2_', 'Peru'))
-        cfg.gpu_filters.append(Filter('copyKind_10_', 'Purple'))
+        cfg.gpu_filters.append(Filter('_fw_', 'yellow'))
+        cfg.gpu_filters.append(Filter('_bw_', 'orange'))
 
     print("Ratio of raw data points to plotting points : %d" % cfg.plot_ratio)
     for filter in cfg.cpu_filters:
