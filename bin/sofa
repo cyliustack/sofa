@@ -93,7 +93,7 @@ if __name__ == "__main__":
         cfg.cpu_filters.append(Filter('idle', 'black'))
 
     cfg.gpu_filters.append(Filter('copyKind_1_', 'Red'))
-    cfg.gpu_filters.append(Filter('copyKind_2_', 'Reru'))
+    cfg.gpu_filters.append(Filter('copyKind_2_', 'Peru'))
     cfg.gpu_filters.append(Filter('copyKind_10_', 'Purple'))
     if args.gpu_filters is not None:
         pairs = args.gpu_filters.split(',')
