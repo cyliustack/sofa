@@ -103,6 +103,7 @@ if __name__ == "__main__":
     else:
         cfg.gpu_filters.append(Filter('_fw_', 'yellow'))
         cfg.gpu_filters.append(Filter('_bw_', 'orange'))
+        cfg.gpu_filters.append(Filter('AllReduceKernel', 'indigo'))
 
     print("Ratio of raw data points to plotting points : %d" % cfg.plot_ratio)
     for filter in cfg.cpu_filters:

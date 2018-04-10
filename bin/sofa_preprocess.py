@@ -766,7 +766,8 @@ def sofa_preprocess(logdir, cfg):
                     t_offset=t_glb_net_base -
                     t_base),
                 packets)
-            net_traces = pd.DataFrame(res)
+            res_viz = list_downsample(res, cfg.plot_ratio)
+            net_traces = pd.DataFrame(res_viz)
             net_traces.columns = sofa_fieldnames
             net_traces.to_csv(
                 logdir + 'cputrace.csv',
