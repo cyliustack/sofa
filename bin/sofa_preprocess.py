@@ -10,9 +10,10 @@ import glob
 import os
 from functools import partial
 import subprocess
+import re
 from sofa_config import *
 from sofa_print import *
-
+from sofa_graph import *
 
 def list_downsample(list, plot_ratio):
     new_list = []
@@ -360,6 +361,7 @@ def sofa_preprocess(logdir, cfg):
     with open('%s/perf.script' % logdir, 'w') as logfile:
         subprocess.call(['perf', 'script', '-i', '%s/perf.data' %
                          logdir, '-F', 'time,cpu,pid,tid,ip,sym,period'], stdout=logfile)
+    
     # sys.stdout.flush()
     with open(logdir + 'sofa_time.txt') as f:
         t_glb_base = float(f.readlines()[0])
