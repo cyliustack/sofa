@@ -55,6 +55,8 @@ def sofa_record(command, logdir, cfg):
             subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
         with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
             subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
+        with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
+            subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile) 
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
             subprocess.Popen(['date', '+%s'], stdout=logfile)
 

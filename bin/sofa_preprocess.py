@@ -13,7 +13,6 @@ import subprocess
 import re
 from sofa_config import *
 from sofa_print import *
-from sofa_graph import *
 
 def list_downsample(list, plot_ratio):
     new_list = []
