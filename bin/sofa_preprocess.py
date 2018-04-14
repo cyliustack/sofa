@@ -35,21 +35,23 @@ def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
                   float_format='%.6f')
     return traces
 
-
+    # 0/0     [004] 96050.733788:          1 bus-cycles:  ffffffff8106315a native_write_msr_safe
+    # 0/0     [004] 96050.733788:          7     cycles:  ffffffff8106315a native_write_msr_safe
 def cpu_trace_read(sample, t_offset):
     fields = sample.split()
+
     time = float(fields[2].split(':')[0])
-    func_name = fields[5]
+    func_name = fields[4].replace('-','_') + fields[6]
     t_begin = time + t_offset
     t_end = time + t_offset
-    if '' + fields[4] == '0':
+    if '' + fields[3] == '0':
         event = 0
     else:
-        event = np.log(int("0x" + fields[4], 16))
+        event = np.log(int("0x" + fields[3], 16))
 
     trace = [t_begin,
              event,  # % 1000000
-             float(fields[3]) / 1.5e9,
+             float(fields[3]) / 1e9,
              int(fields[1].split('[')[1].split(']')[0]),
              -1,
              0,
@@ -58,7 +60,7 @@ def cpu_trace_read(sample, t_offset):
              -1,
              int(fields[0].split('/')[0]),
              int(fields[0].split('/')[1]),
-             fields[5],
+             func_name,
              0]
     return trace
 
@@ -359,7 +361,7 @@ def sofa_preprocess(logdir, cfg):
 
     with open('%s/perf.script' % logdir, 'w') as logfile:
         subprocess.call(['perf', 'script', '-i', '%s/perf.data' %
-                         logdir, '-F', 'time,cpu,pid,tid,ip,sym,period'], stdout=logfile)
+                         logdir, '-F', 'time,cpu,pid,tid,ip,sym,period,event'], stdout=logfile)
     
     # sys.stdout.flush()
     with open(logdir + 'sofa_time.txt') as f:

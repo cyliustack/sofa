@@ -64,12 +64,12 @@ def sofa_record(command, logdir, cfg):
         if int(os.system('command -v nvprof')) == 0:
             print_info('Profile with NVPROF')
             os.system(
-                'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -o %s/perf.data -F %s -a -- %s' %
+                'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,bus-cycles -o %s/perf.data -a -F %s -- %s' %
                 (logdir, logdir, sample_freq, command))
         else:
             print_info('Profile without NVPROF')
             os.system(
-                'perf record -o %s/perf.data -F %s -a -- %s' %
+                'perf record -o %s/perf.data -e cycles,bus-cycles -F %s -a -- %s' %
                 (logdir, sample_freq, command))
 
         print_info("Epilog of Recording...")

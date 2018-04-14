@@ -84,6 +84,7 @@ if __name__ == "__main__":
         cfg.plot_ratio = args.plot_ratio
 
     cfg.cpu_filters.append(Filter('nv_alloc_system_pages', 'red'))
+    cfg.cpu_filters.append(Filter('bus', 'cornflowerblue'))
     if args.cpu_filters is not None:
         pairs = args.cpu_filters.split(',')
         for pair in pairs:
