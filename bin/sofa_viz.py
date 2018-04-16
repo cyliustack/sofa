@@ -13,7 +13,7 @@ def sofa_viz(logdir, cfg):
 
     subprocess.Popen(['sleep', '2'])
     print_warning(
-        'If your rendering timeline slow, please try \033[4msofa report --plot_ratio=10\033[24m to downsampling scatter points.')
+        'If your rendering timeline is slow, please try \033[4msofa report --plot_ratio=10\033[24m to downsample scatter points.')
     print_info(
         'SOFA Visualization is listening on port \033[4m\033[97mhttp://localhost:8000\033[24m\033[0m\033[24m')
     print_info('Please open your browser to start profiling.')
