@@ -14,12 +14,12 @@ import re
 from sofa_config import *
 from sofa_print import *
 
-def list_downsample(list, plot_ratio):
+def list_downsample(list_in, plot_ratio):
     new_list = []
-    for i in xrange(len(list)):
+    for i in xrange(len(list_in)):
         if i % plot_ratio == 0:
             # print("%d"%(i))
-            new_list.append(list[i])
+            new_list.append(list_in[i])
     return new_list
 
 
@@ -35,24 +35,30 @@ def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
                   float_format='%.6f')
     return traces
 
-    # 0/0     [004] 96050.733788:          1 bus-cycles:  ffffffff8106315a native_write_msr_safe
-    # 0/0     [004] 96050.733788:          7     cycles:  ffffffff8106315a native_write_msr_safe
+# 0/0     [004] 96050.733788:          1 bus-cycles:  ffffffff8106315a native_write_msr_safe
+# 0/0     [004] 96050.733788:          7     cycles:  ffffffff8106315a native_write_msr_safe
+# 359342/359342 2493492.850125:          1 bus-cycles:  ffffffff8106450a native_write_msr_safe
+# 359342/359342 2493492.850128:          1 cycles:  ffffffff8106450a native_write_msr_safe
 def cpu_trace_read(sample, t_offset):
     fields = sample.split()
 
-    time = float(fields[2].split(':')[0])
-    func_name = fields[4].replace('-','_') + fields[6]
+    if re.match('\[\d+\]', fields[1]) != None:
+        time = float(fields[2].split(':')[0])
+        func_name = fields[4].replace('-','_') + fields[6]
+        cycles = float(fields[3])
+        event = np.log(1.0*int("0x01" + fields[5], 16))
+    else:
+        time = float(fields[1].split(':')[0])
+        func_name = fields[3].replace('-','_') + fields[5]
+        cycles = float(fields[2])
+        event = np.log(1.0*int("0x01" + fields[4], 16))
+    
     t_begin = time + t_offset
     t_end = time + t_offset
-    if '' + fields[3] == '0':
-        event = 0
-    else:
-        event = np.log(int("0x" + fields[3], 16))
-
     trace = [t_begin,
              event,  # % 1000000
-             float(fields[3]) / 1e9,
-             int(fields[1].split('[')[1].split(']')[0]),
+             cycles / 1e9,
+             -1,
              -1,
              0,
              0,
@@ -361,7 +367,7 @@ def sofa_preprocess(logdir, cfg):
 
     with open('%s/perf.script' % logdir, 'w') as logfile:
         subprocess.call(['perf', 'script', '-i', '%s/perf.data' %
-                         logdir, '-F', 'time,cpu,pid,tid,ip,sym,period,event'], stdout=logfile)
+                         logdir, '-F', 'time,pid,tid,ip,sym,period,event'], stdout=logfile)
     
     # sys.stdout.flush()
     with open(logdir + 'sofa_time.txt') as f:
@@ -410,7 +416,7 @@ def sofa_preprocess(logdir, cfg):
         print_info("Length of cpu_traces = %d" % len(samples))
         if len(samples) > 0:
             pool = mp.Pool(processes=cpu_count)
-            t_base = float((samples[0].split())[2].split(':')[0])
+            t_base = float((samples[0].split())[1].split(':')[0])
             res = pool.map(
                 partial(
                     cpu_trace_read,

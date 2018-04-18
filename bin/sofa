@@ -49,12 +49,10 @@ if __name__ == "__main__":
         type=int,
         required=False,
         help='Down-sample ratio for points in scatter plot: 1, 10, 100, etc..')
-    parser.add_argument(
-        '--verbose',
-        metavar='True/False',
-        type=bool,
-        required=False,
-        help='Enable/Disable verbose mode')
+    parser.add_argument('--profile_all_cpus', dest='profile_all_cpus', action='store_true')
+    parser.set_defaults(profile_all_cpus=False)
+    parser.add_argument('--verbose', dest='verbose', action='store_true')
+    parser.set_defaults(verbose=False)
     parser.add_argument(
         'command',
         type=str,
@@ -82,6 +80,10 @@ if __name__ == "__main__":
 
     if args.plot_ratio is not None:
         cfg.plot_ratio = args.plot_ratio
+
+    if args.profile_all_cpus is not None:
+        cfg.profile_all_cpus = args.profile_all_cpus
+
 
     cfg.cpu_filters.append(Filter('nv_alloc_system_pages', 'red'))
     cfg.cpu_filters.append(Filter('bus', 'cornflowerblue'))

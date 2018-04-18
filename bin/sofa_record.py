@@ -61,17 +61,19 @@ def sofa_record(command, logdir, cfg):
             subprocess.Popen(['date', '+%s'], stdout=logfile)
 
         print_info("Recording...")
-        if int(os.system('command -v nvprof')) == 0:
-            print_info('Profile with NVPROF')
-            os.system(
-                'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,bus-cycles -o %s/perf.data -a -F %s -- %s' %
-                (logdir, logdir, sample_freq, command))
-        else:
-            print_info('Profile without NVPROF')
-            os.system(
-                'perf record -o %s/perf.data -e cycles,bus-cycles -F %s -a -- %s' %
-                (logdir, sample_freq, command))
 
+        if cfg.profile_all_cpus == True:
+            perf_options = '-a'
+        else:
+            perf_options = ''
+
+        if int(os.system('command -v nvprof')) == 0:
+            profile_command = 'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,bus-cycles -o %s/perf.data -F %s %s -- %s ' % (logdir, logdir, sample_freq, perf_options, command)
+        else:
+            print_warning('Profile without NVPROF')
+            profile_command = 'perf record -o %s/perf.data -e cycles,bus-cycles %s -F %s %s -- %s' % (logdir, logdir, sample_freq, perf_options, command)
+        print_info( profile_command)
+        os.system( profile_command)
         print_info("Epilog of Recording...")
         os.system('pkill tcpdump')
         os.system('pkill mpstat')

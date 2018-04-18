@@ -13,3 +13,4 @@ class SOFA_Config:
     verbose = False
     cpu_top_k = 20
     plot_ratio = 1
+    profile_all_cpus = False
