@@ -43,6 +43,8 @@ if __name__ == "__main__":
         help='A string of list of pairs of keyword and color')
     parser.add_argument('--cpu_top_k', metavar='N', type=int, required=False,
                         help='K functions of the highest overheads')
+    parser.add_argument('--gpu_time_offset', metavar='N', type=int, required=False,
+                        help='timestamp offset between CPU and GPU, +N or -N')
     parser.add_argument(
         '--plot_ratio',
         metavar='N',
@@ -80,6 +82,9 @@ if __name__ == "__main__":
 
     if args.plot_ratio is not None:
         cfg.plot_ratio = args.plot_ratio
+
+    if args.gpu_time_offset is not None:
+        cfg.gpu_time_offset = args.gpu_time_offset
 
     if args.profile_all_cpus is not None:
         cfg.profile_all_cpus = args.profile_all_cpus

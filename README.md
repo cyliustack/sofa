@@ -24,10 +24,13 @@ Run `bash </PATH/TO/INSTALL>/sofa/tools/uninstall.sh` to safely remove/uninstall
 SOFA supports serveral different usages, like how one can use perf.
 
 ## Basic Statistics
-* `sofa stat "ping google.com.tw -c 3"`
+1. Profile your program by sampling involved CPUs:   
+    `sofa stat "wget http://www.bbc.com/news"`    
+2. Profile your program by sampling all CPUs:   
+    `sofa stat "wget http://www.bbc.com/news" --profile_all_cpus`   
 
 ## Performance Visualizations
-1. `sofa record "ping google.com.tw -c 3"`
+1. `sofa record "wget http://www.bbc.com/news"`
 2. `sofa report`
 3. Open browser with one of the following links for different visualizations
     * [http://localhost:8000](http://localhost:8000)
@@ -35,7 +38,7 @@ SOFA supports serveral different usages, like how one can use perf.
     * [http://localhost:8000/gpu-report.html](http://localhost:8000/gpu-report.html)
 
 ## Run with different __plugins__
-1. Run `sofa record "ping google.com.tw -c 3"` __only once__ to record the events.
+1. Run `sofa record "wget http://www.bbc.com/news"` __only once__ to record the events.
 2. Run `sofa preprocess` __only once__ to process the events.
 3. Run `sofa analyze` with __A__ plugin.
 4. Run `sofa analyze` with __B__ plugin.

@@ -14,6 +14,7 @@ import re
 from sofa_config import *
 from sofa_print import *
 
+
 def list_downsample(list_in, plot_ratio):
     new_list = []
     for i in xrange(len(list_in)):
@@ -38,21 +39,24 @@ def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
 # 0/0     [004] 96050.733788:          1 bus-cycles:  ffffffff8106315a native_write_msr_safe
 # 0/0     [004] 96050.733788:          7     cycles:  ffffffff8106315a native_write_msr_safe
 # 359342/359342 2493492.850125:          1 bus-cycles:  ffffffff8106450a native_write_msr_safe
-# 359342/359342 2493492.850128:          1 cycles:  ffffffff8106450a native_write_msr_safe
+# 359342/359342 2493492.850128:          1 cycles:  ffffffff8106450a
+# native_write_msr_safe
+
+
 def cpu_trace_read(sample, t_offset):
     fields = sample.split()
 
-    if re.match('\[\d+\]', fields[1]) != None:
+    if re.match('\[\d+\]', fields[1]) is not None:
         time = float(fields[2].split(':')[0])
-        func_name = fields[4].replace('-','_') + fields[6]
+        func_name = fields[4].replace('-', '_') + fields[6]
         cycles = float(fields[3])
-        event = np.log(1.0*int("0x01" + fields[5], 16))
+        event = np.log(1.0 * int("0x01" + fields[5], 16))
     else:
         time = float(fields[1].split(':')[0])
-        func_name = fields[3].replace('-','_') + fields[5]
+        func_name = fields[3].replace('-', '_') + fields[5]
         cycles = float(fields[2])
-        event = np.log(1.0*int("0x01" + fields[4], 16))
-    
+        event = np.log(1.0 * int("0x01" + fields[4], 16))
+
     t_begin = time + t_offset
     t_end = time + t_offset
     trace = [t_begin,
@@ -366,9 +370,14 @@ def sofa_preprocess(logdir, cfg):
     t_glb_gpu_base = 0
 
     with open('%s/perf.script' % logdir, 'w') as logfile:
-        subprocess.call(['perf', 'script', '-i', '%s/perf.data' %
-                         logdir, '-F', 'time,pid,tid,ip,sym,period,event'], stdout=logfile)
-    
+        subprocess.call(['perf',
+                         'script',
+                         '-i',
+                         '%s/perf.data' % logdir,
+                         '-F',
+                         'time,pid,tid,ip,sym,period,event'],
+                        stdout=logfile)
+
     # sys.stdout.flush()
     with open(logdir + 'sofa_time.txt') as f:
         t_glb_base = float(f.readlines()[0])
@@ -376,7 +385,6 @@ def sofa_preprocess(logdir, cfg):
         t_glb_gpu_base = t_glb_base
         print t_glb_base
         print t_glb_net_base
-        print t_glb_gpu_base
 
     net_traces = []
     cpu_traces = []
@@ -493,23 +501,22 @@ def sofa_preprocess(logdir, cfg):
                     pkt_src = pkt_dst = -1
                     pid = tid = -1
                     vmstat_info = 'r=' + str(int(vm_r)) + '|'\
-                                + 'b=' + str(int(vm_b)) + '|'\
-                                + 'sw=' + str(int(vm_sw)) + '|'\
-                                + 'fr=' + str(int(vm_fr)) + '|'\
-                                + 'bu=' + str(int(vm_bu)) + '|'\
-                                + 'ca=' + str(int(vm_ca)) + '|'\
-                                + 'si=' + str(int(vm_si)) + '|'\
-                                + 'so=' + str(int(vm_so)) + '|'\
-                                + 'bi=' + str(int(vm_bi)) + '|'\
-                                + 'bo=' + str(int(vm_bo)) + '|'\
-                                + 'in=' + str(int(vm_in)) + '|'\
-                                + 'cs=' + str(int(vm_cs)) + '|'\
-                                + 'usr=' + str(int(vm_usr)) + '|'\
-                                + 'sys=' + str(int(vm_sys)) + '|'\
-                                + 'idl=' + str(int(vm_idl)) + '|'\
-                                + 'wa=' + str(int(vm_wa)) + '|'\
-                                + 'st=' + str(int(vm_st)) 
-
+                        + 'b=' + str(int(vm_b)) + '|'\
+                        + 'sw=' + str(int(vm_sw)) + '|'\
+                        + 'fr=' + str(int(vm_fr)) + '|'\
+                        + 'bu=' + str(int(vm_bu)) + '|'\
+                        + 'ca=' + str(int(vm_ca)) + '|'\
+                        + 'si=' + str(int(vm_si)) + '|'\
+                        + 'so=' + str(int(vm_so)) + '|'\
+                        + 'bi=' + str(int(vm_bi)) + '|'\
+                        + 'bo=' + str(int(vm_bo)) + '|'\
+                        + 'in=' + str(int(vm_in)) + '|'\
+                        + 'cs=' + str(int(vm_cs)) + '|'\
+                        + 'usr=' + str(int(vm_usr)) + '|'\
+                        + 'sys=' + str(int(vm_sys)) + '|'\
+                        + 'idl=' + str(int(vm_idl)) + '|'\
+                        + 'wa=' + str(int(vm_wa)) + '|'\
+                        + 'st=' + str(int(vm_st))
 
                     trace = [
                         t_begin,
@@ -657,9 +664,9 @@ def sofa_preprocess(logdir, cfg):
                 logdir, vm_usr_list, 'vmstat_trace.csv', 'a')
             vm_sys_traces = list_to_csv_and_traces(
                 logdir, vm_sys_list, 'vmstat_trace.csv', 'a')
-    
-    ## gpu    sm   mem   enc   dec
-    ## Idx     %     %     %     %
+
+    # gpu    sm   mem   enc   dec
+    # Idx     %     %     %     %
     #        0     0     0     0     0
     #        1     0     0     0     0
     #        2     0     0     0     0
@@ -674,12 +681,12 @@ def sofa_preprocess(logdir, cfg):
             t_base = t = 0
             for i in xrange(len(lines)):
                 if lines[i].find('gpu') == -1 \
-                        and lines[i].find('Idx') == -1 :
+                        and lines[i].find('Idx') == -1:
                     fields = lines[i].split()
                     if len(fields) < 5:
                         continue
-                    nvsmi_id  = int(fields[0])  
-                    nvsmi_sm  = float(fields[1]) + 1e-5
+                    nvsmi_id = int(fields[0])
+                    nvsmi_sm = float(fields[1]) + 1e-5
                     nvsmi_mem = float(fields[2]) + 1e-5
 
                     t_begin = t - t_base + t_glb_base
@@ -690,7 +697,8 @@ def sofa_preprocess(logdir, cfg):
                     bandwidth = -1
                     pkt_src = pkt_dst = -1
                     pid = tid = -1
-                    nvsmi_info = "GPUID.sm.mem=%d_%lf_%lf" % (nvsmi_id, nvsmi_sm, nvsmi_mem)
+                    nvsmi_info = "GPUID.sm.mem=%d_%lf_%lf" % (
+                        nvsmi_id, nvsmi_sm, nvsmi_mem)
 
                     trace = [
                         t_begin,
@@ -726,23 +734,19 @@ def sofa_preprocess(logdir, cfg):
                     if nvsmi_id == 0:
                         t = t + 1
     nvsmi_sm_traces = list_to_csv_and_traces(
-                logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
+        logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
     nvsmi_mem_traces = list_to_csv_and_traces(
-                logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
+        logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
 
-
-
-    # TODO: align cpu time and gpu time
-    t_nv = sys.float_info.min
+    t_first_nv = sys.float_info.max
     for i in xrange(len(cpu_traces)):
-        # print("name:%s"%cpu_traces.loc[i,'name'])
-        if cpu_traces.iat[i, 11].find(
-                'nv_alloc_system_pages') != -1 and float(cpu_traces.iat[i, 0]) > t_nv:
-            t_nv = float(cpu_traces.iat[i, 0])
-    if t_nv > sys.float_info.min:
-        t_glb_gpu_base = t_nv + 0.05
-        print("t_base: cpu=%lf gpu=%lf" % (t_glb_base, t_glb_gpu_base))
+        if re.search('_nv\d+rm', cpu_traces.iat[i,11]) is not None and float(cpu_traces.iat[i,0]) < t_first_nv:
+            t_first_nv = float(cpu_traces.iat[i, 0])
 
+    if t_first_nv == sys.float_info.max:
+        print_warning("'_nv*rm' was not found.")
+        t_first_nv = t_glb_base
+    print("t_first_nv: %lf" % (t_first_nv))
     # Apply filters for cpu traces
     df_grouped = cpu_traces.groupby('name')
     filtered_groups = []
@@ -797,13 +801,41 @@ def sofa_preprocess(logdir, cfg):
             " 2> " +
             logdir +
             "gputrace.tmp")
+
+        # TODO: align cpu time and gpu time
+        os.system(
+            "nvprof --print-api-trace -i " +
+            nvvp_filename +
+            " 2> " +
+            logdir +
+            "nvapi.txt")
+        with open(logdir + 'nvapi.txt') as f:
+            lines = f.readlines()
+            t_api_offset = 0.0
+            for line in lines:
+                if line.find('cudaMemcpy') != -1:
+                    ts = line.split()[0]
+                    if ts.find('ms') != -1:
+                        t_api_offset = int(
+                            re.search(r'\d+', ts).group()) * 1e-3
+                    elif ts.find('us') != -1:
+                        t_api_offset = int(
+                            re.search(r'\d+', ts).group()) * 1e-6
+                    else:
+                        t_api_offset = int(re.search(r'\d+', ts).group()) * 1.0
+                    break
+            print('t_api_offset = %lf' % t_api_offset)
+            print('cfg.gpu_time_offset = %lf' % (cfg.gpu_time_offset * 1e-3))
+            t_glb_gpu_base = t_api_offset + t_first_nv + cfg.gpu_time_offset * 1e-3
+        print t_glb_gpu_base
+
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
         num_cudaproc = num_cudaproc + 1
         with open(logdir + 'gputrace.tmp') as f:
             records = f.readlines()
             # print(records[1])
 
-            if len(records)>0 and records[1].split(',')[0] == '"Start"':
+            if len(records) > 0 and records[1].split(',')[0] == '"Start"':
                 indices = records[1].replace(
                     '"', '').replace(
                     '\n', '').split(',')
@@ -860,8 +892,8 @@ def sofa_preprocess(logdir, cfg):
             else:
                 print_warning(
                     "gputrace existed, but no kernel traces were recorded.")
-		
-    		os.system('cat %s/gputrace.tmp' % logdir)
+
+                os.system('cat %s/gputrace.tmp' % logdir)
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
