@@ -72,7 +72,7 @@ def sofa_record(command, logdir, cfg):
             profile_command = 'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,bus-cycles -o %s/perf.data -F %s %s -- %s ' % (logdir, logdir, sample_freq, perf_options, command)
         else:
             print_warning('Profile without NVPROF')
-            profile_command = 'perf record -o %s/perf.data -e cycles,bus-cycles %s -F %s %s -- %s' % (logdir, logdir, sample_freq, perf_options, command)
+            profile_command = 'perf record -o %s/perf.data -e cycles,bus-cycles -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
         print_info( profile_command)
         os.system( profile_command)
         print_info("Epilog of Recording...")

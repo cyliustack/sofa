@@ -383,33 +383,34 @@ def sofa_analyze(logdir, cfg):
     filein_cpu = logdir + "cputrace.csv"
     filein_vmstat = logdir + "vmstat_trace.csv"
     
-    with open(logdir + 'nvlink_topo.txt') as f:
-        lines = f.readlines()
-        title = lines[0]
-        num_gpus = 1 
-        for word in title.split():
-            if re.match(r'GPU', word) != None :
-               num_gpus = num_gpus + 1 
-        print_info('# of GPUs: ' + str(num_gpus) )
-        edges = []
-        for i in xrange(num_gpus):
-            connections = lines[1+i].split()
-            for j in xrange(len(connections)):
-                if connections[j] == 'NV1' or connections[j] == 'NV2':
-                    edges.append((i,j-1))
-                    #print('%d connects to %d' % (i, j-1))
-        #print(edges)
-        G = nx.DiGraph(edges)           
-        for cycle in nx.simple_cycles(G):
-            if len(cycle) == num_gpus:
-                print("One of the recommended %d rings" % len(cycle) )
-                print(cycle)
-                os.system("mkdir -p /tmp/sofa_hints/")
-                xring_order=''
-                for node in cycle:
-                    xring_order = xring_order + str(node) + ','
-                os.system("echo 'export CUDA_VISIBLE_DEVICES="+xring_order+"' > /tmp/sofa_hints/xring_order.txt")
-                break
+    if os.path.isfile('%s/nvlink_topo.txt' % logdir):
+        with open(logdir + 'nvlink_topo.txt') as f:
+            lines = f.readlines()
+            title = lines[0]
+            num_gpus = 1 
+            for word in title.split():
+                if re.match(r'GPU', word) != None :
+                   num_gpus = num_gpus + 1 
+            print_info('# of GPUs: ' + str(num_gpus) )
+            edges = []
+            for i in xrange(num_gpus):
+                connections = lines[1+i].split()
+                for j in xrange(len(connections)):
+                    if connections[j] == 'NV1' or connections[j] == 'NV2':
+                        edges.append((i,j-1))
+                        #print('%d connects to %d' % (i, j-1))
+            #print(edges)
+            G = nx.DiGraph(edges)           
+            for cycle in nx.simple_cycles(G):
+                if len(cycle) == num_gpus:
+                    print("One of the recommended %d rings" % len(cycle) )
+                    print(cycle)
+                    os.system("mkdir -p /tmp/sofa_hints/")
+                    xring_order=''
+                    for node in cycle:
+                        xring_order = xring_order + str(node) + ','
+                    os.system("echo 'export CUDA_VISIBLE_DEVICES="+xring_order+"' > /tmp/sofa_hints/xring_order.txt")
+                    break
     #try:
     #    df_mpstat = pd.read_csv(filein_mpstat)
     #    mpstat_profile(logdir, cfg, df_mpstat)
@@ -425,7 +426,7 @@ def sofa_analyze(logdir, cfg):
     except IOError:
         print_warning(
             "cputrace.csv is not found")
-        quit()
+        #quit()
 
     try:
         df_gpu = pd.read_csv(filein_gpu)

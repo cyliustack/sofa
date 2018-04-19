@@ -670,73 +670,72 @@ def sofa_preprocess(logdir, cfg):
     #        0     0     0     0     0
     #        1     0     0     0     0
     #        2     0     0     0     0
-    with open('%s/nvsmi.txt' % logdir) as f:
-        lines = f.readlines()
-        print_info("Length of nvsmi_traces = %d" % len(lines))
-        if len(lines) > 0:
-            nvsmi_sm_list = []
-            nvsmi_mem_list = []
-            nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            t_base = t = 0
-            for i in xrange(len(lines)):
-                if lines[i].find('gpu') == -1 \
-                        and lines[i].find('Idx') == -1:
-                    fields = lines[i].split()
-                    if len(fields) < 5:
-                        continue
-                    nvsmi_id = int(fields[0])
-                    nvsmi_sm = float(fields[1]) + 1e-5
-                    nvsmi_mem = float(fields[2]) + 1e-5
+    if os.path.isfile('%s/nvsmi.txt' % logdir):
+        with open('%s/nvsmi.txt' % logdir) as f:
+            lines = f.readlines()
+            print_info("Length of nvsmi_traces = %d" % len(lines))
+            if len(lines) > 0:
+                nvsmi_sm_list = []
+                nvsmi_mem_list = []
+                nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                t_base = t = 0
+                for i in xrange(len(lines)):
+                    if lines[i].find('gpu') == -1 \
+                            and lines[i].find('Idx') == -1:
+                        fields = lines[i].split()
+                        if len(fields) < 5:
+                            continue
+                        nvsmi_id = int(fields[0])
+                        nvsmi_sm = float(fields[1]) + 1e-5
+                        nvsmi_mem = float(fields[2]) + 1e-5
 
-                    t_begin = t - t_base + t_glb_base
-                    deviceId = cpuid = nvsmi_id
-                    event = -1
-                    copyKind = -1
-                    payload = -1
-                    bandwidth = -1
-                    pkt_src = pkt_dst = -1
-                    pid = tid = -1
-                    nvsmi_info = "GPUID.sm.mem=%d_%lf_%lf" % (
-                        nvsmi_id, nvsmi_sm, nvsmi_mem)
+                        t_begin = t - t_base + t_glb_base
+                        deviceId = cpuid = nvsmi_id
+                        event = -1
+                        copyKind = -1
+                        payload = -1
+                        bandwidth = -1
+                        pkt_src = pkt_dst = -1
+                        pid = tid = -1
+                        nvsmi_info = "GPUID.sm.mem=%d_%lf_%lf" % (
+                            nvsmi_id, nvsmi_sm, nvsmi_mem)
 
-                    trace = [
-                        t_begin,
-                        event,
-                        nvsmi_sm,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        nvsmi_info,
-                        cpuid]
-                    nvsmi_sm_list.append(trace)
+                        trace = [
+                            t_begin,
+                            event,
+                            nvsmi_sm,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            nvsmi_info,
+                            cpuid]
+                        nvsmi_sm_list.append(trace)
 
-                    trace = [
-                        t_begin,
-                        event,
-                        nvsmi_mem,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        nvsmi_info,
-                        cpuid]
-                    nvsmi_mem_list.append(trace)
-                    if nvsmi_id == 0:
-                        t = t + 1
-    nvsmi_sm_traces = list_to_csv_and_traces(
-        logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
-    nvsmi_mem_traces = list_to_csv_and_traces(
-        logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
+                        trace = [
+                            t_begin,
+                            event,
+                            nvsmi_mem,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            nvsmi_info,
+                            cpuid]
+                        nvsmi_mem_list.append(trace)
+                        if nvsmi_id == 0:
+                            t = t + 1
+                nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
+                nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
 
     t_first_nv = sys.float_info.max
     for i in xrange(len(cpu_traces)):
@@ -748,10 +747,11 @@ def sofa_preprocess(logdir, cfg):
         t_first_nv = t_glb_base
     print("t_first_nv: %lf" % (t_first_nv))
     # Apply filters for cpu traces
-    df_grouped = cpu_traces.groupby('name')
+    
     filtered_groups = []
     color_of_filtered_group = []
     if len(cpu_traces) > 0:
+        df_grouped = cpu_traces.groupby('name')
         for filter in cfg.cpu_filters:
             group = cpu_traces[cpu_traces['name'].str.contains(
                 filter.keyword)]
