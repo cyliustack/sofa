@@ -68,6 +68,8 @@ def sofa_record(command, logdir, cfg):
         else:
             perf_options = ''
 
+            
+        os.system('cp /proc/kallsyms %s/' % (logdir) )
         if int(os.system('command -v nvprof')) == 0:
             profile_command = 'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,bus-cycles -o %s/perf.data -F %s %s -- %s ' % (logdir, logdir, sample_freq, perf_options, command)
         else:

@@ -372,6 +372,8 @@ def sofa_preprocess(logdir, cfg):
     with open('%s/perf.script' % logdir, 'w') as logfile:
         subprocess.call(['perf',
                          'script',
+                         '--kallsym',
+                         '%s/kallsym' % logdir,
                          '-i',
                          '%s/perf.data' % logdir,
                          '-F',
