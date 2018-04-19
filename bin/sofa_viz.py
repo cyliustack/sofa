@@ -13,11 +13,13 @@ def sofa_viz(logdir, cfg):
 
     subprocess.Popen(['sleep', '2'])
     print_warning(
-        'If your rendering timeline is slow, please try \033[4msofa report --plot_ratio=10\033[24m to downsample scatter points.')
+        'If your rendering timeline is slow, please try \033[4msofa preprocess --plot_ratio=10\033[24m to downsample scatter points,')
+    print_warning('and then \033[4msofa viz\033[24m to see the downsampled results.')
     print_info(
-        'SOFA Visualization is listening on port \033[4m\033[97mhttp://localhost:8000\033[24m\033[0m\033[24m')
+        'SOFA Visualization is listening on port \033[4m\033[97mhttp://localhost:%d\033[24m\033[0m\033[24m' % (cfg.viz_port) )
+    print_info('To change port, please run command: \033[4msofa viz --viz_port=PortNumber\033[24m')
     print_info('Please open your browser to start profiling.')
     print_info('After profiling, please enter Ctrl+C to exit.')
     os.system(
-        'cd %s && python -m SimpleHTTPServer 1> /dev/null; cd -' %
-        (logdir))
+        'cd %s && python -m SimpleHTTPServer %d 2>&1 1> /dev/null; cd -' %
+        (logdir,cfg.viz_port))
