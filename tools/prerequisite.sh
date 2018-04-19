@@ -56,7 +56,8 @@ function install_packages()
             cmake tcpdump python-pip python-dev sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "CentOS"* ]]; then
-        sudo yum install \
+    	sudo yum install epel-release 
+	sudo yum install \
             perf cmake tcpdump libpcap-devel libconfig-devel boost-devel \
             centos-release-scl devtoolset-4-gcc* python-pip python-devel sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
