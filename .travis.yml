@@ -7,6 +7,7 @@ before_install:
   - ./tools/empower-tcpdump.sh $(whoami)
 install:
   - sudo ./install.sh /usr/local
-after_script:
+before_script:
   - source /usr/local/sofa/tools/activate.sh
-
+script:
+  - sofa stat "wget http://www.bbc.com/news"
