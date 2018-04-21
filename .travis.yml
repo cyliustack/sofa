@@ -1,0 +1,11 @@
+language: python
+python:
+  - 3.5
+before_install:
+  - ./tools/prerequisite.sh
+  - ./tools/empower-tcpdump.sh $(whoami)
+install:
+  - ./install.sh /usr/local
+after_script:
+  - source /usr/local/sofa/tools/activate.sh
+
