@@ -24,11 +24,12 @@ def sofa_record(command, logdir, cfg):
         print_error("sudo sysctl -w kernel.kptr_restrict=0")
         quit()
 
-    if int(subprocess.check_output(
-            ["cat", "/proc/sys/kernel/perf_event_paranoid"])) != -1:
-        print_error('PerfEvent is not avaiable, please try the command below:')
-        print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
-        quit()
+    if cfg.profile_all_cpus:
+        if int(subprocess.check_output(
+                ["cat", "/proc/sys/kernel/perf_event_paranoid"])) != -1:
+            print_error('PerfEvent is not avaiable, please try the command below:')
+            print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
+            quit()
 
     subprocess.call(['mkdir', '-p', logdir])
     os.system('rm %s/perf.data > /dev/null 2> /dev/null' % logdir)
