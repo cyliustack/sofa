@@ -10,23 +10,21 @@ import os
 from functools import partial
 from sofa_print import *
 import subprocess
-from time import sleep
+from time import sleep, time
 
 
 def sofa_record(command, logdir, cfg):
 
     print_info('SOFA_COMMAND: %s' % command)
     sample_freq = 99
-    if int(subprocess.check_output(
-            ["cat", "/proc/sys/kernel/kptr_restrict"])) != 0:
+    if int(open("/proc/sys/kernel/kptr_restrict").read()) != 0:
         print_error(
             "/proc/kallsyms permission is restricted, please try the command below:")
         print_error("sudo sysctl -w kernel.kptr_restrict=0")
         quit()
 
     if cfg.profile_all_cpus:
-        if int(subprocess.check_output(
-                ["cat", "/proc/sys/kernel/perf_event_paranoid"])) != -1:
+        if int(open("/proc/sys/kernel/perf_event_paranoid").read()) != -1:
             print_error('PerfEvent is not avaiable, please try the command below:')
             print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
             quit()
@@ -60,7 +58,8 @@ def sofa_record(command, logdir, cfg):
             with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
                 subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)  
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
-            subprocess.Popen(['date', '+%s'], stdout=logfile)
+            print >>open('%s/sofa_time.txt' % logdir, 'w'), int(time())
+            # print(int(time()), file=open('%s/sofa_time.txt' % logdir, 'w'))  # UPGRADE: py3
 
         print_info("Recording...")
 

@@ -409,7 +409,10 @@ def sofa_analyze(logdir, cfg):
                     xring_order=''
                     for node in cycle:
                         xring_order = xring_order + str(node) + ','
-                    os.system("echo 'export CUDA_VISIBLE_DEVICES="+xring_order+"' > /tmp/sofa_hints/xring_order.txt")
+                    with open("/tmp/sofa_hints/xring_order.txt", "w") as f:
+                        f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
+                    # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text('export CUDA_VISIBLE_DEVICES=' + xring_order)  # UPGRADE: py35
+                    # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text(f'export CUDA_VISIBLE_DEVICES=f{xring_order}')  # UPGRADE: py36
                     break
     #try:
     #    df_mpstat = pd.read_csv(filein_mpstat)
