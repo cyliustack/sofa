@@ -770,7 +770,7 @@ def sofa_preprocess(logdir, cfg):
     with open(logdir + 'net.tmp') as f:
         packets = lines = f.readlines()
         print_info("Length of net_traces = %d" % len(packets))
-        if len(packets) > 0:
+        if packets:
             t_base = float(lines[0].split()[0])
             with mp.Pool(processes=cpu_count) as pool:
                 res = pool.map(
@@ -802,9 +802,8 @@ def sofa_preprocess(logdir, cfg):
         with open(logdir + "nvapi.txt", "w") as f:
             subprocess.call(["nvprof", "--print-api-trace", "-i", nvvp_filename], stderr=f)
         with open(logdir + 'nvapi.txt') as f:
-            lines = f.readlines()
             t_api_offset = 0.0
-            for line in lines:
+            for line in f:
                 if line.find('cudaMemcpy') != -1:
                     ts = line.split()[0]
                     if ts.find('ms') != -1:
