@@ -762,13 +762,11 @@ def sofa_preprocess(logdir, cfg):
                                     'keyword': filter.keyword})
 
     # ============ Preprocessing Network Trace ==========================
-    os.system(
-        "tcpdump -q -n -tt -r " +
-        logdir +
-        "sofa.pcap" +
-        " > " +
-        logdir +
-        "net.tmp")
+    with open(logdir + 'net.tmp', 'w') as f:
+        subprocess.check_output(
+            ["tcpdump", "-q", "-n", "-tt", "-r",
+            logdir,
+            "sofa.pcap"], stdout=f)
     with open(logdir + 'net.tmp') as f:
         packets = lines = f.readlines()
         print_info("Length of net_traces = %d" % len(packets))
