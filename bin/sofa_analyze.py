@@ -406,9 +406,7 @@ def sofa_analyze(logdir, cfg):
                     print("One of the recommended %d rings" % len(cycle) )
                     print(cycle)
                     os.system("mkdir -p /tmp/sofa_hints/")
-                    xring_order=''
-                    for node in cycle:
-                        xring_order = xring_order + str(node) + ','
+                    xring_order = ','.join(map(str, cycle))
                     with open("/tmp/sofa_hints/xring_order.txt", "w") as f:
                         f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
                     # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text('export CUDA_VISIBLE_DEVICES=' + xring_order)  # UPGRADE: py35
