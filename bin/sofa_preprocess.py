@@ -797,20 +797,12 @@ def sofa_preprocess(logdir, cfg):
     indices = []
     for nvvp_filename in glob.glob(logdir + "gputrace*[0-9].nvvp"):
         print_progress("Read " + nvvp_filename + " by nvprof -- begin")
-        os.system(
-            "nvprof --csv --print-gpu-trace -i " +
-            nvvp_filename +
-            " 2> " +
-            logdir +
-            "gputrace.tmp")
+        with open(logdir + "gputrace.tmp", "w") as f:
+            subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "-i", nvvp_filename], stderr=f)
 
         # TODO: align cpu time and gpu time
-        os.system(
-            "nvprof --print-api-trace -i " +
-            nvvp_filename +
-            " 2> " +
-            logdir +
-            "nvapi.txt")
+        with open(logdir + "nvapi.txt", "w") as f:
+            subprocess.call(["nvprof", "--print-api-trace", "-i", nvvp_filename], stderr=f)
         with open(logdir + 'nvapi.txt') as f:
             lines = f.readlines()
             t_api_offset = 0.0
