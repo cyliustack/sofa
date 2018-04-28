@@ -382,7 +382,7 @@ def sofa_preprocess(logdir, cfg):
 
     # sys.stdout.flush()
     with open(logdir + 'sofa_time.txt') as f:
-        t_glb_base = float(f.readlines()[0])
+        t_glb_base = float(f.readline())
         t_glb_net_base = t_glb_base
         t_glb_gpu_base = t_glb_base
         print t_glb_base
