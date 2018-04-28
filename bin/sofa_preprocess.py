@@ -425,14 +425,14 @@ def sofa_preprocess(logdir, cfg):
         samples = f.readlines()
         print_info("Length of cpu_traces = %d" % len(samples))
         if len(samples) > 0:
-            pool = mp.Pool(processes=cpu_count)
             t_base = float((samples[0].split())[1].split(':')[0])
-            res = pool.map(
-                partial(
-                    cpu_trace_read,
-                    t_offset=t_glb_base -
-                    t_base),
-                samples)
+            with mp.Pool(processes=cpu_count) as pool:
+                res = pool.map(
+                    partial(
+                        cpu_trace_read,
+                        t_offset=t_glb_base -
+                        t_base),
+                    samples)
             cpu_traces = pd.DataFrame(res)
             cpu_traces.columns = sofa_fieldnames
             cpu_traces.to_csv(
@@ -774,13 +774,13 @@ def sofa_preprocess(logdir, cfg):
         print_info("Length of net_traces = %d" % len(packets))
         if len(packets) > 0:
             t_base = float(lines[0].split()[0])
-            pool = mp.Pool(processes=cpu_count)
-            res = pool.map(
-                partial(
-                    net_trace_read,
-                    t_offset=t_glb_net_base -
-                    t_base),
-                packets)
+            with mp.Pool(processes=cpu_count) as pool:
+                res = pool.map(
+                    partial(
+                        net_trace_read,
+                        t_offset=t_glb_net_base -
+                        t_base),
+                    packets)
             res_viz = list_downsample(res, cfg.plot_ratio)
             net_traces = pd.DataFrame(res_viz)
             net_traces.columns = sofa_fieldnames
@@ -859,17 +859,17 @@ def sofa_preprocess(logdir, cfg):
                 print_info("Length of gpu_traces = %d" % len(records))
                 t_base = float(records[0].split(',')[0])
                 t_offset = t_glb_gpu_base - t_base
-                pool = mp.Pool(processes=cpu_count)
-                res = pool.map(
-                    partial(
-                        gpu_trace_read,
-                        indices=indices,
-                        ts_rescale=ts_rescale,
-                        dt_rescale=dt_rescale,
-                        n_cudaproc=num_cudaproc,
-                        t_offset=t_glb_gpu_base -
-                        t_base),
-                    records)
+                with mp.Pool(processes=cpu_count) as pool:
+                    res = pool.map(
+                        partial(
+                            gpu_trace_read,
+                            indices=indices,
+                            ts_rescale=ts_rescale,
+                            dt_rescale=dt_rescale,
+                            n_cudaproc=num_cudaproc,
+                            t_offset=t_glb_gpu_base -
+                            t_base),
+                        records)
                 gpu_traces = pd.DataFrame(res)
                 gpu_traces.columns = sofa_fieldnames
                 gpu_traces.to_csv(
