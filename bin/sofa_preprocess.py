@@ -17,7 +17,7 @@ from sofa_print import *
 
 def list_downsample(list_in, plot_ratio):
     new_list = []
-    for i in xrange(len(list_in)):
+    for i in range(len(list_in)):
         if i % plot_ratio == 0:
             # print("%d"%(i))
             new_list.append(list_in[i])
@@ -86,7 +86,7 @@ def net_trace_read(packet, t_offset):
     bandwidth = 125.0e6
     pkt_src = 0
     pkt_dst = 0
-    for i in xrange(4):
+    for i in range(4):
         pkt_src = pkt_src + \
             int(packet.split()[2].split('.')[i]) * np.power(1000, 3 - i)
         pkt_dst = pkt_dst + \
@@ -280,15 +280,15 @@ class bcolors:
 
 
 def print_warning(content):
-    print(bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC)
+    print((bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC))
 
 
 def print_info(content):
-    print(bcolors.OKGREEN + "[INFO] " + content + bcolors.ENDC)
+    print((bcolors.OKGREEN + "[INFO] " + content + bcolors.ENDC))
 
 
 def print_progress(content):
-    print(bcolors.OKBLUE + "[PROGRESS] " + content + bcolors.ENDC)
+    print((bcolors.OKBLUE + "[PROGRESS] " + content + bcolors.ENDC))
 
 
 class SOFATrace:
@@ -385,8 +385,8 @@ def sofa_preprocess(logdir, cfg):
         t_glb_base = float(f.readline())
         t_glb_net_base = t_glb_base
         t_glb_gpu_base = t_glb_base
-        print t_glb_base
-        print t_glb_net_base
+        print(t_glb_base)
+        print(t_glb_net_base)
 
     net_traces = []
     cpu_traces = []
@@ -470,7 +470,7 @@ def sofa_preprocess(logdir, cfg):
             vm_wa_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             vm_st_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             t_base = t = 0
-            for i in xrange(len(lines)):
+            for i in range(len(lines)):
                 if lines[i].find('procs') == - \
                         1 and lines[i].find('swpd') == -1:
                     fields = lines[i].split()
@@ -682,7 +682,7 @@ def sofa_preprocess(logdir, cfg):
                 nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
                 nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
                 t_base = t = 0
-                for i in xrange(len(lines)):
+                for i in range(len(lines)):
                     if lines[i].find('gpu') == -1 \
                             and lines[i].find('Idx') == -1:
                         fields = lines[i].split()
@@ -740,14 +740,14 @@ def sofa_preprocess(logdir, cfg):
                 nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
 
     t_first_nv = sys.float_info.max
-    for i in xrange(len(cpu_traces)):
+    for i in range(len(cpu_traces)):
         if re.search('_nv\d+rm', cpu_traces.iat[i,11]) is not None and float(cpu_traces.iat[i,0]) < t_first_nv:
             t_first_nv = float(cpu_traces.iat[i, 0])
 
     if t_first_nv == sys.float_info.max:
         print_warning("'_nv*rm' was not found.")
         t_first_nv = t_glb_base
-    print("t_first_nv: %lf" % (t_first_nv))
+    print(("t_first_nv: %lf" % (t_first_nv)))
     # Apply filters for cpu traces
     
     filtered_groups = []
@@ -763,10 +763,9 @@ def sofa_preprocess(logdir, cfg):
 
     # ============ Preprocessing Network Trace ==========================
     with open(logdir + 'net.tmp', 'w') as f:
-        subprocess.check_output(
+        subprocess.check_call(
             ["tcpdump", "-q", "-n", "-tt", "-r",
-            logdir,
-            "sofa.pcap"], stdout=f)
+            "%s/sofa.pcap"%logdir ], stdout=f)
     with open(logdir + 'net.tmp') as f:
         packets = lines = f.readlines()
         print_info("Length of net_traces = %d" % len(packets))
@@ -815,10 +814,10 @@ def sofa_preprocess(logdir, cfg):
                     else:
                         t_api_offset = int(re.search(r'\d+', ts).group()) * 1.0
                     break
-            print('t_api_offset = %lf' % t_api_offset)
-            print('cfg.gpu_time_offset = %lf' % (cfg.gpu_time_offset * 1e-3))
+            print(('t_api_offset = %lf' % t_api_offset))
+            print(('cfg.gpu_time_offset = %lf' % (cfg.gpu_time_offset * 1e-3)))
             t_glb_gpu_base = t_api_offset + t_first_nv + cfg.gpu_time_offset * 1e-3
-        print t_glb_gpu_base
+        print(t_glb_gpu_base)
 
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
         num_cudaproc = num_cudaproc + 1

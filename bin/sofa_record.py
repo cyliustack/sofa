@@ -58,8 +58,7 @@ def sofa_record(command, logdir, cfg):
             with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
                 subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)  
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
-            print >>open('%s/sofa_time.txt' % logdir, 'w'), int(time())
-            # print(int(time()), file=open('%s/sofa_time.txt' % logdir, 'w'))  # UPGRADE: py3
+            logfile.write(str(int(time()))+'\n')
 
         print_info("Recording...")
 
@@ -83,7 +82,7 @@ def sofa_record(command, logdir, cfg):
         os.system('pkill vmstat')
         os.system('pkill nvidia-smi')
     except BaseException:
-        print "Unexpected error:", sys.exc_info()[0]
+        print("Unexpected error:", sys.exc_info()[0])
         while os.system('pkill tcpdump')  != 0 or \
                 os.system('pkill mpstat') != 0 or \
                 os.system('pkill vmstat') != 0 or \
