@@ -23,7 +23,7 @@ if __name__ == "__main__":
     sys.stdout.flush()
 
     
-    if not ( int(sys.version_info[0]) >= 3 and int(sys.version_info[1]) >= 4 ):
+    if sys.version_info < (3,4) :
         print_error("Your Python version is %s.%s.%s" % sys.version_info[:3])
         print_error("But SOFA requires minimum version of Python 3.4.")
         quit()
