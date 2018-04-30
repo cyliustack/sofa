@@ -30,16 +30,16 @@ def sofa_record(command, logdir, cfg):
             quit()
 
     subprocess.call(['mkdir', '-p', logdir])
-    os.system('rm %s/perf.data > /dev/null 2> /dev/null' % logdir)
-    os.system('rm %s/sofa.pcap > /dev/null 2> /dev/null' % logdir)
-    os.system('rm %s/gputrace*.nvvp > /dev/null 2> /dev/null' % logdir)
-    os.system('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir)
-    os.system('rm %s/*.csv > /dev/null 2> /dev/null' % logdir)
-    os.system('rm %s/*.txt > /dev/null 2> /dev/null' % logdir)
+    subprocess.call('rm %s/perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
+    subprocess.call('rm %s/sofa.pcap > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/gputrace*.nvvp > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/*.txt > /dev/null 2> /dev/null' % logdir, shell=True)
     try:
         print_info("Prolog of Recording...")
         with open(os.devnull, 'w') as FNULL:
-            subprocess.Popen(["tcpdump",
+           p_tcpdump =  subprocess.Popen(["tcpdump",
                               '-i',
                               'any',
                               '-v',
@@ -48,15 +48,15 @@ def sofa_record(command, logdir, cfg):
                               '%s/sofa.pcap' % logdir],
                              stderr=FNULL)
         with open('%s/mpstat.txt' % logdir, 'w') as logfile:
-            subprocess.Popen(
+            p_mpstat = subprocess.Popen(
                 ['mpstat', '-P', 'ALL', '1', '600'], stdout=logfile)
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
-            subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
+            p_vmstat = subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
         if int(os.system('command -v nvprof')) == 0:
             with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
-                subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
+                p_nvsmi = subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
             with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
-                subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)  
+                p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)  
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
             logfile.write(str(int(time()))+'\n')
 
@@ -68,19 +68,25 @@ def sofa_record(command, logdir, cfg):
             perf_options = ''
 
             
-        os.system('cp /proc/kallsyms %s/' % (logdir) )
+        subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
+        subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
         if int(os.system('command -v nvprof')) == 0:
             profile_command = 'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,bus-cycles -o %s/perf.data -F %s %s -- %s ' % (logdir, logdir, sample_freq, perf_options, command)
         else:
             print_warning('Profile without NVPROF')
             profile_command = 'perf record -o %s/perf.data -e cycles,bus-cycles -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
         print_info( profile_command)
-        os.system( profile_command)
+        subprocess.call(profile_command.split())
         print_info("Epilog of Recording...")
-        os.system('pkill tcpdump')
-        os.system('pkill mpstat')
-        os.system('pkill vmstat')
-        os.system('pkill nvidia-smi')
+        p_tcpdump.terminate()
+        p_vmstat.terminate()
+        p_mpstat.terminate()
+        p_nvtopo.terminate()
+        p_nvsmi.terminate()
+        #os.system('pkill tcpdump')
+        #os.system('pkill mpstat')
+        #os.system('pkill vmstat')
+        #os.system('pkill nvidia-smi')
     except BaseException:
         print("Unexpected error:", sys.exc_info()[0])
         while os.system('pkill tcpdump')  != 0 or \
