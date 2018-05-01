@@ -28,7 +28,8 @@ def sofa_record(command, logdir, cfg):
         print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
         quit()
 
-    subprocess.call(['mkdir', '-p', logdir])
+    if subprocess.call(['mkdir', '-p', logdir]):
+        quit()
     subprocess.call('rm %s/perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
     subprocess.call('rm %s/sofa.pcap > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/gputrace*.nvvp > /dev/null 2> /dev/null' % logdir, shell=True)
