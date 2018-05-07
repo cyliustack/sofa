@@ -15,6 +15,12 @@ from time import sleep, time
 
 def sofa_record(command, logdir, cfg):
 
+    p_tcpdump = None
+    p_mpstat  = None
+    p_vmstat  = None
+    p_nvsmi   = None
+    p_nvtopo  = None 
+
     print_info('SOFA_COMMAND: %s' % command)
     sample_freq = 99
     if int(open("/proc/sys/kernel/kptr_restrict").read()) != 0:
@@ -52,7 +58,7 @@ def sofa_record(command, logdir, cfg):
                 ['mpstat', '-P', 'ALL', '1', '600'], stdout=logfile)
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
             p_vmstat = subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
-        if int(os.system('command -v nvprof')) == 0:
+        if int(os.system('command -v nvprofx')) == 0:
             with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
                 p_nvsmi = subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
             with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
@@ -78,24 +84,33 @@ def sofa_record(command, logdir, cfg):
         print_info( profile_command)
         subprocess.call(profile_command.split())
         print_info("Epilog of Recording...")
-        p_tcpdump.terminate()
-        p_vmstat.terminate()
-        p_mpstat.terminate()
-        p_nvtopo.terminate()
-        p_nvsmi.terminate()
+        if p_tcpdump != None:
+            p_tcpdump.terminate()
+        if p_vmstat != None:
+            p_vmstat.terminate()
+        if p_mpstat != None:
+            p_mpstat.terminate()
+        if p_nvtopo != None:
+            p_nvtopo.terminate()
+        if p_nvsmi != None:
+            p_nvsmi.terminate()
         #os.system('pkill tcpdump')
         #os.system('pkill mpstat')
         #os.system('pkill vmstat')
         #os.system('pkill nvidia-smi')
     except BaseException:
         print("Unexpected error:", sys.exc_info()[0])
-        while os.system('pkill tcpdump')  != 0 or \
-                os.system('pkill mpstat') != 0 or \
-                os.system('pkill vmstat') != 0 or \
-                os.system('pkill nvidia-smi') != 0:
-            print_warning(
-                "Try to kill tcpdump, mpstat, vmstat and nvidia-smi. If not, Ctrl+C to stop the action.")
-            sleep(0.5)
+        if p_tcpdump != None:
+            p_tcpdump.kill()
+        if p_vmstat != None:
+            p_vmstat.kill()
+        if p_mpstat != None:
+            p_mpstat.kill()
+        if p_nvtopo != None:
+            p_nvtopo.kill()
+        if p_nvsmi != None:
+            p_nvsmi.kill()
+        
         print_info("tcpdump, mpstat, vmstat and nvidia-smi are killed.")
         raise
     print_info("End of Recording")
