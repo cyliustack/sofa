@@ -48,25 +48,25 @@ function install_packages()
 {
     echo -e "${C_GREEN}Installing other packages...${C_NONE}"
 
-    inform_sudo "Running sudo for installing packages"
+    #inform_sudo "Running sudo for installing packages"
     if [[ "$OS" == "Ubuntu"* ]] || [[ "$OS" == "Debian"* ]]; then
-        sudo apt-get install \
+        apt-get install \
             libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
             linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic \
             cmake tcpdump python3-pip python3-dev sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "CentOS"* ]]; then
-    	sudo yum install epel-release 
-	sudo yum install \
+        yum install epel-release 
+        yum install \
             perf tcpdump\
             centos-release-scl devtoolset-4-gcc* python34-pip python34-devel sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "Fedora"* ]]; then
-        sudo dnf -y install \
+        dnf -y install \
             perf cmake tcpdump boost-devel libconfig-devel libpcap-devel cmake python34-pip python34-devel sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "Arch"* ]]; then
-        sudo pacman -S \
+        pacman -S \
             linux-tools cmake boost cmake python-pip python2-pip tcpdump sysstat
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"
