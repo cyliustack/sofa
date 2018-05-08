@@ -1,0 +1,16 @@
+language: python
+virtualenv:
+  system_site_packages: true
+sudo: required
+before_install:
+  - sudo ./tools/prerequisite.sh
+  - pip install numpy 
+  - pip install pandas 
+  - pip install networkx
+  - ./tools/empower-tcpdump.sh $(whoami)
+install:
+  - sudo ./install.sh /usr/local
+before_script:
+  - source /usr/local/sofa/tools/activate.sh
+script:
+  - sofa stat "wget http://www.bbc.com/news"
