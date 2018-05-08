@@ -41,10 +41,11 @@ function install_python_packages()
 
     # Install for Python3
     if [[ "$OS" == "Ubuntu"* ]] && [[ "$(lsb_release -rs)" == "14.04" ]] ;then
-        apt-get install -y python3-numpy python3-pandas python3-networkx python3-cxxfilt
+        apt-get install -y python3-numpy python3-pandas python3-networkx 
     else 
-        pip3 install --user numpy pandas networks cxxfilt
+        pip3 install --user numpy pandas networks 
     fi
+    pip3 install --user cxxfilt
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
