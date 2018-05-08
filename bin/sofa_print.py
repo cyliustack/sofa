@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
