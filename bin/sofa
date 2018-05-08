@@ -22,6 +22,12 @@ if __name__ == "__main__":
     usr_command = None
     sys.stdout.flush()
 
+    
+    if sys.version_info < (3,4) :
+        print_error("Your Python version is %s.%s.%s" % sys.version_info[:3])
+        print_error("But SOFA requires minimum version of Python 3.4.")
+        quit()
+
     parser = argparse.ArgumentParser(description='SOFA')
     parser.add_argument(
         '--logdir',

@@ -17,7 +17,7 @@ from sofa_print import *
 
 def list_downsample(list_in, plot_ratio):
     new_list = []
-    for i in xrange(len(list_in)):
+    for i in range(len(list_in)):
         if i % plot_ratio == 0:
             # print("%d"%(i))
             new_list.append(list_in[i])
@@ -86,7 +86,7 @@ def net_trace_read(packet, t_offset):
     bandwidth = 125.0e6
     pkt_src = 0
     pkt_dst = 0
-    for i in xrange(4):
+    for i in range(4):
         pkt_src = pkt_src + \
             int(packet.split()[2].split('.')[i]) * np.power(1000, 3 - i)
         pkt_dst = pkt_dst + \
@@ -280,15 +280,15 @@ class bcolors:
 
 
 def print_warning(content):
-    print(bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC)
+    print((bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC))
 
 
 def print_info(content):
-    print(bcolors.OKGREEN + "[INFO] " + content + bcolors.ENDC)
+    print((bcolors.OKGREEN + "[INFO] " + content + bcolors.ENDC))
 
 
 def print_progress(content):
-    print(bcolors.OKBLUE + "[PROGRESS] " + content + bcolors.ENDC)
+    print((bcolors.OKBLUE + "[PROGRESS] " + content + bcolors.ENDC))
 
 
 class SOFATrace:
@@ -382,11 +382,11 @@ def sofa_preprocess(logdir, cfg):
 
     # sys.stdout.flush()
     with open(logdir + 'sofa_time.txt') as f:
-        t_glb_base = float(f.readlines()[0])
+        t_glb_base = float(f.readline())
         t_glb_net_base = t_glb_base
         t_glb_gpu_base = t_glb_base
-        print t_glb_base
-        print t_glb_net_base
+        print(t_glb_base)
+        print(t_glb_net_base)
 
     net_traces = []
     cpu_traces = []
@@ -425,14 +425,14 @@ def sofa_preprocess(logdir, cfg):
         samples = f.readlines()
         print_info("Length of cpu_traces = %d" % len(samples))
         if len(samples) > 0:
-            pool = mp.Pool(processes=cpu_count)
             t_base = float((samples[0].split())[1].split(':')[0])
-            res = pool.map(
-                partial(
-                    cpu_trace_read,
-                    t_offset=t_glb_base -
-                    t_base),
-                samples)
+            with mp.Pool(processes=cpu_count) as pool:
+                res = pool.map(
+                    partial(
+                        cpu_trace_read,
+                        t_offset=t_glb_base -
+                        t_base),
+                    samples)
             cpu_traces = pd.DataFrame(res)
             cpu_traces.columns = sofa_fieldnames
             cpu_traces.to_csv(
@@ -470,7 +470,7 @@ def sofa_preprocess(logdir, cfg):
             vm_wa_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             vm_st_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             t_base = t = 0
-            for i in xrange(len(lines)):
+            for i in range(len(lines)):
                 if lines[i].find('procs') == - \
                         1 and lines[i].find('swpd') == -1:
                     fields = lines[i].split()
@@ -682,7 +682,7 @@ def sofa_preprocess(logdir, cfg):
                 nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
                 nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
                 t_base = t = 0
-                for i in xrange(len(lines)):
+                for i in range(len(lines)):
                     if lines[i].find('gpu') == -1 \
                             and lines[i].find('Idx') == -1:
                         fields = lines[i].split()
@@ -740,14 +740,14 @@ def sofa_preprocess(logdir, cfg):
                 nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
 
     t_first_nv = sys.float_info.max
-    for i in xrange(len(cpu_traces)):
+    for i in range(len(cpu_traces)):
         if re.search('_nv\d+rm', cpu_traces.iat[i,11]) is not None and float(cpu_traces.iat[i,0]) < t_first_nv:
             t_first_nv = float(cpu_traces.iat[i, 0])
 
     if t_first_nv == sys.float_info.max:
         print_warning("'_nv*rm' was not found.")
         t_first_nv = t_glb_base
-    print("t_first_nv: %lf" % (t_first_nv))
+    print(("t_first_nv: %lf" % (t_first_nv)))
     # Apply filters for cpu traces
     
     filtered_groups = []
@@ -762,25 +762,22 @@ def sofa_preprocess(logdir, cfg):
                                     'keyword': filter.keyword})
 
     # ============ Preprocessing Network Trace ==========================
-    os.system(
-        "tcpdump -q -n -tt -r " +
-        logdir +
-        "sofa.pcap" +
-        " > " +
-        logdir +
-        "net.tmp")
+    with open(logdir + 'net.tmp', 'w') as f:
+        subprocess.check_call(
+            ["tcpdump", "-q", "-n", "-tt", "-r",
+            "%s/sofa.pcap"%logdir ], stdout=f)
     with open(logdir + 'net.tmp') as f:
         packets = lines = f.readlines()
         print_info("Length of net_traces = %d" % len(packets))
-        if len(packets) > 0:
+        if packets:
             t_base = float(lines[0].split()[0])
-            pool = mp.Pool(processes=cpu_count)
-            res = pool.map(
-                partial(
-                    net_trace_read,
-                    t_offset=t_glb_net_base -
-                    t_base),
-                packets)
+            with mp.Pool(processes=cpu_count) as pool:
+                res = pool.map(
+                    partial(
+                        net_trace_read,
+                        t_offset=t_glb_net_base -
+                        t_base),
+                    packets)
             res_viz = list_downsample(res, cfg.plot_ratio)
             net_traces = pd.DataFrame(res_viz)
             net_traces.columns = sofa_fieldnames
@@ -797,24 +794,15 @@ def sofa_preprocess(logdir, cfg):
     indices = []
     for nvvp_filename in glob.glob(logdir + "gputrace*[0-9].nvvp"):
         print_progress("Read " + nvvp_filename + " by nvprof -- begin")
-        os.system(
-            "nvprof --csv --print-gpu-trace -i " +
-            nvvp_filename +
-            " 2> " +
-            logdir +
-            "gputrace.tmp")
+        with open(logdir + "gputrace.tmp", "w") as f:
+            subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "-i", nvvp_filename], stderr=f)
 
         # TODO: align cpu time and gpu time
-        os.system(
-            "nvprof --print-api-trace -i " +
-            nvvp_filename +
-            " 2> " +
-            logdir +
-            "nvapi.txt")
+        with open(logdir + "nvapi.txt", "w") as f:
+            subprocess.call(["nvprof", "--print-api-trace", "-i", nvvp_filename], stderr=f)
         with open(logdir + 'nvapi.txt') as f:
-            lines = f.readlines()
             t_api_offset = 0.0
-            for line in lines:
+            for line in f:
                 if line.find('cudaMemcpy') != -1:
                     ts = line.split()[0]
                     if ts.find('ms') != -1:
@@ -826,10 +814,10 @@ def sofa_preprocess(logdir, cfg):
                     else:
                         t_api_offset = int(re.search(r'\d+', ts).group()) * 1.0
                     break
-            print('t_api_offset = %lf' % t_api_offset)
-            print('cfg.gpu_time_offset = %lf' % (cfg.gpu_time_offset * 1e-3))
+            print(('t_api_offset = %lf' % t_api_offset))
+            print(('cfg.gpu_time_offset = %lf' % (cfg.gpu_time_offset * 1e-3)))
             t_glb_gpu_base = t_api_offset + t_first_nv + cfg.gpu_time_offset * 1e-3
-        print t_glb_gpu_base
+        print(t_glb_gpu_base)
 
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
         num_cudaproc = num_cudaproc + 1
@@ -859,17 +847,17 @@ def sofa_preprocess(logdir, cfg):
                 print_info("Length of gpu_traces = %d" % len(records))
                 t_base = float(records[0].split(',')[0])
                 t_offset = t_glb_gpu_base - t_base
-                pool = mp.Pool(processes=cpu_count)
-                res = pool.map(
-                    partial(
-                        gpu_trace_read,
-                        indices=indices,
-                        ts_rescale=ts_rescale,
-                        dt_rescale=dt_rescale,
-                        n_cudaproc=num_cudaproc,
-                        t_offset=t_glb_gpu_base -
-                        t_base),
-                    records)
+                with mp.Pool(processes=cpu_count) as pool:
+                    res = pool.map(
+                        partial(
+                            gpu_trace_read,
+                            indices=indices,
+                            ts_rescale=ts_rescale,
+                            dt_rescale=dt_rescale,
+                            n_cudaproc=num_cudaproc,
+                            t_offset=t_glb_gpu_base -
+                            t_base),
+                        records)
                 gpu_traces = pd.DataFrame(res)
                 gpu_traces.columns = sofa_fieldnames
                 gpu_traces.to_csv(

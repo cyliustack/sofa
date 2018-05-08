@@ -36,37 +36,37 @@ function install_python_packages()
     # Install Python packages
     echo -e "${C_GREEN}Installing python packages...${C_NONE}"
     # Install for Python2
-    pip2 install --user cxxfilt pandas networkx 
-    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+    #pip2 install --user cxxfilt pandas networkx 
+    #[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 
     # Install for Python3
-    # pip3 install --user cxxfilt pandas networkx 
-    # [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+    pip3 install --user cxxfilt pandas networkx 
+    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
 function install_packages()
 {
     echo -e "${C_GREEN}Installing other packages...${C_NONE}"
 
-    inform_sudo "Running sudo for installing packages"
+    #inform_sudo "Running sudo for installing packages"
     if [[ "$OS" == "Ubuntu"* ]] || [[ "$OS" == "Debian"* ]]; then
-        sudo apt-get install \
+        apt-get install \
             libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
             linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic \
-            cmake tcpdump python-pip python-dev sysstat
+            cmake tcpdump python3-pip python3-dev sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "CentOS"* ]]; then
-    	sudo yum install epel-release 
-	sudo yum install \
-            perf cmake tcpdump libpcap-devel libconfig-devel boost-devel \
-            centos-release-scl devtoolset-4-gcc* python-pip python-devel sysstat
+        yum install epel-release 
+        yum install \
+            perf tcpdump\
+            centos-release-scl devtoolset-4-gcc* python34-pip python34-devel sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "Fedora"* ]]; then
-        sudo dnf -y install \
-            perf cmake tcpdump boost-devel libconfig-devel libpcap-devel cmake python-pip python-devel sysstat
+        dnf -y install \
+            perf cmake tcpdump boost-devel libconfig-devel libpcap-devel cmake python34-pip python34-devel sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "Arch"* ]]; then
-        sudo pacman -S \
+        pacman -S \
             linux-tools cmake boost cmake python-pip python2-pip tcpdump sysstat
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"

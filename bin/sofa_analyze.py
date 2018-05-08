@@ -17,7 +17,7 @@ import re
 
 
 def payload_sum(df):
-    print(len(df))
+    print((len(df)))
 
 
 class Event:
@@ -79,9 +79,9 @@ def comm_profile(logdir, cfg, df_gpu):
     print_title("Data Traffic for each CopyKind (MB)")
     data_copyKind = grouped_df = df_gpu.groupby("copyKind")["payload"]
     for key, item in grouped_df:
-        print(
+        print((
             "[%s]: %lf" %
-            (cktable[key], grouped_df.get_group(key).sum() / 1000000.0))
+            (cktable[key], grouped_df.get_group(key).sum() / 1000000.0)))
         if int(key) == 1:
             total_h2d_traffic = grouped_df.get_group(key).sum() / 1000000.0
         if int(key) == 2:
@@ -91,12 +91,12 @@ def comm_profile(logdir, cfg, df_gpu):
         if int(key) != 8:
             total_traffic = total_traffic + \
                 grouped_df.get_group(key).sum() / 1000000.0
-    print("Total traffic: %.2lf" % total_traffic)
+    print(("Total traffic: %.2lf" % total_traffic))
 
     print_title("Data Communication Time for each CopyKind (s)")
     durations_copyKind = grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
-        print("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum()))
+        print(("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum())))
         if key == 0:
             total_kernel_time = grouped_df.get_group(key).sum()
         else:
@@ -108,7 +108,7 @@ def comm_profile(logdir, cfg, df_gpu):
 
     total_weights = 0
     for i in range(len(bw)):
-        key = bw.keys()[i]
+        key = list(bw.keys())[i]
         if cktable[key] == 'D2D':
             continue
         if cktable[key] == 'H2D':
@@ -128,13 +128,13 @@ def comm_profile(logdir, cfg, df_gpu):
             bw_p2p = bw.iloc[i]
 
     print_title("Summary of Comm.")
-    print("Averaged Achieved H2D Bandwidth: %.1f (GB/s)" % bw_h2d)
-    print("Averaged Achieved D2H Bandwidth: %.1f (GB/s)" % bw_d2h)
-    print("Averaged Achieved P2P Bandwidth: %.1f (GB/s)" % bw_p2p)
-    print("MeasuredTotalTraffic : %lf (MB)" % total_traffic)
-    print("MeasuredTotalH2DTraffic : %lf (MB)" % total_h2d_traffic)
-    print("MeasuredTotalD2HTraffic : %lf (MB)" % total_d2h_traffic)
-    print("MeasuredTotalP2PTraffic : %lf (MB)" % total_p2p_traffic)
+    print(("Averaged Achieved H2D Bandwidth: %.1f (GB/s)" % bw_h2d))
+    print(("Averaged Achieved D2H Bandwidth: %.1f (GB/s)" % bw_d2h))
+    print(("Averaged Achieved P2P Bandwidth: %.1f (GB/s)" % bw_p2p))
+    print(("MeasuredTotalTraffic : %lf (MB)" % total_traffic))
+    print(("MeasuredTotalH2DTraffic : %lf (MB)" % total_h2d_traffic))
+    print(("MeasuredTotalD2HTraffic : %lf (MB)" % total_d2h_traffic))
+    print(("MeasuredTotalP2PTraffic : %lf (MB)" % total_p2p_traffic))
 
     accum = np.zeros((1 + n_gpus, 1 + n_gpus))
     accum_count = np.zeros((1 + n_gpus, 1 + n_gpus))
@@ -155,10 +155,10 @@ def comm_profile(logdir, cfg, df_gpu):
         accum[src][dst] = float(accum[src][dst] + payload)
         accum_count[src][dst] = int(accum_count[src][dst] + 1)
 
-    for i in xrange(accum_time.shape[0]):
+    for i in range(accum_time.shape[0]):
         accum_time[0][i] = accum[0][i] / (1024.0 * 1024 * 1024) / bw_h2d
         accum_time[i][0] = accum[i][0] / (1024.0 * 1024 * 1024) / bw_d2h
-        for j in xrange(accum_time.shape[1]):
+        for j in range(accum_time.shape[1]):
             if i > 0 and j > 0:
                 accum_time[i][j] = accum[i][j] / \
                     (1024.0 * 1024 * 1024) / bw_p2p
@@ -205,7 +205,7 @@ def comm_profile(logdir, cfg, df_gpu):
             row_str = row_str + "%.3lf" % (accum_time[i][j]) + "\t"
         print(row_str)
 
-    print("MeasuredMaxFlowTime : %lf (MB)" % np.max(accum_time))
+    print(("MeasuredMaxFlowTime : %lf (MB)" % np.max(accum_time)))
 
     df_gpu.to_csv(
         logdir + '/' + 'comm.csv',
@@ -225,16 +225,16 @@ def gpu_profile(logdir, cfg, df_gpu):
     grouped_df = df_gpu.groupby("deviceId")["duration"]
     total_tasktime = 0
     for key, item in grouped_df:
-        print("[%d]: %lf" % (int(float(key)), grouped_df.get_group(key).sum()))
+        print(("[%d]: %lf" % (int(float(key)), grouped_df.get_group(key).sum())))
         total_tasktime = total_tasktime + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
     per_gpu_time = total_tasktime / n_devices
-    print("Averaged GPU time of devices: %.2lf" % per_gpu_time)
+    print(("Averaged GPU time of devices: %.2lf" % per_gpu_time))
 
     print_title("Data Traffic (bidirection) for each Device (MB)")
     grouped_df = df_gpu.groupby("deviceId")["payload"]
     for key, item in grouped_df:
-        print("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0))
+        print(("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0)))
 
     grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
@@ -250,11 +250,11 @@ def gpu_profile(logdir, cfg, df_gpu):
             all_reduce_time = all_reduce_time + grouped_df.get_group(key).sum()
 
     comm_profile(logdir, cfg, df_gpu)
-    print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
+    print(("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time))
 
     print_title("Summary of Kernels")
-    print("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time)
-    print("MeasuredAllReduceTime : %lf (s)" % all_reduce_time)
+    print(("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time))
+    print(("MeasuredAllReduceTime : %lf (s)" % all_reduce_time))
 
 
 def net_profile(logdir, cfg, df):
@@ -267,8 +267,8 @@ def net_profile(logdir, cfg, df):
         if key.find("network:tcp:") != -1:
             total_net_time = total_net_time + grouped_df.get_group(key).sum()
             n_packets = n_packets + 1
-    print("total network time = %.3lf" % total_net_time)
-    print("total amount of network packets  = %d" % n_packets)
+    print(("total network time = %.3lf" % total_net_time))
+    print(("total amount of network packets  = %d" % n_packets))
 
 
 def cpu_profile(logdir, cfg, df):
@@ -277,12 +277,12 @@ def cpu_profile(logdir, cfg, df):
     total_exec_time = 0
     for key, item in grouped_df:
         if cfg.verbose:
-            print("[%d]: %lf" % (key, grouped_df.get_group(key).sum()))
+            print(("[%d]: %lf" % (key, grouped_df.get_group(key).sum())))
         total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
     avg_exec_time = total_exec_time / n_devices
-    print("total execution time = %.3lf" % total_exec_time)
-    print("average execution time across devices = %.3lf" % avg_exec_time)
+    print(("total execution time = %.3lf" % total_exec_time))
+    print(("average execution time across devices = %.3lf" % avg_exec_time))
 
 # TODO: Analyze vmstat instead.
 #def mpstat_profile(logdir, cfg, df):
@@ -349,7 +349,7 @@ class ProfiledDomainDNN:
                 pos = line.find("--batch_size")
                 if pos >= 0:
                     self.batch_size = int(line[pos:].split()[0].split('=')[1])
-                    print(self.prefix + "batch_size: %d" % self.batch_size)
+                    print((self.prefix + "batch_size: %d" % self.batch_size))
                     break
 
     def get_iterations(self, filepath):
@@ -360,7 +360,7 @@ class ProfiledDomainDNN:
                 if pos >= 0:
                     self.iterations = int(
                         line[pos:].split()[0].split('=')[1]) + 11
-                    print(self.prefix + "iterations: %d" % self.iterations)
+                    print((self.prefix + "iterations: %d" % self.iterations))
                     break
 
     def get_throughput(self, filepath):
@@ -369,7 +369,7 @@ class ProfiledDomainDNN:
             for line in lines:
                 if line.find("total images/sec:") != -1:
                     self.throughput = float(line.split()[2])
-                    print(self.prefix + "Throughput: %.2lf" % self.throughput)
+                    print((self.prefix + "Throughput: %.2lf" % self.throughput))
                     break
 
 
@@ -393,9 +393,9 @@ def sofa_analyze(logdir, cfg):
                    num_gpus = num_gpus + 1 
             print_info('# of GPUs: ' + str(num_gpus) )
             edges = []
-            for i in xrange(num_gpus):
+            for i in range(num_gpus):
                 connections = lines[1+i].split()
-                for j in xrange(len(connections)):
+                for j in range(len(connections)):
                     if connections[j] == 'NV1' or connections[j] == 'NV2':
                         edges.append((i,j-1))
                         #print('%d connects to %d' % (i, j-1))
@@ -403,13 +403,14 @@ def sofa_analyze(logdir, cfg):
             G = nx.DiGraph(edges)           
             for cycle in nx.simple_cycles(G):
                 if len(cycle) == num_gpus:
-                    print("One of the recommended %d rings" % len(cycle) )
+                    print(("One of the recommended %d rings" % len(cycle) ))
                     print(cycle)
                     os.system("mkdir -p /tmp/sofa_hints/")
-                    xring_order=''
-                    for node in cycle:
-                        xring_order = xring_order + str(node) + ','
-                    os.system("echo 'export CUDA_VISIBLE_DEVICES="+xring_order+"' > /tmp/sofa_hints/xring_order.txt")
+                    xring_order = ','.join(map(str, cycle))
+                    with open("/tmp/sofa_hints/xring_order.txt", "w") as f:
+                        f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
+                    # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text('export CUDA_VISIBLE_DEVICES=' + xring_order)  # UPGRADE: py35
+                    # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text(f'export CUDA_VISIBLE_DEVICES=f{xring_order}')  # UPGRADE: py36
                     break
     #try:
     #    df_mpstat = pd.read_csv(filein_mpstat)
