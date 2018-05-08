@@ -40,7 +40,10 @@ function install_python_packages()
     #[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 
     # Install for Python3
-    pip3 install --user cxxfilt pandas networkx 
+    pip3 install --user numpy
+    pip3 install --user cxxfilt
+    pip3 install --user pandas
+    pip3 install --user networkx 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
