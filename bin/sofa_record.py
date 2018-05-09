@@ -58,7 +58,7 @@ def sofa_record(command, logdir, cfg):
                 ['mpstat', '-P', 'ALL', '1', '600'], stdout=logfile)
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
             p_vmstat = subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
-        if int(os.system('command -v nvprofx')) == 0:
+        if int(os.system('command -v nvprof')) == 0:
             with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
                 p_nvsmi = subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
             with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
@@ -86,14 +86,19 @@ def sofa_record(command, logdir, cfg):
         print_info("Epilog of Recording...")
         if p_tcpdump != None:
             p_tcpdump.terminate()
+            print_info("tried terminating tcpdump")
         if p_vmstat != None:
             p_vmstat.terminate()
+            print_info("tried terminating vmstat")
         if p_mpstat != None:
             p_mpstat.terminate()
+            print_info("tried terminating mpstat")
         if p_nvtopo != None:
             p_nvtopo.terminate()
+            print_info("tried terminating nvidia-smi topo")
         if p_nvsmi != None:
             p_nvsmi.terminate()
+            print_info("tried terminating nvidia-smi dmon")
         #os.system('pkill tcpdump')
         #os.system('pkill mpstat')
         #os.system('pkill vmstat')
@@ -102,15 +107,18 @@ def sofa_record(command, logdir, cfg):
         print("Unexpected error:", sys.exc_info()[0])
         if p_tcpdump != None:
             p_tcpdump.kill()
+            print_info("tried killing tcpdump")
         if p_vmstat != None:
             p_vmstat.kill()
+            print_info("tried killing vmstat")
         if p_mpstat != None:
             p_mpstat.kill()
+            print_info("tried killing mpstat")
         if p_nvtopo != None:
             p_nvtopo.kill()
+            print_info("tried killing nvidia-smi topo")
         if p_nvsmi != None:
             p_nvsmi.kill()
-        
-        print_info("tcpdump, mpstat, vmstat and nvidia-smi are killed.")
+            print_info("tried killing nvidia-smi dmon")
         raise
     print_info("End of Recording")
