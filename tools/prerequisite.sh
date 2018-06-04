@@ -41,7 +41,7 @@ function install_python_packages()
 
     # Install for Python3
     if [[ "$OS" == "Ubuntu"* ]] && [[ "$(lsb_release -rs)" == "14.04" ]] ;then
-        apt-get install -y  python3-pandas python3-networkx 
+        apt-get install -y  python3-numpy python3-pandas python3-networkx 
     else 
         pip3 install --user  numpy pandas networks 
     fi
