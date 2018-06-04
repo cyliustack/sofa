@@ -762,31 +762,36 @@ def sofa_preprocess(logdir, cfg):
                                     'keyword': filter.keyword})
 
     # ============ Preprocessing Network Trace ==========================
-    with open(logdir + 'net.tmp', 'w') as f:
-        subprocess.check_call(
-            ["tcpdump", "-q", "-n", "-tt", "-r",
-            "%s/sofa.pcap"%logdir ], stdout=f)
-    with open(logdir + 'net.tmp') as f:
-        packets = lines = f.readlines()
-        print_info("Length of net_traces = %d" % len(packets))
-        if packets:
-            t_base = float(lines[0].split()[0])
-            with mp.Pool(processes=cpu_count) as pool:
-                res = pool.map(
-                    partial(
-                        net_trace_read,
-                        t_offset=t_glb_net_base -
-                        t_base),
-                    packets)
-            res_viz = list_downsample(res, cfg.plot_ratio)
-            net_traces = pd.DataFrame(res_viz)
-            net_traces.columns = sofa_fieldnames
-            net_traces.to_csv(
-                logdir + 'cputrace.csv',
-                mode='a',
-                header=False,
-                index=False,
-                float_format='%.6f')
+    
+    if os.path.isfile('%s/sofa.pcap' % logdir):
+        with open(logdir + 'net.tmp', 'w') as f:
+            subprocess.check_call(
+                ["tcpdump", "-q", "-n", "-tt", "-r",
+                "%s/sofa.pcap"%logdir ], stdout=f)
+        with open(logdir + 'net.tmp') as f:
+            packets = lines = f.readlines()
+            print_info("Length of net_traces = %d" % len(packets))
+            if packets:
+                t_base = float(lines[0].split()[0])
+                with mp.Pool(processes=cpu_count) as pool:
+                    res = pool.map(
+                        partial(
+                            net_trace_read,
+                            t_offset=t_glb_net_base -
+                            t_base),
+                        packets)
+                res_viz = list_downsample(res, cfg.plot_ratio)
+                net_traces = pd.DataFrame(res_viz)
+                net_traces.columns = sofa_fieldnames
+                net_traces.to_csv(
+                    logdir + 'cputrace.csv',
+                    mode='a',
+                    header=False,
+                    index=False,
+                    float_format='%.6f')
+    else:
+        print_warning("no network traces were recorded.")
+
 
     # ============ Preprocessing GPU Trace ==========================
     num_cudaproc = 0
@@ -882,7 +887,6 @@ def sofa_preprocess(logdir, cfg):
             else:
                 print_warning(
                     "gputrace existed, but no kernel traces were recorded.")
-
                 os.system('cat %s/gputrace.tmp' % logdir)
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")

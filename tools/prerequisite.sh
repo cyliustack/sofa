@@ -41,9 +41,9 @@ function install_python_packages()
 
     # Install for Python3
     if [[ "$OS" == "Ubuntu"* ]] && [[ "$(lsb_release -rs)" == "14.04" ]] ;then
-        apt-get install -y python3-numpy python3-pandas python3-networkx 
+        apt-get install -y  python3-pandas python3-networkx 
     else 
-        pip3 install --user numpy pandas networks 
+        pip3 install --user  numpy pandas networks 
     fi
     pip3 install --user cxxfilt
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
@@ -64,7 +64,7 @@ function install_packages()
         yum install epel-release 
         yum install \
             perf tcpdump\
-            centos-release-scl devtoolset-4-gcc* python34-pip python34-devel python34-numpy sysstat
+            centos-release-scl devtoolset-4-gcc* python34-pip python34-devel sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ "$OS" == "Fedora"* ]]; then
         dnf -y install \
