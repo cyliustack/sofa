@@ -42,15 +42,20 @@ function install_python_packages()
         yum install https://centos7.iuscommunity.org/ius-release.rpm
         yum install python36u
         yum install python36u-pip
-    elif [[ $(which apt) ]]  ; then	
-        sudo add-apt-repository ppa:deadsnakes/ppa -y
-        sudo apt-get update -y
-        sudo apt-get install python3.6 -y
+    elif [[ "${OS}" == "Ubuntu" ]] && [[ "${VERSION}" == "14.04"* ]]  ; then	
+	add-apt-repository ppa:deadsnakes/ppa -y
+	apt-get update -y
+        apt-get install python3.6 -y
+	curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
+	python3.6 get-pip.py 	
+    elif [[ $(which apt) ]] ; then	
+        apt-get update -y
+        apt-get install python3.6 -y
     else
-	    url_python36="Python-3.6.0.tar.xz"
+	    file_python36="Python-3.6.0.tar.xz"
 	    if [[ ! -f "Python-3.6.0.tar.xz" ]]; then
-	        wget https://www.python.org/ftp/python/3.6.0/$url_python36
-	        tar xJf $url_python36
+	        wget https://www.python.org/ftp/python/3.6.0/$file_python36
+	        tar xJf $file_python36
 	        cd Python-3.6.0
 	        ./configure ./configure --with-ssl
 	        cd -
