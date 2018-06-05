@@ -49,13 +49,13 @@ function install_python_packages()
         apt-get install python3.6 -y
 	curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
 	python3.6 get-pip.py
-    elif [[ $(which apt) ]]  ; then	
+    elif [[ $(which apt) ]] ; then	
         apt-get install python3.6 -y
     else
-	    url_python36="Python-3.6.0.tar.xz"
+	    file_python36="Python-3.6.0.tar.xz"
 	    if [[ ! -f "Python-3.6.0.tar.xz" ]]; then
-	        wget https://www.python.org/ftp/python/3.6.0/$url_python36
-	        tar xJf $url_python36
+	        wget https://www.python.org/ftp/python/3.6.0/$file_python36
+	        tar xJf $file_python36
 	        cd Python-3.6.0
 	        ./configure ./configure --with-ssl
 	        cd -
