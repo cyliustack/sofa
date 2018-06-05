@@ -43,24 +43,26 @@ function install_python_packages()
         yum install python36u
         yum install python36u-pip
     elif [[ $(which apt) ]]  ; then	
-	    apt-get install python3 python3-pip
+        sudo add-apt-repository ppa:deadsnakes/ppa
+        sudo apt-get update
+        sudo apt-get install python3.6
     else
-	url_python36="Python-3.6.0.tar.xz"
-	if [[ ! -f "Python-3.6.0.tar.xz" ]]; then
-	    wget https://www.python.org/ftp/python/3.6.0/$url_python36
-	    tar xJf $url_python36
+	    url_python36="Python-3.6.0.tar.xz"
+	    if [[ ! -f "Python-3.6.0.tar.xz" ]]; then
+	        wget https://www.python.org/ftp/python/3.6.0/$url_python36
+	        tar xJf $url_python36
+	        cd Python-3.6.0
+	        ./configure ./configure --with-ssl
+	        cd -
+	    fi 
 	    cd Python-3.6.0
-	    ./configure ./configure --with-ssl
-	    cd -
-	fi 
-	cd Python-3.6.0
-	make -j
-	sudo make install
-	# Install for Python3
-	python3.6 -m pip install --upgrade upgrade pip
-	python3.6 -m pip install numpy pandas networkx cxxfilt 
-	cd - 
-	rm -r Python-3.6.0*
+	    make -j
+	    sudo make install
+	    # Install for Python3
+	    python3.6 -m pip install --upgrade upgrade pip
+	    python3.6 -m pip install numpy pandas networkx cxxfilt 
+	    cd - 
+	    rm -r Python-3.6.0*
     fi  
     #python3 -m pip uninstall numpy pandas networkx ccxfilt
     python3 -m pip install --upgrade pip
