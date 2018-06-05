@@ -1,8 +1,13 @@
 #!/bin/bash
-if [[ $(which python3.5) ]] ; then
+C_NONE="\033[0;00m"
+C_GREEN="\033[1;32m"
+C_RED_BK="\033[1;41m"
+
+if [[ $( which python3.5 2>/dev/null ) ]] ; then
 	python3.5 $(dirname $0)/sofa.py "$@"
-elif [[ $(which python3.6) ]] ; then
+elif [[ $(which python3.6 2>/dev/null ) ]] ; then
 	python3.6 $(dirname $0)/sofa.py "$@"
 else
-	echo "No compatible python is found. Please run sofa/tools/prerequisite.sh for complete installation."
+	echo -e "${C_RED_BK}No compatible python is found. Please run sofa/tools/prerequisite.sh for complete installation. ${C_NONE}"
+    exit 1
 fi 
