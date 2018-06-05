@@ -43,9 +43,9 @@ function install_python_packages()
         yum install python36u
         yum install python36u-pip
     elif [[ $(which apt) ]]  ; then	
-        sudo add-apt-repository ppa:deadsnakes/ppa
-        sudo apt-get update
-        sudo apt-get install python3.6
+        sudo add-apt-repository ppa:deadsnakes/ppa -y
+        sudo apt-get update -y
+        sudo apt-get install python3.6 -y
     else
 	    url_python36="Python-3.6.0.tar.xz"
 	    if [[ ! -f "Python-3.6.0.tar.xz" ]]; then
