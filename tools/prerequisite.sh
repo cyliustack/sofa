@@ -42,9 +42,7 @@ function install_python_packages()
         yum install https://centos7.iuscommunity.org/ius-release.rpm
         yum install python36u
         yum install python36u-pip
-    elif [[ $(which apt) ]]  ; then
-    	apt-get update
-        apt-get update --fix-missing
+    elif [[ $(which apt) ]]  ; then	
 	    apt-get install python3 python3-pip
     else
 	url_python36="Python-3.6.0.tar.xz"
@@ -76,6 +74,8 @@ function install_packages()
 
     #inform_sudo "Running sudo for installing packages"
     if [[ $(which apt) ]] ; then
+        apt-get update
+        apt-get update --fix-missing
         apt-get install \
             libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
             linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic \
