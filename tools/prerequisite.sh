@@ -44,7 +44,8 @@ function install_python_packages()
         yum install python36u-pip
     elif [[ $(which apt) ]]  ; then
     	apt-get update
-	apt-get install python3 python3-pip
+        apt-get update --fix-missing
+	    apt-get install python3 python3-pip
     else
 	url_python36="Python-3.6.0.tar.xz"
 	if [[ ! -f "Python-3.6.0.tar.xz" ]]; then
@@ -63,7 +64,7 @@ function install_python_packages()
 	cd - 
 	rm -r Python-3.6.0*
     fi  
-    python3 -m pip uninstall numpy pandas networkx ccxfilt
+    #python3 -m pip uninstall numpy pandas networkx ccxfilt
     python3 -m pip install --upgrade pip
     python3 -m pip install numpy pandas networkx cxxfilt 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
