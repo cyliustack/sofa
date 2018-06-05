@@ -42,10 +42,15 @@ function install_python_packages()
         yum install https://centos7.iuscommunity.org/ius-release.rpm
         yum install python36u
         yum install python36u-pip
+    elif [[ "${OS}" == "Ubuntu" ]] && [[ "${VERSION}" == "14.04"* ]] ; then	
+        apt-get install software-properties-common -y
+	add-apt-repository ppa:deadsnakes/ppa -y
+        apt-get update -y
+        apt-get install python3.6 -y
+	curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
+	python3.6 get-pip.py
     elif [[ $(which apt) ]]  ; then	
-        sudo add-apt-repository ppa:deadsnakes/ppa -y
-        sudo apt-get update -y
-        sudo apt-get install python3.6 -y
+        apt-get install python3.6 -y
     else
 	    url_python36="Python-3.6.0.tar.xz"
 	    if [[ ! -f "Python-3.6.0.tar.xz" ]]; then
@@ -64,9 +69,8 @@ function install_python_packages()
 	    cd - 
 	    rm -r Python-3.6.0*
     fi  
-    #python3 -m pip uninstall numpy pandas networkx ccxfilt
-    python3 -m pip install --upgrade pip
-    python3 -m pip install numpy pandas networkx cxxfilt 
+    python3.6 -m pip install --upgrade pip
+    python3.6 -m pip install numpy pandas networkx cxxfilt 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
@@ -78,11 +82,11 @@ function install_packages()
     if [[ $(which apt) ]] ; then
         apt-get update
         apt-get update --fix-missing
-        apt-get install \
-            libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
-            linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic \
-            cmake tcpdump sysstat
-        [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+	apt-get install curl wget cmake tcpdump sysstat \
+		libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
+		linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic 
+        
+	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which yum) ]]  ; then
         yum install epel-release 
         yum install \

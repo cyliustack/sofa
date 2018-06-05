@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python-sofa
 import numpy as np
 import csv
 import json
