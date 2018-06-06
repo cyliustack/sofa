@@ -1,2 +1,7 @@
 perf.data
 perf.script
+tools/activate.sh
+sofalog
+*.cfg
+*.pyc
+__pycache__
