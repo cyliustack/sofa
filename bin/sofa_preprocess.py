@@ -676,7 +676,8 @@ def sofa_preprocess(logdir, cfg):
         with open('%s/nvsmi.txt' % logdir) as f:
             lines = f.readlines()
             print_info("Length of nvsmi_traces = %d" % len(lines))
-            if len(lines) > 0:
+            
+            if lines[0].find("Not supported on the device(s)") == -1 and len(lines) > 0:
                 nvsmi_sm_list = []
                 nvsmi_mem_list = []
                 nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
@@ -738,7 +739,9 @@ def sofa_preprocess(logdir, cfg):
                             t = t + 1
                 nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
                 nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
-
+            else:
+                print_warning("No nvidia-smi traces were recorded.")
+                
     t_first_nv = sys.float_info.max
     for i in range(len(cpu_traces)):
         if re.search('_nv\d+rm', cpu_traces.iat[i,11]) is not None and float(cpu_traces.iat[i,0]) < t_first_nv:
@@ -790,7 +793,7 @@ def sofa_preprocess(logdir, cfg):
                     index=False,
                     float_format='%.6f')
     else:
-        print_warning("no network traces were recorded.")
+        print_warning("No network traces were recorded.")
 
 
     # ============ Preprocessing GPU Trace ==========================
