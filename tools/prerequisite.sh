@@ -64,13 +64,11 @@ function install_python_packages()
 	    make -j
 	    sudo make install
 	    # Install for Python3
-	    python3.6 -m pip install --upgrade upgrade pip
-	    python3.6 -m pip install numpy pandas networkx cxxfilt 
 	    cd - 
 	    rm -r Python-3.6.0*
     fi  
     python3.6 -m pip install --upgrade pip
-    python3.6 -m pip install numpy pandas networkx cxxfilt 
+    python3.6 -m pip install numpy pandas scipy networkx cxxfilt 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 

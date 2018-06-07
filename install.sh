@@ -16,6 +16,7 @@ BIN_FILES=(bin/sofa
            bin/sofa_record.py
            bin/sofa_preprocess.py
            bin/sofa_analyze.py
+           bin/sofa_deepprof.py
            bin/sofa_viz.py
            bin/sofa_config.py
            bin/sofa_print.py

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import os
 import sys
 import pandas as pd
@@ -24,7 +24,7 @@ iteration_index = 1
 total_iteration = []
 base_time = 0
 
-def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold):
+def iteration_detect(logdir, cfg, df_gpu, time_interval, threshold):
     global iteration_begin, iteration_end, iteration_index, iteration_timelines, total_iteration, base_time
     time_begin = 0
     time_end = int(round(df_gpu.iloc[-1]['timestamp']/time_interval))
@@ -33,11 +33,12 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold):
     events.append("timestamp")
     patternTable = pd.DataFrame(columns = events, dtype = int)	
     iteration_pattern_count = 1 
+    iters = []
     time = 0
  
     while(time < time_end):
         clock = time + 1
-        print "time:" + str(time) + "block:"
+        print("time:" + str(time) + "block:")
         #for index, row in df_gpu.iterrows():
         #if row['timestamp'] <= clock:
         #    if row['name'].split('_')[1] == "copyKind"
@@ -58,7 +59,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold):
         '''
         #print vector 
         if sum(vector)==0:
-            print "vector empty"
+            print("vector empty")
             iteration_timelines.append(0)
             time += 1
             continue
@@ -73,13 +74,13 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold):
                 iteration_begin = patternMatch * time_interval
                 iteration_end = time 
             if matchCount >= 30:
-                print "iteration detected"
-                print "\npattern table:"
-                print patternTable 
-                print "\nvector:" 
-                print vector
-                print "\niteration begin,end:"
-                print iteration_begin, iteration_end * time_interval 
+                print("iteration detected")
+                print("\npattern table:")
+                print(patternTable) 
+                print("\nvector:") 
+                print(vector)
+                print("\niteration begin,end:")
+                print(iteration_begin, iteration_end * time_interval) 
                 patternTable = pd.DataFrame(columns = events, dtype = int)
                 matchCount = 0
                 time = iteration_end + 1
@@ -92,12 +93,14 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold):
             vector.append(time)
             vectorSerie = pd.Series(vector, index = events)
             patternTable=patternTable.append(vectorSerie, ignore_index = True)
-            print "\nnew pattern: "
-            print iteration_pattern_count
-            print patternTable
-            print "\n"
+            print("\nnew pattern: ")
+            print(iteration_pattern_count)
+            print(patternTable)
+            print("\n")
 
         time += 1
+    return iters 
+
 def eventCount(column, eventName, df):
     #get rows count that contains eventName
     return df[df[column].str.contains(eventName, na=False)][column].count()
@@ -107,25 +110,25 @@ def patternMatching(patternTable, vector, threshold):
     global iteration_index
     #print patternTable 
     if patternTable.empty:
-        print "patternTable is empty!"
+        print("patternTable is empty!")
         return -1 
     for index, row in patternTable.iterrows():
         #pvector is vector from patternTable without timestamp
         pvector = row.values[:-1]
         sim = similarity(pvector, vector)
         if sim >= threshold:
-            print "similarity: %f" % sim
+            print("similarity: %f" % sim)
             iteration_index = index+1
-            print row["timestamp"]
+            print(row["timestamp"])
             return row["timestamp"]
-    print "no pattern match!"
+    print("no pattern match!")
     return -1
 
 def similarity(a, b):
     maxv = max(np.linalg.norm(a), np.linalg.norm(b))
     minv = min(np.linalg.norm(a), np.linalg.norm(b))
     if (maxv/minv)<0.5:
-        print maxv/minv
+        print(maxv/minv)
         return 0
     result = 1. - spatial.distance.cosine(a, b)
     #print a,b
@@ -157,28 +160,9 @@ def trace_timeline(path):
             f.write('\n')
             i += 1
 
-def sofa_ID(logdir, cfg):
+def sofa_deepprof(logdir, cfg, df_cpu, df_gpu):
+    print_title("Per-Iteration Performance Info.")
     global iteration_begin, iteration_end, base_time
-    filein = []
-    df_gpu = []
-    df_cpu = []
-    df_mpstat = []
 
-    filein_gpu = logdir + "gputrace.csv"
-    filein_cpu = logdir + "cputrace.csv"
-    filein_mpstat = logdir + "mpstat_trace.csv"
-
-    try:
-        df_gpu = pd.read_csv(filein_gpu)
-        base_time = df_gpu.loc[0,'timestamp']
-        df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
-        iterationDetection(logdir, cfg, df_gpu, 0.01, 0.7)
-        iteration_begin += base_time
-        iteration_end += base_time 
-        traces_to_json(logdir + 'report.js')
-        trace_timeline(logdir + 'iteration_timeline.txt')
-
-    except IOError:
-        print_warning(
-            "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
-
+    df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
+    iters = iteration_detect(logdir, cfg, df_gpu, 0.01, 0.7)
