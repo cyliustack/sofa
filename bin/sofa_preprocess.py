@@ -802,7 +802,7 @@ def sofa_preprocess(logdir, cfg):
                         end = (net_traces['pkt_dst'] == float(filter))
                         group = net_traces[packet_not_zero & start & end]
                         filtered_net_groups.append({'group': group,
-                                                    'color': 'rbga(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
+                                                    'color': 'rgba(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
                                                  'keyword': 'to_%s' %filter})
 
                     end = (net_traces['pkt_dst'] == float(cfg.net_filters[0]))
@@ -810,7 +810,7 @@ def sofa_preprocess(logdir, cfg):
                         start = (net_traces['pkt_src'] == float(filter))
                         group = net_traces[packet_not_zero & start & end]
                         filtered_net_groups.append({'group': group,
-                                                    'color': 'rbga(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
+                                                    'color': 'rgba(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
                                                     'keyword': 'from_%s' %filter})
     else:
         print_waring("no network traces were recorded.")
