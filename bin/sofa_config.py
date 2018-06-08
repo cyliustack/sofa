@@ -11,6 +11,7 @@ class Filter:
 class SOFA_Config:
     cpu_filters = []
     gpu_filters = []
+    net_filters = []
     verbose = False
     cpu_top_k = 20
     plot_ratio = 1

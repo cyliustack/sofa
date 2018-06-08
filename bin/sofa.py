@@ -76,6 +76,13 @@ if __name__ == "__main__":
         type=str,
         nargs='?',
         metavar='<PROFILED_COMMAND>')
+    
+    parser.add_argument(
+        '--network_filters',
+        metavar='"ip1,ip2,ip3"',
+        type=str,
+        required=False,
+        help='filters for network, put your ip into it, eg.192.168.0.100 is 192168000100, and first ip must be your localhost')
 
     cfg = SOFA_Config()
 
@@ -103,7 +110,6 @@ if __name__ == "__main__":
     if args.profile_all_cpus is not None:
         cfg.profile_all_cpus = args.profile_all_cpus
 
-
     cfg.cpu_filters.append(Filter('nv_alloc_system_pages', 'red'))
     cfg.cpu_filters.append(Filter('bus', 'cornflowerblue'))
     if args.cpu_filters is not None:
@@ -126,6 +132,11 @@ if __name__ == "__main__":
         cfg.gpu_filters.append(Filter('_fw_', 'yellow'))
         cfg.gpu_filters.append(Filter('_bw_', 'orange'))
         cfg.gpu_filters.append(Filter('AllReduceKernel', 'indigo'))
+
+    if args.network_filters is not None:
+        pairs = args.network_filters.split(',')
+        for pair in pairs:
+            cfg.net_filters.append(pair)
 
     print("Ratio of raw data points to plotting points : %d" % cfg.plot_ratio)
     for filter in cfg.cpu_filters:
