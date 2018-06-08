@@ -13,7 +13,7 @@ import subprocess
 import re
 from sofa_config import *
 from sofa_print import *
-
+from random import *
 
 def list_downsample(list_in, plot_ratio):
     new_list = []
@@ -676,8 +676,7 @@ def sofa_preprocess(logdir, cfg):
         with open('%s/nvsmi.txt' % logdir) as f:
             lines = f.readlines()
             print_info("Length of nvsmi_traces = %d" % len(lines))
-            
-            if lines[0].find("Not supported on the device(s)") == -1 and len(lines) > 0:
+            if len(lines) > 0:
                 nvsmi_sm_list = []
                 nvsmi_mem_list = []
                 nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
@@ -739,9 +738,7 @@ def sofa_preprocess(logdir, cfg):
                             t = t + 1
                 nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
                 nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
-            else:
-                print_warning("No nvidia-smi traces were recorded.")
-                
+
     t_first_nv = sys.float_info.max
     for i in range(len(cpu_traces)):
         if re.search('_nv\d+rm', cpu_traces.iat[i,11]) is not None and float(cpu_traces.iat[i,0]) < t_first_nv:
@@ -792,9 +789,31 @@ def sofa_preprocess(logdir, cfg):
                     header=False,
                     index=False,
                     float_format='%.6f')
-    else:
-        print_warning("No network traces were recorded.")
+    
+        
+    
+    # ============ Apply for Network filter =====================
+                if cfg.net_filters:
+                    filtered_net_groups = []
+                    color_of_filtered_group = []
+                    packet_not_zero = net_traces['payload'] > 0
+                    start = (net_traces['pkt_src'] == float(cfg.net_filters[0]))
+                    for filter in cfg.net_filters[1:]:
+                        end = (net_traces['pkt_dst'] == float(filter))
+                        group = net_traces[packet_not_zero & start & end]
+                        filtered_net_groups.append({'group': group,
+                                                    'color': 'rbga(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
+                                                 'keyword': 'to_%s' %filter})
 
+                    end = (net_traces['pkt_dst'] == float(cfg.net_filters[0]))
+                    for filter in cfg.net_filters[1:]:
+                        start = (net_traces['pkt_src'] == float(filter))
+                        group = net_traces[packet_not_zero & start & end]
+                        filtered_net_groups.append({'group': group,
+                                                    'color': 'rbga(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
+                                                    'keyword': 'from_%s' %filter})
+    else:
+        print_waring("no network traces were recorded.")
 
     # ============ Preprocessing GPU Trace ==========================
     num_cudaproc = 0
@@ -884,8 +903,7 @@ def sofa_preprocess(logdir, cfg):
                 for filter in cfg.gpu_filters:
                     group = gpu_traces[gpu_traces['name'].str.contains(
                         filter.keyword)]
-                    filtered_gpu_groups.append({'group': group,
-                                                'color': filter.color,
+                    filtered_gpu_groups.append({'group': group,                                                'color': filter.color,
                                                 'keyword': filter.keyword})
             else:
                 print_warning(
@@ -999,6 +1017,19 @@ def sofa_preprocess(logdir, cfg):
     sofatrace.y_field = 'duration'
     sofatrace.data = net_traces
     traces.append(sofatrace)
+    
+    if cfg.net_filters:
+        for filtered_net_group in filtered_net_groups:
+            sofatrace = SOFATrace()
+            sofatrace.name = filtered_net_group['keyword']
+            sofatrace.title = 'keyword_' + sofatrace.name
+            sofatrace.color = filtered_net_group['color']
+            sofatrace.x_field = 'timestamp'
+            sofatrace.y_field = 'duration'
+            sofatrace.data = filtered_net_group['group'].copy()
+            traces.append(sofatrace)
+    else:
+        print('no')
 
     sofatrace = SOFATrace()
     sofatrace.name = 'gpu_kernel_trace'
