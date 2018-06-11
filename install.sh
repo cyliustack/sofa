@@ -12,7 +12,6 @@ INSTALL_DIRS=(bin
               tools
               )
 BIN_FILES=(bin/sofa
-           bin/sofa.py
            bin/sofa_record.py
            bin/sofa_preprocess.py
            bin/sofa_analyze.py
