@@ -107,31 +107,14 @@ def comm_profile(logdir, cfg, df_gpu):
     bw = (data_copyKind.sum() / 1000000) / durations_copyKind.sum() / 1000
     bw_h2d = bw_d2h = bw_p2p = avg_bw = 1e-10
 
-    total_weights = 0
     for i in range(len(bw)):
         key = list(bw.keys())[i]
-        if cktable[key] == 'D2D':
+        if cktable[key] == 'H2D' or cktable[key] == 'D2H' or cktable[key] == 'D2D' or cktable[key] == 'P2P': 
+            print(("Averaged Achieved %s Unidirectional Bandwidth: %.1f (GB/s)" % (cktable[key], bw.iloc[i])))
+        else:
             continue
-        if cktable[key] == 'H2D':
-            total_weights = total_h2d_traffic + total_weights
-            avg_bw = avg_bw + bw.iloc[i] * \
-                float(total_h2d_traffic) / total_weights
-            bw_h2d = bw.iloc[i]
-        if cktable[key] == 'D2H':
-            total_weights = total_d2h_traffic + total_weights
-            avg_bw = avg_bw + bw.iloc[i] * \
-                float(total_d2h_traffic) / total_weights
-            bw_d2h = bw.iloc[i]
-        if cktable[key] == 'P2P':
-            total_weights = total_p2p_traffic + total_weights
-            avg_bw = avg_bw + bw.iloc[i] * \
-                float(total_p2p_traffic) / total_weights
-            bw_p2p = bw.iloc[i]
 
     print_title("Summary of Comm.")
-    print(("Averaged Achieved H2D Bandwidth: %.1f (GB/s)" % bw_h2d))
-    print(("Averaged Achieved D2H Bandwidth: %.1f (GB/s)" % bw_d2h))
-    print(("Averaged Achieved P2P Bandwidth: %.1f (GB/s)" % bw_p2p))
     print(("MeasuredTotalTraffic : %lf (MB)" % total_traffic))
     print(("MeasuredTotalH2DTraffic : %lf (MB)" % total_h2d_traffic))
     print(("MeasuredTotalD2HTraffic : %lf (MB)" % total_d2h_traffic))
@@ -139,7 +122,6 @@ def comm_profile(logdir, cfg, df_gpu):
 
     accum = np.zeros((1 + n_gpus, 1 + n_gpus))
     accum_count = np.zeros((1 + n_gpus, 1 + n_gpus))
-    accum_time = np.zeros((1 + n_gpus, 1 + n_gpus))
 
     # TODO: Parallelize payload accumulatoin
     #print("df length: %d" % len(df_gpu))
@@ -156,14 +138,6 @@ def comm_profile(logdir, cfg, df_gpu):
         accum[src][dst] = float(accum[src][dst] + payload)
         accum_count[src][dst] = int(accum_count[src][dst] + 1)
 
-    for i in range(accum_time.shape[0]):
-        accum_time[0][i] = accum[0][i] / (1024.0 * 1024 * 1024) / bw_h2d
-        accum_time[i][0] = accum[i][0] / (1024.0 * 1024 * 1024) / bw_d2h
-        for j in range(accum_time.shape[1]):
-            if i > 0 and j > 0:
-                accum_time[i][j] = accum[i][j] / \
-                    (1024.0 * 1024 * 1024) / bw_p2p
-
     print("Traffic Matrix (log10(B)):")
     row_str = "\tHOST\t"
     for i in range(1, accum.shape[1]):
@@ -174,6 +148,7 @@ def comm_profile(logdir, cfg, df_gpu):
             row_str = "HOST\t"
         else:
             row_str = "GPU%d\t" % i
+        
         for j in range(accum.shape[1]):
             row_str = row_str + "%d" % (int(np.log10(1 + accum[i][j]))) + "\t"
         print(row_str)
@@ -188,25 +163,11 @@ def comm_profile(logdir, cfg, df_gpu):
             row_str = "HOST\t"
         else:
             row_str = "GPU%d\t" % i
+        
         for j in range(accum.shape[1]):
             row_str = row_str + "%d" % (accum[i][j] / (1024 * 1024)) + "\t"
         print(row_str)
 
-    print("Traffic Time Matrix (s):")
-    row_str = "\tHOST\t"
-    for i in range(1, accum_time.shape[1]):
-        row_str = row_str + "GPU%d" % i + "\t"
-    print(row_str)
-    for i in range(accum_time.shape[0]):
-        if i == 0:
-            row_str = "HOST\t"
-        else:
-            row_str = "GPU%d\t" % i
-        for j in range(accum_time.shape[1]):
-            row_str = row_str + "%.3lf" % (accum_time[i][j]) + "\t"
-        print(row_str)
-
-    print(("MeasuredMaxFlowTime : %lf (MB)" % np.max(accum_time)))
 
     df_gpu.to_csv(
         logdir + '/' + 'comm.csv',
