@@ -843,9 +843,17 @@ def sofa_preprocess(logdir, cfg):
             t_glb_gpu_base = t_api_offset + t_first_nv + cfg.gpu_time_offset * 1e-3
         print(t_glb_gpu_base)
         '''
-        engine = create_engine("sqlite:///"+nvvp_filename)
-        gpu_traces_df = pd.read_sql_table('CUPTI_ACTIVITY_KIND_MEMSET',engine)
-        t_glb_gpu_base = float(gpu_traces_df.iloc[0]['start'])/1e+9
+        with open(logdir + 'gputrace.tmp') as f:
+            for line in f :
+                if line.find('0.000000') != -1:
+                    keyword = line.split(',')[-1]
+                if keyword.find('memcpy') != -1:
+                    gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMCPY'
+                elif keyword.find('memset') != -1:
+                    gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMSET'
+            engine = create_engine("sqlite:///"+nvvp_filename)
+            gpu_traces_df = pd.read_sql_table(gpu_f_event,engine)
+            t_glb_gpu_base = float(gpu_traces_df.iloc[0]['start'])/1e+9
         print(t_glb_gpu_base)
 
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
