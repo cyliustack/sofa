@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import os
 import sys
 import pandas as pd
@@ -26,8 +26,13 @@ iteration_table = []
 
 base_time = 0
 
+<<<<<<< HEAD:bin/sofa_ID.py
 def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
     global iteration_begin, iteration_end, iteration_index, iteration_timelines, iteration_table, base_time
+=======
+def iteration_detect(logdir, cfg, df_gpu, time_interval, threshold):
+    global iteration_begin, iteration_end, iteration_index, iteration_timelines, total_iteration, base_time
+>>>>>>> 6ceddc96756427c5e19ae207751a1320a181de20:bin/sofa_deepprof.py
     time_begin = 0
     time_end = int(round(df_gpu.iloc[-1]['timestamp']/time_interval))
     events = eventName[:]
@@ -35,13 +40,23 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
     patternTable = pd.DataFrame(columns = events, dtype = int)	
     candidate_pattern=[]
     iteration_pattern_count = 1 
+    iters = []
     time = 0
     n = 0
     k = 2
     #Create pattern table by extract top-k feature, and label each vector with specified index 
     while(time < time_end):
         clock = time + 1
+<<<<<<< HEAD:bin/sofa_ID.py
         #slice trace to block by time interval
+=======
+        print("time:" + str(time) + "block:")
+        #for index, row in df_gpu.iterrows():
+        #if row['timestamp'] <= clock:
+        #    if row['name'].split('_')[1] == "copyKind"
+
+        #Pick the block within a interval
+>>>>>>> 6ceddc96756427c5e19ae207751a1320a181de20:bin/sofa_deepprof.py
         df_block = df_gpu[(df_gpu.loc[:, "timestamp"] / time_interval  < clock) & (df_gpu.loc[:, "timestamp"] / time_interval  >= time)]
         
         #Create vector and count 
@@ -50,19 +65,44 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
             vector.append(eventCount('name', e, df_block))
         
         if sum(vector)==0:
+<<<<<<< HEAD:bin/sofa_ID.py
             #if vector is empty
             iteration_timelines.append('0')
+=======
+            print("vector empty")
+            iteration_timelines.append(0)
+>>>>>>> 6ceddc96756427c5e19ae207751a1320a181de20:bin/sofa_deepprof.py
             time += 1
             continue
         patternMatch = patternMatching(patternTable, vector, threshold)
         if patternMatch != -1:
             iteration_timelines.append(str(iteration_index))
             
+<<<<<<< HEAD:bin/sofa_ID.py
+=======
+            if matchCount == 1:
+                iteration_begin = patternMatch * time_interval
+                iteration_end = time 
+            if matchCount >= 30:
+                print("iteration detected")
+                print("\npattern table:")
+                print(patternTable) 
+                print("\nvector:") 
+                print(vector)
+                print("\niteration begin,end:")
+                print(iteration_begin, iteration_end * time_interval) 
+                patternTable = pd.DataFrame(columns = events, dtype = int)
+                matchCount = 0
+                time = iteration_end + 1
+                total_iteration.append([iteration_begin, iteration_end * time_interval])
+                #return iteration_begin, iteration_end
+>>>>>>> 6ceddc96756427c5e19ae207751a1320a181de20:bin/sofa_deepprof.py
         else:
             iteration_timelines.append(str(iteration_pattern_count))
             iteration_pattern_count += 1
             vector.append(time)
             vectorSerie = pd.Series(vector, index = events)
+<<<<<<< HEAD:bin/sofa_ID.py
             patternTable = patternTable.append(vectorSerie, ignore_index = True)
 
         time += 1
@@ -112,6 +152,16 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
                 block_beg += block_size
                 block_end = block_beg + block_size
                 shrink_size = 0
+=======
+            patternTable=patternTable.append(vectorSerie, ignore_index = True)
+            print("\nnew pattern: ")
+            print(iteration_pattern_count)
+            print(patternTable)
+            print("\n")
+
+        time += 1
+    return iters 
+>>>>>>> 6ceddc96756427c5e19ae207751a1320a181de20:bin/sofa_deepprof.py
 
 def eventCount(column, eventName, df):
     #get rows count that contains eventName
@@ -121,21 +171,33 @@ def patternMatching(patternTable, vector, threshold):
     
     global iteration_index
     if patternTable.empty:
+<<<<<<< HEAD:bin/sofa_ID.py
+=======
+        print("patternTable is empty!")
+>>>>>>> 6ceddc96756427c5e19ae207751a1320a181de20:bin/sofa_deepprof.py
         return -1 
     for index, row in patternTable.iterrows():
         #pvector is vector from patternTable without timestamp
         pvector = row.values[:-1]
         sim = similarity(pvector, vector)
         if sim >= threshold:
+<<<<<<< HEAD:bin/sofa_ID.py
             iteration_index = index+1
             break
+=======
+            print("similarity: %f" % sim)
+            iteration_index = index+1
+            print(row["timestamp"])
+            return row["timestamp"]
+    print("no pattern match!")
+>>>>>>> 6ceddc96756427c5e19ae207751a1320a181de20:bin/sofa_deepprof.py
     return -1
 
 def similarity(a, b):
     maxv = max(np.linalg.norm(a), np.linalg.norm(b))
     minv = min(np.linalg.norm(a), np.linalg.norm(b))
     if (maxv/minv)<0.5:
-        print maxv/minv
+        print(maxv/minv)
         return 0
     result = 1. - spatial.distance.cosine(a, b)
     return result
@@ -163,8 +225,10 @@ def trace_timeline(path):
             f.write(str(i)+","+str(index))
             i += 1
 
-def sofa_ID(logdir, cfg):
+def sofa_deepprof(logdir, cfg, df_cpu, df_gpu):
+    print_title("Per-Iteration Performance Info.")
     global iteration_begin, iteration_end, base_time
+<<<<<<< HEAD:bin/sofa_ID.py
     filein = []
     df_gpu = []
     df_cpu = []
@@ -187,4 +251,8 @@ def sofa_ID(logdir, cfg):
     except IOError:
         print_warning(
             "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
+=======
+>>>>>>> 6ceddc96756427c5e19ae207751a1320a181de20:bin/sofa_deepprof.py
 
+    df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
+    iters = iteration_detect(logdir, cfg, df_gpu, 0.01, 0.7)

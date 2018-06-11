@@ -42,35 +42,32 @@ function install_python_packages()
         yum install https://centos7.iuscommunity.org/ius-release.rpm
         yum install python36u
         yum install python36u-pip
-    elif [[ "${OS}" == "Ubuntu" ]] && [[ "${VERSION}" == "14.04"* ]] ; then	
+    elif [[ "${OS}" == "Ubuntu" ]] && ( [[ "${VERSION}" == "14.04"* ]] || [[ "${VERSION}" == "16.04"* ]] ) ; then	
         apt-get install software-properties-common -y
-	add-apt-repository ppa:deadsnakes/ppa -y
+        add-apt-repository ppa:deadsnakes/ppa -y
         apt-get update -y
         apt-get install python3.6 -y
-	curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
-	python3.6 get-pip.py
+	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
+	    python3.6 get-pip.py
+        rm get-pip.py
     elif [[ $(which apt) ]] ; then	
         apt-get install python3.6 -y
     else
-	    file_python36="Python-3.6.0.tar.xz"
-	    if [[ ! -f "Python-3.6.0.tar.xz" ]]; then
-	        wget https://www.python.org/ftp/python/3.6.0/$file_python36
-	        tar xJf $file_python36
-	        cd Python-3.6.0
-	        ./configure ./configure --with-ssl
-	        cd -
-	    fi 
+	    file_pytar="Python-3.6.0.tar.xz"
+	    wget https://www.python.org/ftp/python/3.6.0/$file_pytar
+	    tar xJf $file_pytar
 	    cd Python-3.6.0
+	    ./configure --with-ssl
 	    make -j
 	    sudo make install
 	    # Install for Python3
-	    python3.6 -m pip install --upgrade upgrade pip
-	    python3.6 -m pip install numpy pandas networkx cxxfilt 
 	    cd - 
 	    rm -r Python-3.6.0*
-    fi  
+    fi
+    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+    
     python3.6 -m pip install --upgrade pip
-    python3.6 -m pip install numpy pandas networkx cxxfilt 
+    python3.6 -m pip install numpy pandas scipy networkx cxxfilt 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
