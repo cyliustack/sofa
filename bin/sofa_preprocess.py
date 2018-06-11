@@ -751,7 +751,6 @@ def sofa_preprocess(logdir, cfg):
     # Apply filters for cpu traces
     
     filtered_groups = []
-    color_of_filtered_group = []
     if len(cpu_traces) > 0:
         df_grouped = cpu_traces.groupby('name')
         for filter in cfg.cpu_filters:
@@ -762,7 +761,7 @@ def sofa_preprocess(logdir, cfg):
                                     'keyword': filter.keyword})
 
     # ============ Preprocessing Network Trace ==========================
-    
+    filtered_net_groups = []
     if os.path.isfile('%s/sofa.pcap' % logdir):
         with open(logdir + 'net.tmp', 'w') as f:
             subprocess.check_call(
@@ -790,12 +789,8 @@ def sofa_preprocess(logdir, cfg):
                     index=False,
                     float_format='%.6f')
     
-        
-    
-    # ============ Apply for Network filter =====================
+                # ============ Apply for Network filter =====================
                 if cfg.net_filters:
-                    filtered_net_groups = []
-                    color_of_filtered_group = []
                     packet_not_zero = net_traces['payload'] > 0
                     start = (net_traces['pkt_src'] == float(cfg.net_filters[0]))
                     for filter in cfg.net_filters[1:]:
@@ -813,7 +808,7 @@ def sofa_preprocess(logdir, cfg):
                                                     'color': 'rgba(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
                                                     'keyword': 'from_%s' %filter})
     else:
-        print_waring("no network traces were recorded.")
+        print_warning("no network traces were recorded.")
 
     # ============ Preprocessing GPU Trace ==========================
     num_cudaproc = 0
@@ -899,7 +894,6 @@ def sofa_preprocess(logdir, cfg):
 
                 # Apply filters for GPU traces
                 df_grouped = gpu_traces.groupby('name')
-                color_of_filtered_group = []
                 for filter in cfg.gpu_filters:
                     group = gpu_traces[gpu_traces['name'].str.contains(
                         filter.keyword)]
