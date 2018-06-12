@@ -102,7 +102,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
             shrink_size = 0
             iteration_count += 1
             if iteration_count == iteration_times:
-                print "Iteraion detection complete."
+                print("Iteraion detection complete.")
                 break
         else :
             shrink_size += shrink_rate
@@ -135,7 +135,7 @@ def similarity(a, b):
     maxv = max(np.linalg.norm(a), np.linalg.norm(b))
     minv = min(np.linalg.norm(a), np.linalg.norm(b))
     if (maxv/minv)<0.5:
-        print maxv/minv
+        print(maxv/minv)
         return 0
     result = 1. - spatial.distance.cosine(a, b)
     return result
