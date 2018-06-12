@@ -13,6 +13,7 @@ class SOFA_Config:
     gpu_filters = []
     net_filters = []
     verbose = False
+    enable_deepprof = False
     cpu_top_k = 20
     plot_ratio = 1
     viz_port = 8000

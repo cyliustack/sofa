@@ -66,6 +66,8 @@ if __name__ == "__main__":
     parser.set_defaults(profile_all_cpus=False)
     parser.add_argument('--verbose', dest='verbose', action='store_true')
     parser.set_defaults(verbose=False)
+    parser.add_argument('--enable_deepprof', dest='enable_deepprof', action='store_true')
+    parser.set_defaults(enable_deepprof=False)
     parser.add_argument(
         'command',
         type=str,
@@ -97,6 +99,9 @@ if __name__ == "__main__":
 
     if args.verbose is not None:
         cfg.verbose = args.verbose
+
+    if args.enable_deepprof is not None:
+        cfg.enable_deepprof = args.enable_deepprof
 
     if args.plot_ratio is not None:
         cfg.plot_ratio = args.plot_ratio

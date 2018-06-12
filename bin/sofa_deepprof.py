@@ -165,11 +165,6 @@ def trace_timeline(path):
 
 def sofa_deepprof(logdir, cfg, df_cpu, df_gpu):
     global iteration_begin, iteration_end, base_time
-    filein = []
-
-    filein_gpu = logdir + "gputrace.csv"
-    filein_cpu = logdir + "cputrace.csv"
-    filein_mpstat = logdir + "mpstat_trace.csv"
 
     try:
         base_time = df_gpu.loc[0,'timestamp']
