@@ -14,6 +14,7 @@ import re
 from sofa_config import *
 from sofa_print import *
 from random import *
+from sqlalchemy import create_engine
 
 def list_downsample(list_in, plot_ratio):
     new_list = []
@@ -822,6 +823,7 @@ def sofa_preprocess(logdir, cfg):
         # TODO: align cpu time and gpu time
         with open(logdir + "nvapi.txt", "w") as f:
             subprocess.call(["nvprof", "--print-api-trace", "-i", nvvp_filename], stderr=f)
+        '''    
         with open(logdir + 'nvapi.txt') as f:
             t_api_offset = 0.0
             for line in f:
@@ -839,6 +841,19 @@ def sofa_preprocess(logdir, cfg):
             print(('t_api_offset = %lf' % t_api_offset))
             print(('cfg.gpu_time_offset = %lf' % (cfg.gpu_time_offset * 1e-3)))
             t_glb_gpu_base = t_api_offset + t_first_nv + cfg.gpu_time_offset * 1e-3
+        print(t_glb_gpu_base)
+        '''
+        with open(logdir + 'gputrace.tmp') as f:
+            for line in f :
+                if line.find('0.000000') != -1:
+                    keyword = line.split(',')[-1]
+                if keyword.find('memcpy') != -1:
+                    gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMCPY'
+                elif keyword.find('memset') != -1:
+                    gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMSET'
+            engine = create_engine("sqlite:///"+nvvp_filename)
+            gpu_traces_df = pd.read_sql_table(gpu_f_event,engine)
+            t_glb_gpu_base = float(gpu_traces_df.iloc[0]['start'])/1e+9
         print(t_glb_gpu_base)
 
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
