@@ -24,81 +24,27 @@ iteration_index = 1
 total_iteration = []
 base_time = 0
 
-def iteration_detect(logdir, cfg, df_gpu, time_interval, threshold):
-    global iteration_begin, iteration_end, iteration_index, iteration_timelines, total_iteration, base_time
-    time_begin = 0
-    time_end = int(round(df_gpu.iloc[-1]['timestamp']/time_interval))
-    matchCount = 0
-    events = eventName[:]
-    events.append("timestamp")
-    patternTable = pd.DataFrame(columns = events, dtype = int)	
-    iteration_pattern_count = 1 
+def iteration_detect(logdir, cfg, df, time_interval, threshold):
     iters = []
-    time = 0
- 
-    while(time < time_end):
-        clock = time + 1
-        print("time:" + str(time) + "block:")
-        #for index, row in df_gpu.iterrows():
-        #if row['timestamp'] <= clock:
-        #    if row['name'].split('_')[1] == "copyKind"
-
-        #Pick the block within a interval
-        df_block = df_gpu[(df_gpu.loc[:, "timestamp"] / time_interval  < clock) & (df_gpu.loc[:, "timestamp"] / time_interval  >= time)]
+    #fields of df = timestamp,event,duration,deviceId,copyKind,payload,bandwidth,pkt_src,pkt_dst,pid,tid,name,category
+    #print(features)
+    print(df.iloc[0]['timestamp'])
+    print(df.iloc[-1]['timestamp'])
+    df_agg = df.groupby(['name']).agg({'duration':sum})
+    #g = df_agg['duration'].groupby(level=0, group_keys=False)
+    print(df_agg)
+    df_g = df_agg.sort_values(by=['duration'],ascending=False)
+    print(df_g.head(10))
+    top_names = list(df_g.head(10).keys())
+    print(top_names) 
+    fvectors = []
+    t_begin = df.iloc[0]['timestamp']
+    t_end = df.iloc[-1]['timestamp']
+    fvectors = np.zeros( (int((t_end-t_begin)/time_interval),10))
+    for i in range(len(df)-1):
+        fvid = int((df.iloc[i]['timestamp'] - t_begin) / time_interval) 
+        fvectors[fvid] = fvectors[fvid][0] + df.iloc[i]['duration'] 
         
-        #Create vector and count
-        vector = []
-        for e in eventName:
-            vector.append(eventCount('name', e, df_block))
-        
-        '''
-        count_HtoD = eventCount('name', 'copyKind_1', df_block)
-        count_DtoH = eventCount('name', 'copyKind_2', df_block)
-        count_DtoD = eventCount('name', 'copyKind_8', df_block)
-        count_PtoP = eventCount('name', 'copyKind_10', df_block)
-        '''
-        #print vector 
-        if sum(vector)==0:
-            print("vector empty")
-            iteration_timelines.append(0)
-            time += 1
-            continue
-        #pattern matching, if match then return iteration time, else then add new pattern to table and continue.
-        patternMatch = patternMatching(patternTable, vector, threshold)
-        if patternMatch != -1:
-            iteration_timelines.append(iteration_index)
-            #if matchCount > 30, then it should be iteration
-            matchCount += 1
-            
-            if matchCount == 1:
-                iteration_begin = patternMatch * time_interval
-                iteration_end = time 
-            if matchCount >= 30:
-                print("iteration detected")
-                print("\npattern table:")
-                print(patternTable) 
-                print("\nvector:") 
-                print(vector)
-                print("\niteration begin,end:")
-                print(iteration_begin, iteration_end * time_interval) 
-                patternTable = pd.DataFrame(columns = events, dtype = int)
-                matchCount = 0
-                time = iteration_end + 1
-                total_iteration.append([iteration_begin, iteration_end * time_interval])
-                #return iteration_begin, iteration_end
-        else:
-            iteration_timelines.append(iteration_pattern_count)
-            iteration_pattern_count += 1
-            matchCount = 0
-            vector.append(time)
-            vectorSerie = pd.Series(vector, index = events)
-            patternTable=patternTable.append(vectorSerie, ignore_index = True)
-            print("\nnew pattern: ")
-            print(iteration_pattern_count)
-            print(patternTable)
-            print("\n")
-
-        time += 1
     return iters 
 
 def eventCount(column, eventName, df):
@@ -162,7 +108,5 @@ def trace_timeline(path):
 
 def sofa_deepprof(logdir, cfg, df_cpu, df_gpu):
     print_title("Per-Iteration Performance Info.")
-    global iteration_begin, iteration_end, base_time
-
     df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
-    iters = iteration_detect(logdir, cfg, df_gpu, 0.01, 0.7)
+    iters = iteration_detect(logdir, cfg, df_cpu, 0.01, 0.7)

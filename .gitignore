@@ -2,6 +2,7 @@ perf.data
 perf.script
 tools/activate.sh
 sofalog
+tags
 *.cfg
 *.pyc
 __pycache__

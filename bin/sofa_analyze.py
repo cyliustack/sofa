@@ -394,7 +394,7 @@ def sofa_analyze(logdir, cfg):
         df_gpu = pd.read_csv(filein_gpu)
         df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         gpu_profile(logdir, cfg, df_gpu)
-        #sofa_deepprof(logdir, cfg, df_cpu, df_gpu)  
+        sofa_deepprof(logdir, cfg, df_cpu, df_gpu)  
     except IOError:
         print_warning(
             "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
