@@ -67,7 +67,7 @@ function install_python_packages()
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     
     python3.6 -m pip install --upgrade pip
-    python3.6 -m pip install numpy pandas scipy networkx cxxfilt fuzzywuzzy 
+    python3.6 -m pip install numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
