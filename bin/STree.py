@@ -235,14 +235,15 @@ class STree():
         return [n.idx for n in leaves]
 
     def find_all_leaves(self, snode, repeat_limit):
-        y = self._edgeLabel(snode, snode.parent)
+        y = self._edgeLabel(snode, self.root)
         #convert node content to string
-        y = y.encode("utf-8").encode("string-escape").split("\\x")[0]
+        y = repr(y).strip("'").split("\\")[0]
+        pattern = y
         #TODO: add pattern length limitation
         #if y > it_limit
-        node = self.root
+        node = snode
         while True:
-            edge = self._edgeLabel(node, node.parent)
+            edge = self._edgeLabel(node, self.root)
             if edge.startswith(y):
                 break
 
@@ -262,10 +263,9 @@ class STree():
                 return ''
 
         leaves = node._get_leaves()
-        appearanceTable = [n.idx for n in leaves]
-        repeat_time = len(appearanceTable)
+        repeat_time = len(leaves)
         if repeat_time == repeat_limit:
-            return y
+            return pattern
         return ''
 
     def find_repeat_pattern(self, t, repeat_limit):

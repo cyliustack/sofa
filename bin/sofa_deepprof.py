@@ -112,6 +112,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
                 block_beg += block_size
                 block_end = block_beg + block_size
                 shrink_size = 0
+    process += 1
 
 def eventCount(column, eventName, df):
     #get rows count that contains eventName
