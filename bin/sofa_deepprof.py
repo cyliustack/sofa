@@ -17,7 +17,7 @@ from sofa_config import *
 from STree import *
 
 #events = ["HtoD", "DtoH", "DtoD", "PtoP"]
-eventName = ['maxwell_scudnn_128x128_stridedB_splitK_interior_nn','cudnn::detail::bn_bw_1C11_kernel_new', 'maxwell_scudnn_128x128_relu_interior_nn', 'cudnn::detail::bn_fw_tr_1C11_kernel_new', 'maxwell_scudnn_128x128_stridedB_interior_nn', 'maxwell_sgemmBatched_64x64_raggedMn_nt', 'TensorConversionOp', 'maxwell_sgemmBatched_64x64_raggedMn_nn', 'TensorCwiseBinaryOp<Eigen::internal::scalar_max_op', 'TensorCwiseBinaryOp<Eigen::internal::scalar_sum_op']
+eventName = ['gpu1_copyKind_1_33554432B','gpu1_copyKind_2_33554432B','gpu1_copyKind_8_33554432B']
 iteration_begin = 0
 iteration_end = 0
 iteration_timelines = []
@@ -47,27 +47,26 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
         #Create vector and count 
         vector = []
         for e in eventName:
-            vector.append(eventCount('name', e, df_block))
-        
+            count = eventCount('name', e, df_block)
+            vector.append(count)
         if sum(vector)==0:
             #if vector is empty
             iteration_timelines.append('0')
-            time += 1
-            continue
-        patternMatch = patternMatching(patternTable, vector, threshold)
-        if patternMatch != -1:
-            iteration_timelines.append(str(iteration_index))
-            
         else:
-            iteration_timelines.append(str(iteration_pattern_count))
-            iteration_pattern_count += 1
-            vector.append(time)
-            vectorSerie = pd.Series(vector, index = events)
-            patternTable = patternTable.append(vectorSerie, ignore_index = True)
-
+            patternMatch = patternMatching(patternTable, vector, threshold)
+            if patternMatch != -1:
+                iteration_timelines.append(str(iteration_index))
+            else:
+                iteration_timelines.append(str(iteration_pattern_count))
+                iteration_pattern_count += 1
+                vector.append(time)
+                vectorSerie = pd.Series(vector, index = events)
+                patternTable = patternTable.append(vectorSerie, ignore_index = True)
+        
         time += 1
 
-    #building suffix tree to find pattern
+    #building suffix tree to find patter0
+    print(iteration_timelines)
     mainString = "".join(iteration_timelines)
     st = STree(mainString)    
     IT_times = iteration_times
@@ -113,6 +112,9 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
                 block_end = block_beg + block_size
                 shrink_size = 0
 
+
+
+
 def eventCount(column, eventName, df):
     #get rows count that contains eventName
     return df[df[column].str.contains(eventName, na=False)][column].count()
@@ -128,7 +130,7 @@ def patternMatching(patternTable, vector, threshold):
         sim = similarity(pvector, vector)
         if sim >= threshold:
             iteration_index = index+1
-            break
+            return 0
     return -1
 
 def similarity(a, b):
@@ -169,7 +171,7 @@ def sofa_deepprof(logdir, cfg, df_cpu, df_gpu):
     try:
         base_time = df_gpu.loc[0,'timestamp']
         df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
-        iterationDetection(logdir, cfg, df_gpu, 0.01, 0.7, 11)
+        iterationDetection(logdir, cfg, df_gpu, 0.1, 0.7, 1)
         iteration_begin += base_time
         iteration_end += base_time 
         traces_to_json(logdir + 'report.js')
