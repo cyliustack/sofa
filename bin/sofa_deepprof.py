@@ -69,7 +69,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
     #building suffix tree to find patter0
     print(iteration_timelines)
     mainString = "".join(iteration_timelines)
-    st = STree(mainString)    
+    st = STree(mainString)
     IT_times = iteration_times
     while not candidate_pattern:
         if(IT_times == 0):
@@ -83,7 +83,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
     reversePattern = pattern[::-1]
     reverseMainString = mainString[::-1]
     total_length = len(mainString)
-    block_size = total_length / (n + k)
+    block_size = int(total_length / (n + k))
     process = 0
     block_beg = 0
     block_end = block_size
@@ -93,7 +93,6 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
     iteration_count = 0
     while process < total_length:
         blockString = reverseMainString[block_beg:block_end]
-        
         #use fuzzywuzzy as approximate match accuracy. TODO: use reasonable threshold.
         if fuzz.token_sort_ratio(blockString, reversePattern) > 70:
             iteration_table.append((float(total_length - 1 - block_end) / time_interval, float(total_length - 1 -block_beg) / time_interval))     
@@ -113,7 +112,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
                 block_end = block_beg + block_size
                 shrink_size = 0
 
-
+        process += 1
 
 
 def eventCount(column, eventName, df):
@@ -146,17 +145,23 @@ def similarity(a, b):
  
 def traces_to_json(path):
     global iteration_begin, iteration_end, iteration_table, base_time
-    with open(path, 'w+') as f:
+    sofa_traces = None
+    with open(path, 'r') as f:
         sofa_traces = f.readlines()
+    with open(path, 'w') as f:
+        #sofa_traces = f.readlines()
         f.writelines([line for line in sofa_traces[:-1]])
         f.write("\n\n")
         f.write("iteration_detection = ")
         f.write('{"color": "rgba(241,156,162,1)", "data": [')    
         for (IT_beg, IT_end) in iteration_table:
+            print("begin:%f end:%f duration:%f"%(IT_beg+base_time,IT_end+base_time,IT_end-IT_beg))
             f.write('{"name": "iteration_begin", "x": ' + str(IT_beg + base_time) + ', "y": 1000000}, {"name": "iteration_end", "x": ' + str(IT_end + base_time) +', "y": 1000000}, ')
-        f.write(']}')
-    
-        f.write(sofa_traces[-1].split(",")[0:-1] + "iteration_detection ]")
+        f.write(']}\n')
+        for s in sofa_traces[-1].split(','): 
+            if s.find(']') == -1:
+                f.write(s+',')
+        f.write("iteration_detection ]")
 
 def trace_timeline(path):
     global iteration_timelines
