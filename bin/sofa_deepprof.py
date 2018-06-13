@@ -153,7 +153,7 @@ def traces_to_json(path):
         for (IT_beg, IT_end) in iteration_table:
             f.write('{"name": "iteration_begin", "x": ' + str(IT_beg + base_time) + ', "y": 1000000}, {"name": "iteration_end", "x": ' + str(IT_end + base_time) +', "y": 1000000}, ')
         f.write(']}')
-    
+        f.write("\n\n")
         f.write(sofa_traces[-1].split(",")[0:-1] + "iteration_detection ]")
 
 def trace_timeline(path):
