@@ -70,6 +70,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
     print(iteration_timelines)
     mainString = "".join(iteration_timelines)
     st = STree(mainString)
+    print(mainString)
     IT_times = iteration_times
     while not candidate_pattern:
         if(IT_times == 0):

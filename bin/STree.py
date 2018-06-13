@@ -237,8 +237,7 @@ class STree():
     def find_all_leaves(self, snode, repeat_limit):
         y = self._edgeLabel(snode, snode.parent)
         #convert node content to string
-        y = str(y)
-        #y = y.encode("utf-8").encode("string-escape").split("\\x")[0]
+        y = y.encode("utf-8").decode("unicode_escape").split("\\x")[0]
         #TODO: add pattern length limitation
         #if y > it_limit
         node = self.root
