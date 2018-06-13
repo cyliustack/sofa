@@ -17,6 +17,7 @@ from sofa_config import *
 from STree import *
 
 #events = ["HtoD", "DtoH", "DtoD", "PtoP"]
+#DEMO: Execute "samples/1_Utilities/bandwidthTest/bandwidthTest" three times 
 eventName = ['gpu1_copyKind_1_33554432B','gpu1_copyKind_2_33554432B','gpu1_copyKind_8_33554432B']
 iteration_begin = 0
 iteration_end = 0
@@ -171,7 +172,7 @@ def sofa_deepprof(logdir, cfg, df_cpu, df_gpu):
     try:
         base_time = df_gpu.loc[0,'timestamp']
         df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
-        iterationDetection(logdir, cfg, df_gpu, 0.1, 0.7, 1)
+        iterationDetection(logdir, cfg, df_gpu, 0.1, 0.7, 3)
         iteration_begin += base_time
         iteration_end += base_time 
         traces_to_json(logdir + 'report.js')
