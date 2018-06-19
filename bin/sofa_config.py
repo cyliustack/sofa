@@ -14,6 +14,7 @@ class SOFA_Config:
     net_filters = []
     verbose = False
     enable_deepprof = False
+    iterations = 20
     cpu_top_k = 20
     plot_ratio = 1
     viz_port = 8000

@@ -197,7 +197,7 @@ def sofa_deepprof(logdir, cfg, df_cpu, df_gpu):
     try:
         base_time = df_gpu.loc[0,'timestamp']
         df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
-        iterationDetection(logdir, cfg, df_gpu, 0.01, 0.7, 20)
+        iterationDetection(logdir, cfg, df_gpu, 0.01, 0.7, cfg.iterations)
         iteration_begin += base_time
         iteration_end += base_time 
         traces_to_json(logdir + 'report.js')
