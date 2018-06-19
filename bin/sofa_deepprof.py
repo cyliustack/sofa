@@ -124,7 +124,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
         #use fuzzywuzzy as approximate match accuracy. TODO: use reasonable threshold.
         fuzz_ratio = fuzz.token_sort_ratio(blockString, pattern) 
         fuzzyRatioTable.append(fuzz_ratio)
-        print("fuzz ratio:", fuzz_ratio)
+        #print("fuzz ratio:", fuzz_ratio)
         block_beg += 2
         block_end += 2
         process += 2
