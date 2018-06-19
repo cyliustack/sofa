@@ -820,31 +820,10 @@ def sofa_preprocess(logdir, cfg):
         with open(logdir + "gputrace.tmp", "w") as f:
             subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "-i", nvvp_filename], stderr=f)
 
-        # TODO: align cpu time and gpu time
-        with open(logdir + "nvapi.txt", "w") as f:
-            subprocess.call(["nvprof", "--print-api-trace", "-i", nvvp_filename], stderr=f)
-            
-        with open(logdir + 'nvapi.txt') as f:
-            t_api_offset = 0.0
-            for line in f:
-                if line.find('cudaMemcpy') != -1:
-                    ts = line.split()[0]
-                    if ts.find('ms') != -1:
-                        t_api_offset = int(
-                            re.search(r'\d+', ts).group()) * 1e-3
-                    elif ts.find('us') != -1:
-                        t_api_offset = int(
-                            re.search(r'\d+', ts).group()) * 1e-6
-                    else:
-                        t_api_offset = int(re.search(r'\d+', ts).group()) * 1.0
-                    break
-            print(('t_api_offset = %lf' % t_api_offset))
-            print(('cfg.gpu_time_offset = %lf' % (cfg.gpu_time_offset * 1e-3)))
-            t_glb_gpu_base = t_api_offset + t_first_nv + cfg.gpu_time_offset * 1e-3
-        print(t_glb_gpu_base)
-        '''
         with open(logdir + 'gputrace.tmp') as f:
+            gpu_f_event=''
             for line in f :
+                #print(line)
                 if line.find('0.000000') != -1:
                     keyword = line.split(',')[-1]
                     if keyword.find('memcpy') != -1:
@@ -853,10 +832,11 @@ def sofa_preprocess(logdir, cfg):
                         gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMSET'
             engine = create_engine("sqlite:///"+nvvp_filename)
             gpu_traces_df = pd.read_sql_table(gpu_f_event,engine)
+            print(gpu_traces_df.iloc[0]['start'])
+            print(gpu_traces_df.iloc[0]['end'])
             t_glb_gpu_base = float(gpu_traces_df.iloc[0]['start'])/1e+9
         print(t_glb_gpu_base)
-        '''
-
+       
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
         num_cudaproc = num_cudaproc + 1
         with open(logdir + 'gputrace.tmp') as f:
