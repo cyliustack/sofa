@@ -362,17 +362,17 @@ def sofa_analyze(logdir, cfg):
                         #print('%d connects to %d' % (i, j-1))
             #print(edges)
             G = nx.DiGraph(edges)           
-            for cycle in nx.simple_cycles(G):
-                if len(cycle) == num_gpus:
-                    print(("One of the recommended %d rings" % len(cycle) ))
-                    print(cycle)
-                    os.system("mkdir -p /tmp/sofa_hints/")
-                    xring_order = ','.join(map(str, cycle))
-                    with open("/tmp/sofa_hints/xring_order.txt", "w") as f:
-                        f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
+            #for cycle in nx.simple_cycles(G):
+            #    if len(cycle) == num_gpus:
+            #        print(("One of the recommended %d rings" % len(cycle) ))
+            #        print(cycle)
+            #        os.system("mkdir -p /tmp/sofa_hints/")
+            #        xring_order = ','.join(map(str, cycle))
+            #        with open("/tmp/sofa_hints/xring_order.txt", "w") as f:
+            #            f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
                     # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text('export CUDA_VISIBLE_DEVICES=' + xring_order)  # UPGRADE: py35
                     # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text(f'export CUDA_VISIBLE_DEVICES=f{xring_order}')  # UPGRADE: py36
-                    break
+            #        break
     #try:
     #    df_mpstat = pd.read_csv(filein_mpstat)
     #    mpstat_profile(logdir, cfg, df_mpstat)
@@ -392,9 +392,9 @@ def sofa_analyze(logdir, cfg):
 
     try:
         df_gpu = pd.read_csv(filein_gpu)
+        sofa_deepprof(logdir, cfg, df_cpu, df_gpu)  
         df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         gpu_profile(logdir, cfg, df_gpu)
-        sofa_deepprof(logdir, cfg, df_cpu, df_gpu)  
     except IOError:
         print_warning(
             "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
