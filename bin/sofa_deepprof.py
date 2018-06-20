@@ -25,7 +25,6 @@ iteration_index = 1
 iteration_table = []
 blank_count = 0
 
-base_time = 0
 
 def get_top_k_events(df, topk):
     topk_events=[]
@@ -40,7 +39,7 @@ def get_top_k_events(df, topk):
     return eventName
 
 def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
-    global iteration_begin, iteration_end, iteration_index, iteration_timelines, iteration_table, base_time, blank_count
+    global iteration_begin, iteration_end, iteration_index, iteration_timelines, iteration_table, blank_count
     t_df_begin = df_gpu.iloc[0]['timestamp'] 
     t_df_end = df_gpu.iloc[-1]['timestamp'] 
     tick_begin = 0
@@ -151,7 +150,7 @@ def similar(a, b, threshold):
     return False
  
 def traces_to_json(path):
-    global iteration_begin, iteration_end, iteration_table, base_time
+    global iteration_begin, iteration_end, iteration_table
     sofa_traces = None
     with open(path, 'r') as f:
         sofa_traces = f.readlines()
@@ -162,8 +161,8 @@ def traces_to_json(path):
         f.write("iteration_detection = ")
         f.write('{"color": "rgba(241,156,162,1)", "data": [')    
         for (IT_beg, IT_end) in iteration_table:
-            print("begin:%f end:%f duration:%f"%(IT_beg+base_time,IT_end+base_time,IT_end-IT_beg))
-            f.write('{"name": "iteration_begin", "x": ' + str(IT_beg + base_time) + ', "y": 1000000}, {"name": "iteration_end", "x": ' + str(IT_end + base_time) +', "y": 1000000}, ')
+            print("begin:%f end:%f duration:%f"%(IT_beg, IT_end, IT_end-IT_beg))
+            f.write('{"name": "iteration_begin", "x": ' + str(IT_beg) + ', "y": 1000000}, {"name": "iteration_end", "x": ' + str(IT_end) +', "y": 1000000}, ')
         f.write(']}\n')
         for s in sofa_traces[-1].split(','): 
             if s.find(']') == -1:
@@ -182,7 +181,7 @@ def trace_timeline(path):
             i += 1
 
 def sofa_deepprof(logdir, cfg, df_cpu, df_gpu):
-    global iteration_begin, iteration_end, base_time
+    global iteration_begin, iteration_end
 
     try: 
         iterationDetection(logdir, cfg, df_gpu, 0.01, 0.7, cfg.iterations) 
