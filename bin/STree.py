@@ -268,9 +268,9 @@ class STree():
             return pattern
         return ''
 
-    def find_repeat_pattern(self, t, repeat_limit):
+    def find_repeat_pattern(self, table, repeat_limit):
         node = self.root
-        self.root._travel_nodes(self.find_all_leaves, t, repeat_limit)
+        self.root._travel_nodes(self.find_all_leaves, table, repeat_limit)
 
     def _edgeLabel(self, node, parent):
         """Helper method, returns the edge label between a node and it's parent"""
@@ -343,15 +343,15 @@ class _SNode():
             node._traverse(f)
         f(self)
     
-    def _travel_nodes(self, f, t, repeat_limit):
+    def _travel_nodes(self, f, table, repeat_limit):
         for (node,_) in self.transition_links:
-            node._travel_nodes(f, t, repeat_limit)
+            node._travel_nodes(f, table, repeat_limit)
         #Check if pattern appear exact given times.
         pattern = f(self, repeat_limit)
         #t is a table that record all satisfied patterns.
         if pattern != '':
-            if not pattern in t:
-                t.append(pattern)
+            if not pattern in table:
+                table.append(pattern)
 
     def _get_leaves(self):
         if self.is_leaf():
