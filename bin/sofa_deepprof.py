@@ -3,7 +3,6 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-import csv
 import json
 import random
 from fuzzywuzzy import fuzz
@@ -38,12 +37,26 @@ def get_top_k_events(df, topk):
         print('[%d] %s'%(i,eventName[i]))
     return eventName
 
+def select_pattern(candidate_pattern):
+    print(candidate_pattern)
+    candidate_pattern_filtered = []
+    for cp in candidate_pattern: 
+        if len(cp)>1:
+            if cp.count(cp[0])+cp.count(cp[1]) != len(cp): 
+                candidate_pattern_filtered.append(cp)
+                print('filtered cp = '+cp)
+            
+    pattern = max(candidate_pattern_filtered, key = len)
+    print("pattern selected:", pattern)
+    return pattern  
+
 def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
     global iteration_begin, iteration_end, iteration_index, iteration_timelines, iteration_table, blank_count
     t_df_begin = df_gpu.iloc[0]['timestamp'] 
     t_df_end = df_gpu.iloc[-1]['timestamp'] 
     tick_begin = 0
     tick_end = int( round( ( t_df_end - t_df_begin ) / time_interval ) )
+    print('tick_end='+str(tick_end))
     event_names = get_top_k_events(df_gpu,10)
     events = event_names[:]
     events.append('timestamp')
@@ -85,40 +98,43 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
     #building suffix tree to find patter0
     #print(iteration_timelines)
     mainString = "".join(iteration_timelines)
-    
-    #mainString='11122231111222311112202'
+    #mainString='00000101001001001'
     #mainString = 'aabbcccaabbcccaabbccc' 
     st = STree(mainString)
     #print(mainString)
-    IT_times = iteration_times
-    st.find_repeat_pattern(candidate_pattern, IT_times)
+    st.find_repeat_pattern(candidate_pattern, iteration_times)
     #print("iteration_timelines:", iteration_timelines)
     print("mainString:", mainString) 
-    #print("candidate_patterns:",candidate_pattern)
+    #print("candidate_pattern:",candidate_pattern)
     if candidate_pattern:
-        pattern = max(candidate_pattern, key = len)
-        print("pattern:", pattern)
+        pattern = select_pattern(candidate_pattern)
         total_length = len(mainString)
         block_size = len(pattern)
-        process = 0
         block_beg = 0
         block_end = block_size
+        step = 1
+        #step = int(block_size/8)
         iteration_count = 0
         fuzzyRatioTable = []
         print("black_count:",blank_count)
-        while process < (total_length - block_size):
+        while block_beg < (total_length - block_size):
             blockString = mainString[block_beg:block_end]
             #use fuzzywuzzy as approximate match accuracy. TODO: use reasonable threshold.
             fuzz_ratio = fuzz.token_sort_ratio(blockString, pattern) 
             fuzzyRatioTable.append(fuzz_ratio)
-            #print("fuzz ratio:", fuzz_ratio)
-            block_beg += 2
-            block_end += 2
-            process += 2
+            print(str(block_end)+"  fuzz ratio:"+str(fuzz_ratio))
+            block_beg += step
+            block_end += step
         #find largest fuzzy ratio n blocks (n = iteration_times)
-        ind = np.argpartition(fuzzyRatioTable, -iteration_times)[-iteration_times:]
+        ind = []
+        print(fuzzyRatioTable)
+        for i in range(len(fuzzyRatioTable)):
+            if fuzzyRatioTable[i] > 90:
+                ind.append(i)
+        #ind = np.argpartition(fuzzyRatioTable, -iteration_times)[-iteration_times:]
+        comma_factor = 2
         for index in ind: 
-            iteration_table.append((float(index + blank_count) * time_interval + t_df_begin, float(index + block_size + blank_count) * time_interval + t_df_begin))     
+            iteration_table.append((float(index*step + blank_count) * time_interval/comma_factor + t_df_begin, float(index*step + block_size + blank_count) * time_interval/comma_factor + t_df_begin))     
     else:
         print('No iteration patterns detected.')
 
