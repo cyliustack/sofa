@@ -41,23 +41,23 @@ def get_top_k_events(df, topk):
 
 def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
     global iteration_begin, iteration_end, iteration_index, iteration_timelines, iteration_table, base_time, blank_count
-    time_begin = 0
-    time_end = int(round(df_gpu.iloc[-1]['timestamp']/time_interval))
+    t_df_begin = df_gpu.iloc[0]['timestamp'] 
+    t_df_end = df_gpu.iloc[-1]['timestamp'] 
+    tick_begin = 0
+    tick_end = int( round( ( t_df_end - t_df_begin ) / time_interval ) )
     event_names = get_top_k_events(df_gpu,10)
     events = event_names[:]
     events.append('timestamp')
     patternTable = pd.DataFrame(columns = events, dtype = int)	
     candidate_pattern=[]
     iteration_pattern_count = 1 
-    time = 0
-    n = 0
-    k = 1 
+    tick = 0 
     #Create pattern table by extract top-k feature, and label each vector with specified index 
-    while(time < time_end):
-        clock = time + 1
+    while(tick < tick_end):
+        tick_next = tick + 1
+        tick_event = (df_gpu.loc[:, "timestamp"] - t_df_begin) / time_interval
         #slice trace to block by time interval
-        df_block = df_gpu[(df_gpu.loc[:, "timestamp"] / time_interval  < clock) & (df_gpu.loc[:, "timestamp"] / time_interval  >= time)]
-        
+        df_block = df_gpu[( tick_event < tick_next) & ( tick_event >= tick)]
         #Create vector and count 
         vector = []
         for e in event_names:
@@ -69,7 +69,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
                 iteration_timelines.append('0,')
             else:
                 blank_count += 1
-            time += 1
+            tick += 1
             continue
         patternMatch = patternMatching(patternTable, vector, threshold)
         if patternMatch != -1:
@@ -78,63 +78,54 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
         else:
             iteration_timelines.append(str(iteration_pattern_count)+",")
             iteration_pattern_count += 1
-            vector.append(time)
+            vector.append(tick)
             vectorSerie = pd.Series(vector, index = events)
             patternTable = patternTable.append(vectorSerie, ignore_index = True)
-        time += 1
+        tick += 1
 
     #building suffix tree to find patter0
     #print(iteration_timelines)
     mainString = "".join(iteration_timelines)
     
-    ### Worker Intelligence
-    #n_matches = len(re.findall('9,10,0,0,', mainString)) + \
-    #            len(re.findall('10,14,0,0,', mainString)) + \
-    #            len(re.findall('9,15,0,0,', mainString))  
-    #print("matched times = %d"%n_matches)
-    
     #mainString='11122231111222311112202'
     #mainString = 'aabbcccaabbcccaabbccc' 
     st = STree(mainString)
-    print(mainString)
+    #print(mainString)
     IT_times = iteration_times
-#    while not candidate_pattern:
-#        if(IT_times == 0):
-#            print("can't find pattern")
-#            return 0
     st.find_repeat_pattern(candidate_pattern, IT_times)
-#        IT_times -= 1
-    #pattern finded  
-    print("iteration_timelines:", iteration_timelines)
+    #print("iteration_timelines:", iteration_timelines)
     print("mainString:", mainString) 
-    print("candidate_pattern:",candidate_pattern)
-    pattern = max(candidate_pattern, key = len)
-    print("pattern:", pattern)
-    total_length = len(mainString)
-    block_size = len(pattern)
-    process = 0
-    block_beg = 0
-    block_end = block_size
-    iteration_count = 0
-    fuzzyRatioTable = []
-    print("black_count:",blank_count)
-    while process < (total_length - block_size):
-        blockString = mainString[block_beg:block_end]
-        
-        #use fuzzywuzzy as approximate match accuracy. TODO: use reasonable threshold.
-        fuzz_ratio = fuzz.token_sort_ratio(blockString, pattern) 
-        fuzzyRatioTable.append(fuzz_ratio)
-        #print("fuzz ratio:", fuzz_ratio)
-        block_beg += 2
-        block_end += 2
-        process += 2
-    #find largest fuzzy ratio n blocks (n = iteration_times)
-    ind = np.argpartition(fuzzyRatioTable, -iteration_times)[-iteration_times:]
-    for index in ind: 
-        iteration_table.append((float(index + blank_count) * time_interval, float(index + block_size + blank_count) * time_interval))     
+    #print("candidate_patterns:",candidate_pattern)
+    if candidate_pattern:
+        pattern = max(candidate_pattern, key = len)
+        print("pattern:", pattern)
+        total_length = len(mainString)
+        block_size = len(pattern)
+        process = 0
+        block_beg = 0
+        block_end = block_size
+        iteration_count = 0
+        fuzzyRatioTable = []
+        print("black_count:",blank_count)
+        while process < (total_length - block_size):
+            blockString = mainString[block_beg:block_end]
+            #use fuzzywuzzy as approximate match accuracy. TODO: use reasonable threshold.
+            fuzz_ratio = fuzz.token_sort_ratio(blockString, pattern) 
+            fuzzyRatioTable.append(fuzz_ratio)
+            #print("fuzz ratio:", fuzz_ratio)
+            block_beg += 2
+            block_end += 2
+            process += 2
+        #find largest fuzzy ratio n blocks (n = iteration_times)
+        ind = np.argpartition(fuzzyRatioTable, -iteration_times)[-iteration_times:]
+        for index in ind: 
+            iteration_table.append((float(index + blank_count) * time_interval + t_df_begin, float(index + block_size + blank_count) * time_interval + t_df_begin))     
+    else:
+        print('No iteration patterns detected.')
+
 def eventCount(column, eventName, df):
-    #get rows count that contains eventName
-    return df[df[column].str.contains(eventName, na=False)][column].count()
+        #get rows count that contains eventName
+        return df[df[column].str.contains(eventName, na=False)][column].count()
         
 def patternMatching(patternTable, vector, threshold):
     
@@ -193,12 +184,8 @@ def trace_timeline(path):
 def sofa_deepprof(logdir, cfg, df_cpu, df_gpu):
     global iteration_begin, iteration_end, base_time
 
-    try:
-        base_time = df_gpu.loc[0,'timestamp']
-        df_gpu.loc[:,'timestamp'] -= df_gpu.loc[0,'timestamp']
-        iterationDetection(logdir, cfg, df_gpu, 0.01, 0.7, cfg.iterations)
-        iteration_begin += base_time
-        iteration_end += base_time 
+    try: 
+        iterationDetection(logdir, cfg, df_gpu, 0.01, 0.7, cfg.iterations) 
         traces_to_json(logdir + 'report.js')
         trace_timeline(logdir + 'iteration_timeline.txt')
 

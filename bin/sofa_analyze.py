@@ -386,13 +386,12 @@ def sofa_analyze(logdir, cfg):
         cpu_profile(logdir, cfg, df_cpu)
         net_profile(logdir, cfg, df_cpu)
     except IOError:
-        print_warning(
-            "cputrace.csv is not found")
+        print_warning("cputrace.csv is not found")
         #quit()
 
     try:
         df_gpu = pd.read_csv(filein_gpu)
-        df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
+        #df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         gpu_profile(logdir, cfg, df_gpu)
         if cfg.enable_deepprof:
             sofa_deepprof(logdir, cfg, df_cpu, df_gpu)  
