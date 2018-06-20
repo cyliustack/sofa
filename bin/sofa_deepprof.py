@@ -38,13 +38,13 @@ def get_top_k_events(df, topk):
     return eventName
 
 def select_pattern(candidate_pattern):
-    print(candidate_pattern)
+    #print(candidate_pattern)
     candidate_pattern_filtered = []
     for cp in candidate_pattern: 
         if len(cp)>1:
             if cp.count(cp[0])+cp.count(cp[1]) != len(cp): 
                 candidate_pattern_filtered.append(cp)
-                print('filtered cp = '+cp)
+                #print('filtered cp = '+cp)
             
     pattern = max(candidate_pattern_filtered, key = len)
     print("pattern selected:", pattern)
@@ -56,7 +56,6 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
     t_df_end = df_gpu.iloc[-1]['timestamp'] 
     tick_begin = 0
     tick_end = int( round( ( t_df_end - t_df_begin ) / time_interval ) )
-    print('tick_end='+str(tick_end))
     event_names = get_top_k_events(df_gpu,10)
     events = event_names[:]
     events.append('timestamp')
@@ -116,20 +115,18 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
         #step = int(block_size/8)
         iteration_count = 0
         fuzzyRatioTable = []
-        print("black_count:",blank_count)
         while block_beg < (total_length - block_size):
             blockString = mainString[block_beg:block_end]
             #use fuzzywuzzy as approximate match accuracy. TODO: use reasonable threshold.
             fuzz_ratio = fuzz.token_sort_ratio(blockString, pattern) 
             fuzzyRatioTable.append(fuzz_ratio)
-            print(str(block_end)+"  fuzz ratio:"+str(fuzz_ratio))
             block_beg += step
             block_end += step
         #find largest fuzzy ratio n blocks (n = iteration_times)
         ind = []
-        print(fuzzyRatioTable)
+        #print(fuzzyRatioTable)
         for i in range(len(fuzzyRatioTable)):
-            if fuzzyRatioTable[i] > 90:
+            if fuzzyRatioTable[i] > 80:
                 ind.append(i)
         #ind = np.argpartition(fuzzyRatioTable, -iteration_times)[-iteration_times:]
         comma_factor = 2
@@ -177,7 +174,7 @@ def traces_to_json(path):
         f.write("iteration_detection = ")
         f.write('{"color": "rgba(241,156,162,1)", "data": [')    
         for (IT_beg, IT_end) in iteration_table:
-            print("begin:%f end:%f duration:%f"%(IT_beg, IT_end, IT_end-IT_beg))
+            #print("begin:%f end:%f duration:%f"%(IT_beg, IT_end, IT_end-IT_beg))
             f.write('{"name": "iteration_begin", "x": ' + str(IT_beg) + ', "y": 1000000}, {"name": "iteration_end", "x": ' + str(IT_end) +', "y": 1000000}, ')
         f.write(']}\n')
         for s in sofa_traces[-1].split(','): 
