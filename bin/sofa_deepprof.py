@@ -126,7 +126,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
         ind = []
         #print(fuzzyRatioTable)
         for i in range(len(fuzzyRatioTable)):
-            if fuzzyRatioTable[i] > 80:
+            if fuzzyRatioTable[i] > 87:
                 ind.append(i)
         #ind = np.argpartition(fuzzyRatioTable, -iteration_times)[-iteration_times:]
         comma_factor = 2
@@ -175,7 +175,9 @@ def traces_to_json(path):
         f.write('{"color": "rgba(241,156,162,1)", "data": [')    
         for (IT_beg, IT_end) in iteration_table:
             #print("begin:%f end:%f duration:%f"%(IT_beg, IT_end, IT_end-IT_beg))
-            f.write('{"name": "iteration_begin", "x": ' + str(IT_beg) + ', "y": 1000000}, {"name": "iteration_end", "x": ' + str(IT_end) +', "y": 1000000}, ')
+            for i in range(10):
+                dot_y = np.power(10,float(i-5))
+                f.write('{"name": "iteration_begin", "x": ' + str(IT_beg) + ', "y": ' + str(dot_y) + '}, {"name": "iteration_end", "x": ' + str(IT_end) +', "y": ' + str(dot_y) + '}, ')
         f.write(']}\n')
         for s in sofa_traces[-1].split(','): 
             if s.find(']') == -1:
