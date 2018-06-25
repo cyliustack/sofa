@@ -15,6 +15,8 @@ from sofa_config import *
 from sofa_print import *
 from random import *
 from sqlalchemy import create_engine
+from sofa_tf_prepare import *
+import shutil 
 
 def list_downsample(list_in, plot_ratio):
     new_list = []
@@ -369,6 +371,13 @@ def sofa_preprocess(logdir, cfg):
     t_glb_base = 0
     t_glb_net_base = 0
     t_glb_gpu_base = 0
+
+    # ==================== Move TF_prepare.binary to logdir ====================
+    try:
+        shutil.move("./TF_prepare.binary",logdir)
+    except:
+        print("There is no TF_prepare.binary file or You don't train/inference with real data.")
+    # ==========================================================================
 
     with open('%s/perf.script' % logdir, 'w') as logfile:
         subprocess.call(['perf',
@@ -811,6 +820,18 @@ def sofa_preprocess(logdir, cfg):
     else:
         print_warning("no network traces were recorded.")
 
+    # ============ TF-prepare Trace ================================
+    filtered_TFPrepare_groups = []
+    try:
+        tf_traces = sofa_tf_prepare(_file='TF_prepare.binary',logdir=logdir)
+        for filter in cfg.tf_prepare_filters:
+            group = tf_traces[tf_traces['name'].str.contains(filter.keyword)]
+            filtered_TFPrepare_groups.append({'group': group,
+                                              'color': filter.color,
+                                              'keyword': filter.keyword})
+    except:
+        print ('sofa_tf_prepare error')
+
     # ============ Preprocessing GPU Trace ==========================
     num_cudaproc = 0
     filtered_gpu_groups = []
@@ -1039,7 +1060,26 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.y_field = 'duration'
         sofatrace.data = filtered_gpu_group['group'].copy()
         traces.append(sofatrace)
+    # ===========TF_prepare_traces =======================
+    sofatrace = SOFATrace()
+    sofatrace.name = 'TF_preapre_trace'
+    sofatrace.title = 'OPs'
+    sofatrace.color = 'rgba(0,0,0,0.8)'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = tf_traces
+    traces.append(sofatrace)
 
+    for filtered_TFPrepare_group in filtered_TFPrepare_groups:
+        sofatrace = SOFATrace()
+        sofatrace.name = filtered_TFPrepare_group['keyword']
+        sofatrace.title = 'keyword_' + sofatrace.name
+        sofatrace.color = filtered_TFPrepare_group['color']
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = filtered_TFPrepare_group['group'].copy()
+        traces.append(sofatrace)
+    # ====================================================
     traces_to_json(traces, logdir + 'report.js', cfg)
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- end")
