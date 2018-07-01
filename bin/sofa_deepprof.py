@@ -33,12 +33,13 @@ def get_top_k_events(df, topk):
     df_agg_sorted = df_agg.sort_values(by=['duration'],ascending=False)
     #eventName = ['gpu1_copyKind_1_','gpu1_copyKind_2_','gpu1_copyKind_8_']
     eventName = df_agg_sorted[df_agg_sorted.columns[0:0]].head(topk).index.values.tolist()
+    eventName[7] = eventName[7].split('(')[0]
     for i in range(len(eventName)):
         print('[%d] %s'%(i,eventName[i]))
     return eventName
 
 def select_pattern(candidate_pattern):
-    #print(candidate_pattern)
+    print(candidate_pattern)
     candidate_pattern_filtered = []
     for cp in candidate_pattern: 
         if len(cp)>1:
@@ -93,7 +94,8 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
             vectorSerie = pd.Series(vector, index = events)
             patternTable = patternTable.append(vectorSerie, ignore_index = True)
         tick += 1
-
+    print("totaltick:",tick)
+    print('timelinescount:',len(iteration_timelines))
     #building suffix tree to find patter0
     #print(iteration_timelines)
     mainString = "".join(iteration_timelines)
@@ -107,8 +109,11 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
     #print("candidate_pattern:",candidate_pattern)
     if candidate_pattern:
         pattern = select_pattern(candidate_pattern)
-        total_length = len(mainString)
-        block_size = len(pattern)
+        print('mainStringlen',len(mainString))
+        mainString = mainString.split(',')
+        total_length = len(mainString) - 1
+        print('total_length',total_length)
+        block_size = len(pattern) - pattern.count(',')
         block_beg = 0
         block_end = block_size
         step = 1
@@ -116,22 +121,51 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
         iteration_count = 0
         fuzzyRatioTable = []
         while block_beg < (total_length - block_size):
-            blockString = mainString[block_beg:block_end]
+            blockString = ',' +  ",".join(mainString[block_beg:block_end]) + ','
             #use fuzzywuzzy as approximate match accuracy. TODO: use reasonable threshold.
             fuzz_ratio = fuzz.token_sort_ratio(blockString, pattern) 
             fuzzyRatioTable.append(fuzz_ratio)
             block_beg += step
             block_end += step
+        print('fuzzyTable:',fuzzyRatioTable)
+        print('fuzzycount:',len(fuzzyRatioTable))
         #find largest fuzzy ratio n blocks (n = iteration_times)
         ind = []
+        begTable = []
+        endTable = []
+        beg = 0
+        end = 0
         #print(fuzzyRatioTable)
         for i in range(len(fuzzyRatioTable)):
-            if fuzzyRatioTable[i] > 87:
+            if fuzzyRatioTable[i] > 70:
                 ind.append(i)
-        #ind = np.argpartition(fuzzyRatioTable, -iteration_times)[-iteration_times:]
-        comma_factor = 2
-        for index in ind: 
-            iteration_table.append((float(index*step + blank_count) * time_interval/comma_factor + t_df_begin, float(index*step + block_size + blank_count) * time_interval/comma_factor + t_df_begin))     
+        print('ind',ind)
+        for index in ind:
+            iteration_table.append((float(index*step + blank_count) * time_interval + t_df_begin, float(index*step + block_size + blank_count) * time_interval + t_df_begin))
+
+        begTable.append(ind[0])
+        beg = ind[0]
+        end = ind[0] + block_size
+
+
+#        for idx in range(len(ind)):
+#            if (ind[idx] - beg) > block_size * 2.2:
+#                begTable.append(ind[idx])
+#                endTable.append(end)
+#                beg = ind[idx]
+#            else:
+#                beg = ind[idx]
+#                end = ind[idx] + block_size
+#        endTable.append(end)
+#        print("len of beg/end",len(begTable),len(endTable))
+#
+#        #ind = np.argpartition(fuzzyRatioTable, -iteration_times)[-iteration_times:]
+#        #comma_factor = total_length / comma_count
+#        print('blank:',blank_count)
+#        for index in range(len(begTable)): 
+#            iteration_table.append((float(begTable[index]*step + blank_count) * time_interval + t_df_begin, float(endTable[index]*step + blank_count) * time_interval + t_df_begin))     
+
+
     else:
         print('No iteration patterns detected.')
 
@@ -158,7 +192,7 @@ def similar(a, b, threshold):
         langa = np.linalg.norm(a)
         langb = np.linalg.norm(b)
         ratio = np.abs(langa/langb) 
-        if ratio < 1.2 and ratio > 0.8:
+        if ratio < 2 and ratio > 0.5:
             return True
     return False
  
@@ -172,7 +206,7 @@ def traces_to_json(path):
         f.writelines([line for line in sofa_traces[:-1]])
         f.write("\n\n")
         f.write("iteration_detection = ")
-        f.write('{"color": "rgba(241,156,162,1)", "data": [')    
+        f.write('{"name": "iteration_detection", "color": "rgba(241,156,162,1)", "data": [')    
         for (IT_beg, IT_end) in iteration_table:
             #print("begin:%f end:%f duration:%f"%(IT_beg, IT_end, IT_end-IT_beg))
             for i in range(10):
