@@ -31,15 +31,16 @@ def get_top_k_events(df, topk):
     gby = df.groupby(['name'])
     df_agg = gby.aggregate(np.sum)
     df_agg_sorted = df_agg.sort_values(by=['duration'],ascending=False)
-    #eventName = ['gpu1_copyKind_1_','gpu1_copyKind_2_','gpu1_copyKind_8_']
+    #memcpy = ['copyKind_1_','copyKind_2_','copyKind_8_']
     eventName = df_agg_sorted[df_agg_sorted.columns[0:0]].head(topk).index.values.tolist()
-    eventName[7] = eventName[7].split('(')[0]
+    #eventName.extend(memcpy)
+
     for i in range(len(eventName)):
         print('[%d] %s'%(i,eventName[i]))
     return eventName
 
 def select_pattern(candidate_pattern):
-    print(candidate_pattern)
+    print("candidate_pattern:", candidate_pattern)
     candidate_pattern_filtered = []
     for cp in candidate_pattern: 
         if len(cp)>1:
@@ -137,7 +138,7 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
         end = 0
         #print(fuzzyRatioTable)
         for i in range(len(fuzzyRatioTable)):
-            if fuzzyRatioTable[i] > 70:
+            if fuzzyRatioTable[i] > 87:
                 ind.append(i)
         print('ind',ind)
         for index in ind:
