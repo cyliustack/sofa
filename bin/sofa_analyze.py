@@ -345,6 +345,7 @@ def sofa_analyze(logdir, cfg):
     filein_vmstat = logdir + "vmstat_trace.csv"
     
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
+        
         with open(logdir + 'nvlink_topo.txt') as f:
             lines = f.readlines()
             title = lines[0]
@@ -361,26 +362,18 @@ def sofa_analyze(logdir, cfg):
                         edges.append((i,j-1))
                         #print('%d connects to %d' % (i, j-1))
             #print(edges)
-            G = nx.DiGraph(edges)           
-            #for cycle in nx.simple_cycles(G):
-            #    if len(cycle) == num_gpus:
-            #        print(("One of the recommended %d rings" % len(cycle) ))
-            #        print(cycle)
-            #        os.system("mkdir -p /tmp/sofa_hints/")
-            #        xring_order = ','.join(map(str, cycle))
-            #        with open("/tmp/sofa_hints/xring_order.txt", "w") as f:
-            #            f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
-                    # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text('export CUDA_VISIBLE_DEVICES=' + xring_order)  # UPGRADE: py35
-                    # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text(f'export CUDA_VISIBLE_DEVICES=f{xring_order}')  # UPGRADE: py36
-            #        break
-    #try:
-    #    df_mpstat = pd.read_csv(filein_mpstat)
-    #    mpstat_profile(logdir, cfg, df_mpstat)
-    #except IOError:
-    #    print_warning(
-    #        "vmstat_trace.csv is not found")
-    #    quit()
-
+            if num_gpus > 1:
+                G = nx.DiGraph(edges)           
+                for cycle in nx.simple_cycles(G):
+                    if len(cycle) == num_gpus:
+                        print(("One of the recommended %d rings" % len(cycle) ))
+                        print(cycle)
+                        os.system("mkdir -p /tmp/sofa_hints/")
+                        xring_order = ','.join(map(str, cycle))
+                        with open("/tmp/sofa_hints/xring_order.txt", "w") as f:
+                            f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
+                        break
+    
     try:
         df_cpu = pd.read_csv(filein_cpu)
         cpu_profile(logdir, cfg, df_cpu)
