@@ -138,20 +138,6 @@ def comm_profile(logdir, cfg, df_gpu):
         accum[src][dst] = float(accum[src][dst] + payload)
         accum_count[src][dst] = int(accum_count[src][dst] + 1)
 
-    print("Traffic Matrix (log10(B)):")
-    row_str = "\tHOST\t"
-    for i in range(1, accum.shape[1]):
-        row_str = row_str + "GPU%d" % i + "\t"
-    print(row_str)
-    for i in range(accum.shape[0]):
-        if i == 0:
-            row_str = "HOST\t"
-        else:
-            row_str = "GPU%d\t" % i
-        
-        for j in range(accum.shape[1]):
-            row_str = row_str + "%d" % (int(np.log10(1 + accum[i][j]))) + "\t"
-        print(row_str)
 
     print("Traffic Matrix (MB):")
     row_str = "\tHOST\t"
@@ -216,6 +202,7 @@ def gpu_profile(logdir, cfg, df_gpu):
     print_title("Summary of Kernels")
     print(("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time))
     print(("MeasuredAllReduceTime : %lf (s)" % all_reduce_time))
+    get_top_k_events(df_gpu, 10)
 
 
 def net_profile(logdir, cfg, df):
@@ -233,7 +220,7 @@ def net_profile(logdir, cfg, df):
 
 
 def cpu_profile(logdir, cfg, df):
-    print_title("CPU Profiling: Task Time (IO included) for each Cores (s)")
+    print_title("CPU Profiling: Task Time (IO included) for each Core (s)")
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
     for key, item in grouped_df:

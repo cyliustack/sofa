@@ -38,20 +38,20 @@ function install_python_packages()
     echo -e "${C_GREEN}Installing python packages...${C_NONE}"
      
     if [[ $(which yum) ]]  ; then
-        yum install epel-release
-        yum install https://centos7.iuscommunity.org/ius-release.rpm
-        yum install python36u
-        yum install python36u-pip
+        sudo yum install epel-release
+        sudo yum install https://centos7.iuscommunity.org/ius-release.rpm
+        sudo yum install python36u
+        sudo yum install python36u-pip
     elif [[ "${OS}" == "Ubuntu" ]] && ( [[ "${VERSION}" == "14.04"* ]] || [[ "${VERSION}" == "16.04"* ]] ) ; then	
-        apt-get install software-properties-common -y
-        add-apt-repository ppa:deadsnakes/ppa -y
-        apt-get update -y
-        apt-get install python3.6 -y
+        sudo apt-get install software-properties-common -y
+        sudo add-apt-repository ppa:deadsnakes/ppa -y
+        sudo apt-get update -y
+        sudo apt-get install python3.6 -y
 	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
 	    python3.6 get-pip.py
         rm get-pip.py
     elif [[ $(which apt) ]] ; then	
-        apt-get install python3.6 -y
+        sudo apt-get install python3.6 -y
     else
 	    file_pytar="Python-3.6.0.tar.xz"
 	    wget https://www.python.org/ftp/python/3.6.0/$file_pytar
@@ -77,25 +77,25 @@ function install_packages()
 
     #inform_sudo "Running sudo for installing packages"
     if [[ $(which apt) ]] ; then
-        apt-get update
-        apt-get update --fix-missing
-	apt-get install curl wget cmake tcpdump sysstat \
-		libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
-		linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic 
+        sudo apt-get update
+        sudo apt-get update --fix-missing
+	    sudo apt-get install curl wget cmake tcpdump sysstat \
+            libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
+            linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic 
         
 	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which yum) ]]  ; then
-        yum install epel-release 
-        yum install \
+        sudo yum install epel-release 
+        sudo yum install \
             perf tcpdump\
             centos-release-scl devtoolset-4-gcc* sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which dnf) ]]  ; then
-        dnf -y install \
+        sudo dnf -y install \
             perf cmake tcpdump boost-devel libconfig-devel libpcap-devel cmake sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which pacman) ]]  ; then
-        pacman -S \
+        sudo pacman -S \
             linux-tools cmake boost cmake tcpdump sysstat
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"
