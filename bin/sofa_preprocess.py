@@ -135,11 +135,13 @@ def gpu_trace_read(
 
     pid = n_cudaproc
 
+    deviceId = -1 
     try:
         deviceId = int(float(values[indices.index('Context')]))
     except BaseException:
         deviceId = -1
 
+    tid = stream_id = -1
     try:
         tid = streamId = int(float(values[indices.index('Stream')]))
     except BaseException:
@@ -150,17 +152,17 @@ def gpu_trace_read(
         copyKind = 1
         pkt_src = 0
         pkt_dst = deviceId
-        kernel_name = "gpu%d_copyKind_%d_%dB" % (deviceId, copyKind, payload)
+        kernel_name = "copyKind_%d_%dB" % (copyKind, payload)
     elif kernel_name.find('DtoH') != -1:
         copyKind = 2
         pkt_src = deviceId
         pkt_dst = 0
-        kernel_name = "gpu%d_copyKind_%d_%dB" % (deviceId, copyKind, payload)
+        kernel_name = "copyKind_%d_%dB" % (copyKind, payload)
     elif kernel_name.find('DtoD') != -1:
         copyKind = 8
         pkt_src = deviceId
         pkt_dst = deviceId
-        kernel_name = "gpu%d_copyKind_%d_%dB" % (deviceId, copyKind, payload)
+        kernel_name = "copyKind_%d_%dB" % (copyKind, payload)
     elif kernel_name.find('PtoP') != -1:
         copyKind = 10
         try:
@@ -173,10 +175,11 @@ def gpu_trace_read(
         except BaseException:
             pkt_dst = 0
 
-        kernel_name = "gpu%d_copyKind_%d_%dB" % (deviceId, copyKind, payload)
+        kernel_name = "copyKind_%d_from_gpu%d_to_gpu%d_%dB" % (copyKind, pkt_src, pkt_dst, payload)
     else:
         copyKind = 0
 
+    kernel_name = 'gpu%d_'%deviceId + kernel_name
     # print("%d:%d [%s] ck:%d, %lf,%lf: %d -> %d: payload:%d, bandwidth:%lf,
     # duration:%lf "%(deviceId, streamId, kernel_name, copyKind,
     # t_begin,t_end, pkt_src, pkt_dst, payload, bandwidth, duration))
@@ -701,7 +704,7 @@ def sofa_preprocess(logdir, cfg):
                         bandwidth = -1
                         pkt_src = pkt_dst = -1
                         pid = tid = -1
-                        nvsmi_info = "GPUID.sm.mem=%d_%lf_%lf" % (
+                        nvsmi_info = "GPUID_sm_mem=%d_%lf_%lf" % (
                             nvsmi_id, nvsmi_sm, nvsmi_mem)
 
                         trace = [
