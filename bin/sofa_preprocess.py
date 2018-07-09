@@ -828,11 +828,14 @@ def sofa_preprocess(logdir, cfg):
             for line in f :
                 #print(line)
                 if line.find('0.000000') != -1:
-                    keyword = line.split(',')[-1]
-                    if keyword.find('memcpy') != -1:
-                        gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMCPY'
-                    elif keyword.find('memset') != -1:
-                        gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMSET'
+                    gpu_event_list = line.split(',')
+                    for keyword in reversed(gpu_event_list) :
+                        if keyword.find('memcpy') != -1:
+                            gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMCPY'
+                        elif keyword.find('memset') != -1:
+                            gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMSET'
+                        elif keyword.find('ParallelForAgent') != -1:
+                            gpu_f_event = 'CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL'
             engine = create_engine("sqlite:///"+nvvp_filename)
             gpu_traces_df = pd.read_sql_table(gpu_f_event,engine)
             print(gpu_traces_df.iloc[0]['start'])
