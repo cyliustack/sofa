@@ -24,34 +24,41 @@ fi
 
 function inform_sudo()
 {
-    [[ ! -z "$1" ]] && echo "$1"
-    # Exit without printing messages if password is still in the cache.
-    sudo -n true 2> /dev/null
-    [[ $? == 0 ]] && return 0;
-    sudo >&2 echo -e "\033[1;33mRunning with root privilege now...\033[0;00m";
-    [[ $? != 0 ]] && >&2 echo -e "\033[1;31mAbort\033[0m" && exit 1;
+    if [[ $(which sudo) ]]; then 
+        [[ ! -z "$1" ]] && echo "$1"
+        # Exit without printing messages if password is still in the cache.
+        sudo -n true 2> /dev/null
+        [[ $? == 0 ]] && return 0;
+        sudo >&2 echo -e "\033[1;33mRunning with root privilege now...\033[0;00m";
+        [[ $? != 0 ]] && >&2 echo -e "\033[1;31mAbort\033[0m" && exit 1;
+    fi
 }
 
 function install_python_packages()
 {
     # Install Python packages
     echo -e "${C_GREEN}Installing python packages...${C_NONE}"
-     
+    
+    WITH_SUDO=""
+    if [[ $(which sudo) ]]; then 
+        WITH_SUDO="sudo" 
+    fi
+
     if [[ $(which yum) ]]  ; then
-        sudo yum install epel-release
-        sudo yum install https://centos7.iuscommunity.org/ius-release.rpm
-        sudo yum install python36u
-        sudo yum install python36u-pip
+        $WITH_SUDO yum install epel-release
+        $WITH_SUDO yum install https://centos7.iuscommunity.org/ius-release.rpm
+        $WITH_SUDO yum install python36u
+        $WITH_SUDO yum install python36u-pip
     elif [[ "${OS}" == "Ubuntu" ]] && ( [[ "${VERSION}" == "14.04"* ]] || [[ "${VERSION}" == "16.04"* ]] ) ; then	
-        sudo apt-get install software-properties-common -y
-        sudo add-apt-repository ppa:deadsnakes/ppa -y
-        sudo apt-get update -y
-        sudo apt-get install python3.6 -y
+        $WITH_SUDO apt-get install software-properties-common -y
+        $WITH_SUDO add-apt-repository ppa:deadsnakes/ppa -y
+        $WITH_SUDO apt-get update -y
+        $WITH_SUDO apt-get install python3.6 -y
 	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
 	    python3.6 get-pip.py
         rm get-pip.py
     elif [[ $(which apt) ]] ; then	
-        sudo apt-get install python3.6 -y
+        $WITH_SUDO apt-get install python3.6 -y
     else
 	    file_pytar="Python-3.6.0.tar.xz"
 	    wget https://www.python.org/ftp/python/3.6.0/$file_pytar
@@ -59,15 +66,15 @@ function install_python_packages()
 	    cd Python-3.6.0
 	    ./configure --with-ssl
 	    make -j
-	    sudo make install
+	    $WITH_SUDO make install
 	    # Install for Python3
 	    cd - 
 	    rm -r Python-3.6.0*
     fi
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     
-    python3.6 -m pip install --upgrade pip
-    python3.6 -m pip install numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy 
+    python3.6 -m pip install --user --upgrade pip
+    python3.6 -m pip install --user numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
@@ -75,27 +82,33 @@ function install_packages()
 {
     echo -e "${C_GREEN}Installing other packages...${C_NONE}"
 
-    #inform_sudo "Running sudo for installing packages"
+    WITH_SUDO=""
+    if [[ $(which sudo) ]]; then 
+        echo -e "${C_GREEN}You are going to install SOFA with sudo${C_NONE}"
+        WITH_SUDO="sudo" 
+    fi
+
+    #inform_$WITH_SUDO "Running $WITH_SUDO for installing packages"
     if [[ $(which apt) ]] ; then
-        sudo apt-get update
-        sudo apt-get update --fix-missing
-	    sudo apt-get install curl wget cmake tcpdump sysstat \
+        $WITH_SUDO apt-get update
+        $WITH_SUDO apt-get update --fix-missing
+	    $WITH_SUDO apt-get install curl wget cmake tcpdump sysstat \
             libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
             linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic 
         
 	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which yum) ]]  ; then
-        sudo yum install epel-release 
-        sudo yum install \
+        $WITH_SUDO yum install epel-release 
+        $WITH_SUDO yum install \
             perf tcpdump\
             centos-release-scl devtoolset-4-gcc* sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which dnf) ]]  ; then
-        sudo dnf -y install \
+        $WITH_SUDO dnf -y install \
             perf cmake tcpdump boost-devel libconfig-devel libpcap-devel cmake sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which pacman) ]]  ; then
-        sudo pacman -S \
+        $WITH_SUDO pacman -S \
             linux-tools cmake boost cmake tcpdump sysstat
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"
