@@ -72,7 +72,7 @@ function install_python_packages()
 	    rm -r Python-3.6.0*
     fi
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-    
+    echo "Install via pip" 
     python3.6 -m pip install --user --upgrade pip
     python3.6 -m pip install --user numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
@@ -92,14 +92,14 @@ function install_packages()
     if [[ $(which apt) ]] ; then
         $WITH_SUDO apt-get update
         $WITH_SUDO apt-get update --fix-missing
-	    $WITH_SUDO apt-get install curl wget cmake tcpdump sysstat \
+	    $WITH_SUDO apt-get install -y curl wget cmake tcpdump sysstat \
             libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
             linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic 
         
 	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which yum) ]]  ; then
-        $WITH_SUDO yum install epel-release 
-        $WITH_SUDO yum install \
+        $WITH_SUDO yum install -y epel-release 
+        $WITH_SUDO yum install -y \
             perf tcpdump\
             centos-release-scl devtoolset-4-gcc* sysstat
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
