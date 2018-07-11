@@ -355,9 +355,9 @@ def sofa_analyze(logdir, cfg):
                     if len(cycle) == num_gpus:
                         print(("One of the recommended %d rings" % len(cycle) ))
                         print(cycle)
-                        os.system("mkdir -p /tmp/sofa_hints/")
+                        os.system("mkdir -p ~/.sofa_hints/")
                         xring_order = ','.join(map(str, cycle))
-                        with open("/tmp/sofa_hints/xring_order.txt", "w") as f:
+                        with open("~/.sofa_hints/xring_order.txt", "w") as f:
                             f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
                         break
     
