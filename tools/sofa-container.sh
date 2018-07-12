@@ -48,5 +48,5 @@ fi
 mkdir -p ~/program 
 mkdir -p ~/data
 $WITH_SUDO docker build -t tfsofa -f Dockerfile .
-$WITH_SUDO docker run --runtime=nvidia -it --privileged -p 8000:8000 -c 8 -v ~/program:/tmp/program:rw -v ~/data:/tmp/data:rw  tfsofa bash
+$WITH_SUDO docker run --runtime=nvidia -it --privileged -p 8000:8000 -p 8888:8888 -c 8 -v ~/program:/tmp/program:rw -v ~/data:/tmp/data:rw  tfsofa bash
 
