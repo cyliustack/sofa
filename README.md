@@ -3,6 +3,9 @@
 SOFA: Swarm of Functions Analysis
 Authors: All the contributors of SOFA
 
+# Related Publications
+1. Performance Measurement and Analysis Techniques for High-Performance Distributed Deep Learning Systems, Instruments Today - No.216, http://dx.doi.org/10.29662/IT  
+
 # Prerequisite
 1. Run `./tools/prerequisite.sh` to install all the necessary packages and python packages.
 2. [OPTIONAL] Run `./tools/empower-tcpdump.sh $(whoami)` to make network related events tracable in SOFA. After running this step, it is required to __re-login__ to __APPLY THE CHANGES__!!!
