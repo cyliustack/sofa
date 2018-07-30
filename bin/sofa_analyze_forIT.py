@@ -36,7 +36,8 @@ class Event:
 def overlap(pa, pb, pc, pd):
     if pb - pc >= 0 and pd - pa >= 0:
         return min(pb, pd) - max(pa, pc)
-
+    else:
+        return 0
 
 def partial_sum(df):
     psum = 0
@@ -47,7 +48,7 @@ cktable = {-1: "NON", 0: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 ckindex = [1, 2, 8, 10]
 
 
-def comm_profile(logdir, cfg, df_gpu):
+def comm_profile(cfg, df_gpu):
     total_traffic = 0.0
     total_h2d_traffic = 0.0
     total_d2h_traffic = 0.0
@@ -168,17 +169,7 @@ def comm_profile(logdir, cfg, df_gpu):
             row_str = row_str + "%d" % (accum[i][j] / (1024 * 1024)) + "\t"
         print(row_str)
 
-
-    df_gpu.to_csv(
-        logdir + '/' + 'comm.csv',
-        columns=[
-            "timestamp",
-            "pkt_src",
-            "pkt_dst",
-            "payload",
-            "bandwidth"])
-
-def gpu_profile(logdir, cfg, df_gpu):
+def gpu_profile(cfg, df_gpu):
     total_kernel_time = 0.0
     total_gpu_time = 0.0
 
@@ -210,7 +201,7 @@ def gpu_profile(logdir, cfg, df_gpu):
         if key.find("AllReduce") != -1:
             all_reduce_time = all_reduce_time + grouped_df.get_group(key).sum()
 
-    comm_profile(logdir, cfg, df_gpu)
+    comm_profile(cfg, df_gpu)
     print(("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time))
 
     print_title("Summary of Kernels")
@@ -218,7 +209,7 @@ def gpu_profile(logdir, cfg, df_gpu):
     print(("MeasuredAllReduceTime : %lf (s)" % all_reduce_time))
 
 
-def net_profile(logdir, cfg, df):
+def net_profile(cfg, df):
     print_title("Network Profiling: Communication Time (s)")
     grouped_df = df.groupby("name")["duration"]
     total_net_time = 0
@@ -232,7 +223,7 @@ def net_profile(logdir, cfg, df):
     print(("total amount of network packets  = %d" % n_packets))
 
 
-def cpu_profile(logdir, cfg, df):
+def cpu_profile(cfg, df):
     print_title("CPU Profiling: Task Time (IO included) for each Cores (s)")
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
@@ -331,70 +322,3 @@ class ProfiledDomainDNN:
                 if line.find("total images/sec:") != -1:
                     self.throughput = float(line.split()[2])
                     print((self.prefix + "Throughput: %.2lf" % self.throughput))
-                    break
-
-
-def sofa_analyze(logdir, cfg):
-    filein = []
-    df_gpu = []
-    df_cpu = []
-    df_vmstat = []
-
-    filein_gpu = logdir + "gputrace.csv"
-    filein_cpu = logdir + "cputrace.csv"
-    filein_vmstat = logdir + "vmstat_trace.csv"
-    
-    if os.path.isfile('%s/nvlink_topo.txt' % logdir):
-        with open(logdir + 'nvlink_topo.txt') as f:
-            lines = f.readlines()
-            title = lines[0]
-            num_gpus = 1 
-            for word in title.split():
-                if re.match(r'GPU', word) != None :
-                   num_gpus = num_gpus + 1 
-            print_info('# of GPUs: ' + str(num_gpus) )
-            edges = []
-            for i in range(num_gpus):
-                connections = lines[1+i].split()
-                for j in range(len(connections)):
-                    if connections[j] == 'NV1' or connections[j] == 'NV2':
-                        edges.append((i,j-1))
-                        #print('%d connects to %d' % (i, j-1))
-            #print(edges)
-            G = nx.DiGraph(edges)           
-            #for cycle in nx.simple_cycles(G):
-            #    if len(cycle) == num_gpus:
-            #        print(("One of the recommended %d rings" % len(cycle) ))
-            #        print(cycle)
-            #        os.system("mkdir -p /tmp/sofa_hints/")
-            #        xring_order = ','.join(map(str, cycle))
-            #        with open("/tmp/sofa_hints/xring_order.txt", "w") as f:
-            #            f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
-                    # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text('export CUDA_VISIBLE_DEVICES=' + xring_order)  # UPGRADE: py35
-                    # pathlib.Path('/tmp/sofa_hints/xring_order.txt').write_text(f'export CUDA_VISIBLE_DEVICES=f{xring_order}')  # UPGRADE: py36
-            #        break
-    #try:
-    #    df_mpstat = pd.read_csv(filein_mpstat)
-    #    mpstat_profile(logdir, cfg, df_mpstat)
-    #except IOError:
-    #    print_warning(
-    #        "vmstat_trace.csv is not found")
-    #    quit()
-
-    try:
-        df_cpu = pd.read_csv(filein_cpu)
-        cpu_profile(logdir, cfg, df_cpu)
-        net_profile(logdir, cfg, df_cpu)
-    except IOError:
-        print_warning("cputrace.csv is not found")
-        #quit()
-
-    try:
-        df_gpu = pd.read_csv(filein_gpu)
-        #df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
-        gpu_profile(logdir, cfg, df_gpu)
-        if cfg.enable_deepprof:
-            sofa_deepprof(logdir, cfg, df_cpu, df_gpu)  
-    except IOError:
-        print_warning(
-            "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
