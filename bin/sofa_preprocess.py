@@ -115,6 +115,7 @@ def gpu_trace_read(
         n_cudaproc,
         ts_rescale,
         dt_rescale,
+        payload_unit,
         t_offset):
     values = record.replace('"', '').split(',')
     kernel_name = values[indices.index('Name')]
@@ -124,7 +125,7 @@ def gpu_trace_read(
     t_begin = time
     t_end = time + duration
     try:
-        payload = int(float(values[indices.index('Size')]) * 1024 * 1024)
+        payload = int(float(values[indices.index('Size')]) * payload_unit)
     except BaseException:
         payload = 0
 
@@ -855,6 +856,18 @@ def sofa_preprocess(logdir, cfg):
                     '\n', '').split(',')
                 print(indices)
                 # ms,ms,,,,,,,,B,B,MB,GB/s,,,,
+                payload_unit = 1
+                if records[2].split(',')[11] == 'GB':
+                    payload_unit = np.power(1024,3)
+                elif records[2].split(',')[11] == 'MB':
+                    payload_unit = np.power(1024,2)
+                elif records[2].split(',')[11] == 'KB':
+                    payload_unit = np.power(1024,1)
+                else: 
+                    print_info("The payload unit in gputrace.tmp was not recognized!")
+                    quit()
+                
+                
                 ts_rescale = 1.0
                 if records[2].split(',')[0] == 'ms':
                     ts_rescale = 1.0e3
@@ -878,6 +891,7 @@ def sofa_preprocess(logdir, cfg):
                             indices=indices,
                             ts_rescale=ts_rescale,
                             dt_rescale=dt_rescale,
+                            payload_unit=payload_unit,
                             n_cudaproc=num_cudaproc,
                             t_offset=t_glb_gpu_base -
                             t_base),
