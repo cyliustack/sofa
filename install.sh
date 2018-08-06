@@ -20,6 +20,8 @@ BIN_FILES=(bin/sofa
            bin/sofa_viz.py
            bin/sofa_config.py
            bin/sofa_print.py
+           pcm/pcm-memory.x
+           pcm/pcm-core.x
            )
 PLUGIN_FILES=(plugins/.placeholder
               )

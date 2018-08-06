@@ -77,10 +77,10 @@ def sofa_record(command, logdir, cfg):
         subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
         subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
         if int(os.system('command -v nvprof')) == 0:
-            profile_command = 'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,bus-cycles -o %s/perf.data -F %s %s -- %s ' % (logdir, logdir, sample_freq, perf_options, command)
+            profile_command = 'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,cache-misses,instructions -o %s/perf.data -F %s %s -- %s ' % (logdir, logdir, sample_freq, perf_options, command)
         else:
             print_warning('Profile without NVPROF')
-            profile_command = 'perf record -o %s/perf.data -e cycles,bus-cycles -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
+            profile_command = 'perf record -o %s/perf.data -e cycles,instructions -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
         print_info( profile_command)
         subprocess.call(profile_command.split())
         print_info("Epilog of Recording...")

@@ -49,12 +49,12 @@ def cpu_trace_read(sample, t_offset):
 
     if re.match('\[\d+\]', fields[1]) is not None:
         time = float(fields[2].split(':')[0])
-        func_name = fields[4].replace('-', '_') + fields[6]
+        func_name = '[%s]'%fields[4].replace('-','_') + fields[6] 
         cycles = float(fields[3])
         event = np.log(1.0 * int("0x01" + fields[5], 16))
     else:
         time = float(fields[1].split(':')[0])
-        func_name = fields[3].replace('-', '_') + fields[5]
+        func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] 
         cycles = float(fields[2])
         event = np.log(1.0 * int("0x01" + fields[4], 16))
 
@@ -949,7 +949,7 @@ def sofa_preprocess(logdir, cfg):
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_usr'
-    sofatrace.title = 'VMSTAT_USR'
+    sofatrace.title = 'CPU_USAGE_USR'
     sofatrace.color = 'Magenta'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
@@ -958,48 +958,49 @@ def sofa_preprocess(logdir, cfg):
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_sys'
-    sofatrace.title = 'VMSTAT_SYS'
+    sofatrace.title = 'CPU_USAGE_SYS'
     sofatrace.color = 'LightBlue'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = vm_sys_traces
     traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'vmstat_in'
-    sofatrace.title = 'VMSTAT_IN'
-    sofatrace.color = 'DarkMagenta'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = vm_in_traces
-    traces.append(sofatrace)
+    if cfg.enable_vmstat:
+        sofatrace = SOFATrace()
+        sofatrace.name = 'vmstat_in'
+        sofatrace.title = 'VMSTAT_IN'
+        sofatrace.color = 'DarkMagenta'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = vm_in_traces
+        traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'vmstat_cs'
-    sofatrace.title = 'VMSTAT_CS'
-    sofatrace.color = 'DarkOliveGreen'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = vm_cs_traces
-    traces.append(sofatrace)
+        sofatrace = SOFATrace()
+        sofatrace.name = 'vmstat_cs'
+        sofatrace.title = 'VMSTAT_CS'
+        sofatrace.color = 'DarkOliveGreen'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = vm_cs_traces
+        traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'vmstat_bi'
-    sofatrace.title = 'VMSTAT_BI'
-    sofatrace.color = 'DarkOrange'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = vm_bi_traces
-    traces.append(sofatrace)
+        sofatrace = SOFATrace()
+        sofatrace.name = 'vmstat_bi'
+        sofatrace.title = 'VMSTAT_BI'
+        sofatrace.color = 'DarkOrange'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = vm_bi_traces
+        traces.append(sofatrace)
 
-    sofatrace = SOFATrace()
-    sofatrace.name = 'vmstat_bo'
-    sofatrace.title = 'VMSTAT_BO'
-    sofatrace.color = 'DarkOrchid'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = vm_bo_traces
-    traces.append(sofatrace)
+        sofatrace = SOFATrace()
+        sofatrace.name = 'vmstat_bo'
+        sofatrace.title = 'VMSTAT_BO'
+        sofatrace.color = 'DarkOrchid'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = vm_bo_traces
+        traces.append(sofatrace)
 
     sofatrace = SOFATrace()
     sofatrace.name = 'nvsmi_mem'

@@ -70,6 +70,8 @@ if __name__ == "__main__":
     parser.set_defaults(verbose=False)
     parser.add_argument('--enable_deepprof', dest='enable_deepprof', action='store_true')
     parser.set_defaults(enable_deepprof=False)
+    parser.add_argument('--enable_vmstat', dest='enable_vmstat', action='store_true')
+    parser.set_defaults(enable_deepprof=False)
     parser.add_argument(
         'command',
         type=str,
@@ -105,6 +107,10 @@ if __name__ == "__main__":
     if args.enable_deepprof is not None:
         cfg.enable_deepprof = args.enable_deepprof
 
+    if args.enable_vmstat is not None:
+        cfg.enable_vmstat = args.enable_vmstat
+
+
     if args.iterations is not None:
         cfg.iterations = args.iterations
 
@@ -121,7 +127,8 @@ if __name__ == "__main__":
         cfg.profile_all_cpus = args.profile_all_cpus
 
     cfg.cpu_filters.append(Filter('nv_alloc_system_pages', 'red'))
-    cfg.cpu_filters.append(Filter('bus', 'cornflowerblue'))
+    cfg.cpu_filters.append(Filter('instructions', 'cornflowerblue'))
+    cfg.cpu_filters.append(Filter('cache_misses', 'pink'))
     if args.cpu_filters is not None:
         pairs = args.cpu_filters.split(',')
         for pair in pairs:
