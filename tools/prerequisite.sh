@@ -55,8 +55,8 @@ function install_python_packages()
         $WITH_SUDO apt-get update -y
         $WITH_SUDO apt-get install python3.6 -y
 	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
-	    python3.6 get-pip.py
-        rm get-pip.py
+	    $WITH_SUDO python3.6 get-pip.py
+        $WITH_SUDO rm get-pip.py
     elif [[ $(which apt) ]] ; then	
         $WITH_SUDO apt-get install python3.6 -y
     else
@@ -73,8 +73,8 @@ function install_python_packages()
     fi
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip" 
-    python3.6 -m pip install --upgrade pip
-    python3.6 -m pip install numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy 
+    $WITH_SUDO python3.6 -m pip install --upgrade pip
+    $WITH_SUDO python3.6 -m pip install numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
@@ -115,6 +115,13 @@ function install_packages()
     fi
 }
 
+function install_utility_from_source()
+{
+    echo -e "${C_GREEN}Installing utilities from source...${C_NONE}"
+    git clone https://github.com/opcm/pcm.git 
+    cd pcm && make -j && cd - 
+}
+
 # main
 echo -e "${C_GREEN}OS Distribution:${C_NONE} '$OS'"
 echo -e "${C_GREEN}Version:${C_NONE} '$VERSION'"
@@ -122,5 +129,6 @@ printf "\n\n"
 
 install_packages
 install_python_packages
+install_utility_from_source
 
 echo -e "${C_GREEN}Complete!!${C_NONE}"
