@@ -348,19 +348,32 @@ def sofa_analyze(logdir, cfg):
                     if connections[j] == 'NV1' or connections[j] == 'NV2':
                         edges.append((i,j-1))
                         #print('%d connects to %d' % (i, j-1))
-            #print(edges)
+            
+            ring_found = False
             if num_gpus > 1:
                 G = nx.DiGraph(edges)           
+                # Try to find ring with its length of num_gpus
                 for cycle in nx.simple_cycles(G):
                     if len(cycle) == num_gpus:
-                        print(("One of the recommended %d rings" % len(cycle) ))
-                        print(cycle)
+                        print(("One of the recommended ring having length of %d" % len(cycle) ))
+                        ring_found = True
                         os.system("mkdir -p sofalog/sofa_hints/")
                         xring_order = ','.join(map(str, cycle))
                         with open("sofalog/sofa_hints/xring_order.txt", "w") as f:
                             f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
                         break
-    
+                
+                # Try to find ring with its length of num_gpus/2 
+                if not ring_found:
+                    for cycle in nx.simple_cycles(G):
+                        if len(cycle) == num_gpus/2:
+                            print(("One of the recommended ring having length of %d" % len(cycle) ))
+                            ring_found = True
+                            os.system("mkdir -p sofalog/sofa_hints/")
+                            xring_order = ','.join(map(str, cycle))
+                            with open("sofalog/sofa_hints/xring_order.txt", "w") as f:
+                                f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
+                            break   
     try:
         df_cpu = pd.read_csv(filein_cpu)
         cpu_profile(logdir, cfg, df_cpu)
