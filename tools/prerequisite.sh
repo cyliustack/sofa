@@ -117,9 +117,18 @@ function install_packages()
 
 function install_utility_from_source()
 {
+    WITH_SUDO=""
+    if [[ $(which sudo) ]]; then 
+        echo -e "${C_GREEN}You are going to install SOFA with sudo${C_NONE}"
+        WITH_SUDO="sudo" 
+    fi
     echo -e "${C_GREEN}Installing utilities from source...${C_NONE}"
+    rm -rf pcm
     git clone https://github.com/opcm/pcm.git 
+    sed -i -- 's/-DPCM_USE_PERF//g' pcm/Makefile
     cd pcm && make -j && cd - 
+    $WITH_SUDO mkdir -p /usr/local/intelpcm/bin 
+    $WITH_SUDO cp pcm/pcm-*.x /usr/local/intelpcm/bin
 }
 
 # main

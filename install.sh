@@ -20,8 +20,6 @@ BIN_FILES=(bin/sofa
            bin/sofa_viz.py
            bin/sofa_config.py
            bin/sofa_print.py
-           pcm/pcm-memory.x
-           pcm/pcm-core.x
            )
 PLUGIN_FILES=(plugins/.placeholder
               )
@@ -68,6 +66,7 @@ function install_sofa()
     cat > ${PREFIX}/tools/activate.sh <<EOF
 export PATH=${PREFIX}/bin:\$PATH
 export PATH=\$PATH:/usr/local/cuda/bin
+export PATH=\$PATH:/usr/local/intelpcm/bin
 EOF
 ##################
 
