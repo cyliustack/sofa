@@ -21,3 +21,4 @@ class SOFA_Config:
     profile_all_cpus = False
     enable_deepprof = False
     enable_vmstat = False
+    enable_pcm = False

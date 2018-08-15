@@ -406,6 +406,9 @@ def sofa_preprocess(logdir, cfg):
     vm_st_traces = []
     nvsmi_sm_traces = []
     nvsmi_mem_traces = []
+    pcm_pcie_traces = []
+    pcm_core_traces = []
+    pcm_memory_traces = []
     gpu_traces = []
     gpu_traces_viz = []
     gpu_kernel_traces = []
@@ -824,7 +827,10 @@ def sofa_preprocess(logdir, cfg):
         with open(logdir + "gputrace.tmp", "w") as f:
             subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "-i", nvvp_filename], stderr=f)
 
+
+        # TODO: automatically retrieve the timestamp of the first CUDA activity(e.g. kernel, memory op, etc..)
         with open(logdir + 'gputrace.tmp') as f:
+            #f.getlines() 
             gpu_f_event=''
             for line in f :
                 #print(line)
@@ -919,6 +925,80 @@ def sofa_preprocess(logdir, cfg):
                 print_warning(
                     "gputrace existed, but no kernel traces were recorded.")
                 os.system('cat %s/gputrace.tmp' % logdir)
+    
+    
+    #=== Intel PCM Trace =======#
+    ### Skt,PCIeRdCur,RFO,CRd,DRd,ItoM,PRd,WiL,PCIe Rd (B),PCIe Wr (B)
+    ### 0,0,852,0,0,48,0,0,54528,57600
+    ### 1,0,600,0,0,0,0,0,38400,38400
+    if cfg.enable_pcm and os.path.isfile('%s/pcm_pcie.csv' % logdir):
+        with open( logdir + '/pcm_pcie.csv' ) as f:
+            lines = f.readlines()
+            print_info("Length of pcm_pcie_traces = %d" % len(lines))
+            if len(lines) > 0:
+                pcm_pcie_list = []
+                pcm_pcie_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                t_base = t = 0
+                for line in lines:
+                    if line.find('Skt') == -1:
+                        fields = line.split(',')
+                        #for f in range(len(fields)):
+                        #    print("field[%d] %s" % (f, fields[f]))
+                       
+                        skt = int(fields[0])
+                        t_begin = t - t_base + t_glb_base
+                        deviceId = skt
+                        event = -1
+                        copyKind = -1
+                        payload = -1
+                        pcm_pcie_wt_bandwidth = int(fields[len(fields)-1])
+                        pcm_pcie_rd_bandwidth = int(fields[len(fields)-2])
+                        pkt_src = pkt_dst = -1
+                        pid = tid = -1
+                        nvsmi_info = "PCM_PCIE=%d|RD:%d|WT:%d" % (
+                            skt, pcm_pcie_rd_bandwidth, pcm_pcie_wt_bandwidth)
+
+                        bandwidth = pcm_pcie_rd_bandwidth
+                        trace = [
+                            t_begin,
+                            event,
+                            nvsmi_sm,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            nvsmi_info,
+                            cpuid]
+                        pcm_pcie_list.append(trace)
+ 
+                        bandwidth = pcm_pcie_wt_bandwidth
+                        trace = [
+                            t_begin,
+                            event,
+                            nvsmi_sm,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            nvsmi_info,
+                            cpuid]
+                        pcm_pcie_list.append(trace)                 
+                        t = t + 0.1
+                pcm_pcie_traces = list_to_csv_and_traces(logdir, pcm_pcie_list, 'pcm_pcie_trace.csv', 'w')
+
+            else:
+                print_warning('No pcm-pcie counter values are recorded.')
+                print_warning('If necessary, run /usr/local/intelpcm/bin/pcm-pcie.x ONCE to reset MSR so as to enable correct pcm recording')
+   
+    
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
@@ -1018,6 +1098,15 @@ def sofa_preprocess(logdir, cfg):
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = nvsmi_sm_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'pcm_pcie'
+    sofatrace.title = 'PCM_PCIE'
+    sofatrace.color = 'purple'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'bandwidth'
+    sofatrace.data = pcm_pcie_traces
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()

@@ -81,15 +81,15 @@ if __name__ == "__main__":
         'usr_command',
         type=str,
         nargs='?',
-        metavar='<PROFILED_COMMAND>')
-    
+        metavar='<PROFILED_COMMAND>')    
     parser.add_argument(
         '--network_filters',
         metavar='"ip1,ip2,ip3"',
         type=str,
         required=False,
         help='filters for network, put your ip into it, eg.192.168.0.100 is 192168000100, and first ip must be your localhost')
-
+    parser.add_argument('--enable_pcm', dest='enable_pcm', action='store_true')
+    parser.set_defaults(enable_pcm=False)
     cfg = SOFA_Config()
 
     args = parser.parse_args()
@@ -110,6 +110,8 @@ if __name__ == "__main__":
     if args.enable_vmstat is not None:
         cfg.enable_vmstat = args.enable_vmstat
 
+    if args.enable_pcm is not None:
+        cfg.enable_pcm = args.enable_pcm
 
     if args.iterations is not None:
         cfg.iterations = args.iterations

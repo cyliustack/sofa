@@ -11,6 +11,8 @@ from functools import partial
 from sofa_print import *
 import subprocess
 from time import sleep, time
+from pwd import getpwuid
+
 
 
 def sofa_record(command, logdir, cfg):
@@ -20,6 +22,7 @@ def sofa_record(command, logdir, cfg):
     p_vmstat  = None
     p_nvsmi   = None
     p_nvtopo  = None 
+    p_pcm_pcie = None 
 
     print_info('SOFA_COMMAND: %s' % command)
     sample_freq = 99
@@ -34,8 +37,19 @@ def sofa_record(command, logdir, cfg):
         print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
         quit()
 
-    if subprocess.call(['mkdir', '-p', logdir]):
+    ret = str(subprocess.check_output(['getcap /usr/local/intelpcm/bin/pcm-pcie.x'], shell=True))
+    if ret.find('cap_sys_rawio+ep') == -1:
+        print_error('To read/write MSR in userspace is not avaiable, please try the command below:')
+        print_error('sudo setcap cap_sys_rawio=ep /usr/local/intelpcm/bin/pcm-pcie.x')
+        #p_pcm_pcie = subprocess.Popen(['/usr/local/intelpcm/bin/pcm-pcie.x','0.1','-csv=sofalog/pcm_pcie.csv','-B'],stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        #p_pcm_pcie.communicate('y\n')
         quit()
+
+    if subprocess.call(['mkdir', '-p', logdir]) != 0:
+        print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
+        quit()
+    
+    print_info('Clean previous logged files')
     subprocess.call('rm %s/perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
     subprocess.call('rm %s/sofa.pcap > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/gputrace*.nvvp > /dev/null 2> /dev/null' % logdir, shell=True)
@@ -65,9 +79,12 @@ def sofa_record(command, logdir, cfg):
                 p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)  
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
             logfile.write(str(int(time()))+'\n')
-
-        print_info("Recording...")
-
+        
+        if cfg.enable_pcm:
+            with open(os.devnull, 'w') as FNULL:
+                p_pcm_pcie = subprocess.Popen(['/usr/local/intelpcm/bin/pcm-pcie.x','0.1','-csv=sofalog/pcm_pcie.csv','-B'],stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        
+        print_info("Recording...")    
         if cfg.profile_all_cpus == True:
             perf_options = '-a'
         else:
@@ -99,6 +116,10 @@ def sofa_record(command, logdir, cfg):
         if p_nvsmi != None:
             p_nvsmi.terminate()
             print_info("tried terminating nvidia-smi dmon")
+        if cfg.enable_pcm:
+            if p_pcm_pcie != None:
+                p_pcm_pcie.terminate()
+                print_info("tried terminating pcm-pcie.x")
         #os.system('pkill tcpdump')
         #os.system('pkill mpstat')
         #os.system('pkill vmstat')
@@ -120,5 +141,9 @@ def sofa_record(command, logdir, cfg):
         if p_nvsmi != None:
             p_nvsmi.kill()
             print_info("tried killing nvidia-smi dmon")
+        if cfg.enable_pcm:
+            if p_pcm_pcie != None:
+                p_pcm_pcie.kill()
+                print_info("tried killing pcm-pcie.x")
         raise
     print_info("End of Recording")
