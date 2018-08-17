@@ -827,28 +827,29 @@ def sofa_preprocess(logdir, cfg):
         with open(logdir + "gputrace.tmp", "w") as f:
             subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "-i", nvvp_filename], stderr=f)
 
+        #Automatically retrieve the timestamp of the first CUDA activity(e.g. kernel, memory op, etc..)
+        engine = create_engine("sqlite:///"+nvvp_filename)
+        t_glb_gpu_bases = []
+        try:
+            t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_MEMSET',engine)).iloc[0]['start'])
+        except BaseException:
+            print_info('NO MEMSET')
+        try:
+            t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_MEMCPY',engine)).iloc[0]['start'])
+        except BaseException:
+            print_info('NO MEMCPY')
+        try: 
+            t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL',engine)).iloc[0]['start'])
+        except BaseException:
+            print_info('NO CONCURRENT KERNEL')
+        try: 
+            t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_KERNEL',engine)).iloc[0]['start'])
+        except BaseException:
+            print_info('NO KERNEL')
+        print(t_glb_gpu_bases) 
+        t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]/1e+9
 
-        # TODO: automatically retrieve the timestamp of the first CUDA activity(e.g. kernel, memory op, etc..)
-        with open(logdir + 'gputrace.tmp') as f:
-            #f.getlines() 
-            gpu_f_event=''
-            for line in f :
-                #print(line)
-                if line.find('0.000000') != -1:
-                    gpu_event_list = line.split(',')
-                    for keyword in reversed(gpu_event_list) :
-                        if keyword.find('memcpy') != -1:
-                            gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMCPY'
-                        elif keyword.find('memset') != -1:
-                            gpu_f_event = 'CUPTI_ACTIVITY_KIND_MEMSET'
-                        elif keyword.find('ParallelForAgent') != -1:
-                            gpu_f_event = 'CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL'
-            engine = create_engine("sqlite:///"+nvvp_filename)
-            gpu_traces_df = pd.read_sql_table(gpu_f_event,engine)
-            print(gpu_traces_df.iloc[0]['start'])
-            print(gpu_traces_df.iloc[0]['end'])
-            t_glb_gpu_base = float(gpu_traces_df.iloc[0]['start'])/1e+9
-        print(t_glb_gpu_base)
+        print_info("Timestamp of the first GPU trace = " + str(t_glb_gpu_base))
        
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
         num_cudaproc = num_cudaproc + 1
@@ -869,6 +870,8 @@ def sofa_preprocess(logdir, cfg):
                     payload_unit = np.power(1024,2)
                 elif records[2].split(',')[11] == 'KB':
                     payload_unit = np.power(1024,1)
+                elif records[2].split(',')[11] == 'B':
+                    payload_unit = 1
                 else: 
                     print_info("The payload unit in gputrace.tmp was not recognized!")
                     quit()
@@ -1128,8 +1131,6 @@ def sofa_preprocess(logdir, cfg):
             sofatrace.y_field = 'duration'
             sofatrace.data = filtered_net_group['group'].copy()
             traces.append(sofatrace)
-    else:
-        print('no')
 
     sofatrace = SOFATrace()
     sofatrace.name = 'gpu_kernel_trace'
