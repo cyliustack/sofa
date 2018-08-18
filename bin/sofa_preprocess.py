@@ -747,17 +747,7 @@ def sofa_preprocess(logdir, cfg):
                 nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
                 nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
 
-    t_first_nv = sys.float_info.max
-    for i in range(len(cpu_traces)):
-        if re.search('_nv\d+rm', cpu_traces.iat[i,11]) is not None and float(cpu_traces.iat[i,0]) < t_first_nv:
-            t_first_nv = float(cpu_traces.iat[i, 0])
-
-    if t_first_nv == sys.float_info.max:
-        print_warning("'_nv*rm' was not found.")
-        t_first_nv = t_glb_base
-    print(("t_first_nv: %lf" % (t_first_nv)))
     # Apply filters for cpu traces
-    
     filtered_groups = []
     if len(cpu_traces) > 0:
         df_grouped = cpu_traces.groupby('name')
