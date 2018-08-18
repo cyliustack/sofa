@@ -77,8 +77,6 @@ def sofa_record(command, logdir, cfg):
                 p_nvsmi = subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
             with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
                 p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)  
-        with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
-            logfile.write(str(int(time()))+'\n')
         
         if cfg.enable_pcm:
             with open(os.devnull, 'w') as FNULL:
@@ -90,16 +88,22 @@ def sofa_record(command, logdir, cfg):
         else:
             perf_options = ''
 
-            
         subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
         subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
-        if int(os.system('command -v nvprof')) == 0:
+        if int(os.system('command -v nvprof')) == 0: 
             profile_command = 'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,cache-misses,instructions -o %s/perf.data -F %s %s -- %s ' % (logdir, logdir, sample_freq, perf_options, command)
         else:
             print_warning('Profile without NVPROF')
             profile_command = 'perf record -o %s/perf.data -e cycles,instructions -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
         print_info( profile_command)
+        with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
+            logfile.write(str(int(time()))+'\n')
         subprocess.call(profile_command.split())
+        
+        
+        
+        
+        
         print_info("Epilog of Recording...")
         if p_tcpdump != None:
             p_tcpdump.terminate()

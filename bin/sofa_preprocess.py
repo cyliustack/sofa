@@ -388,10 +388,11 @@ def sofa_preprocess(logdir, cfg):
     # sys.stdout.flush()
     with open(logdir + 'sofa_time.txt') as f:
         t_glb_base = float(f.readline())
+        print_info('Time offset applied to perf timestamp (s):' + str(cfg.cpu_time_offset))
+        t_glb_base = t_glb_base + cfg.cpu_time_offset
+        print_info('Time base of perf (since 1970):' + str(t_glb_base))
         t_glb_net_base = t_glb_base
         t_glb_gpu_base = t_glb_base
-        print(t_glb_base)
-        print(t_glb_net_base)
 
     net_traces = []
     cpu_traces = []
@@ -748,6 +749,7 @@ def sofa_preprocess(logdir, cfg):
                 nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
 
     # Apply filters for cpu traces
+    
     filtered_groups = []
     if len(cpu_traces) > 0:
         df_grouped = cpu_traces.groupby('name')
@@ -769,13 +771,12 @@ def sofa_preprocess(logdir, cfg):
             packets = lines = f.readlines()
             print_info("Length of net_traces = %d" % len(packets))
             if packets:
-                t_base = float(lines[0].split()[0])
+                #DEPRECATED: t_base = float(lines[0].split()[0])
                 with mp.Pool(processes=cpu_count) as pool:
                     res = pool.map(
                         partial(
                             net_trace_read,
-                            t_offset=t_glb_net_base -
-                            t_base),
+                            t_offset=0),
                         packets)
                 res_viz = list_downsample(res, cfg.plot_ratio)
                 net_traces = pd.DataFrame(res_viz)

@@ -50,8 +50,8 @@ if __name__ == "__main__":
                         help='K functions of the highest overheads')
     parser.add_argument('--iterations', metavar='N', type=int, required=False,
                         help='number of iterations by which a program runs')
-    parser.add_argument('--gpu_time_offset', metavar='N', type=int, required=False,
-                        help='timestamp offset between CPU and GPU, +N or -N')
+    parser.add_argument('--cpu_time_offset_ms', metavar='N', type=int, required=False,
+            help='timestamp offset (unit: ms) between CPU and GPU, +N or -N')
     parser.add_argument(
         '--plot_ratio',
         metavar='N',
@@ -119,8 +119,10 @@ if __name__ == "__main__":
     if args.plot_ratio is not None:
         cfg.plot_ratio = args.plot_ratio
 
-    if args.gpu_time_offset is not None:
-        cfg.gpu_time_offset = args.gpu_time_offset
+    if args.cpu_time_offset_ms is not None:
+        cfg.cpu_time_offset = 0.001*args.cpu_time_offset_ms
+    else:
+        cfg.cpu_time_offset = 0.8
     
     if args.viz_port is not None:
         cfg.viz_port = args.viz_port
