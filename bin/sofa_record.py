@@ -110,7 +110,7 @@ def sofa_record(command, logdir, cfg):
         print_info( profile_command)
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
             logfile.write(str(int(time()))+'\n')
-        subprocess.call(profile_command.split())
+        subprocess.call(profile_command, shell=True)
         
         
         

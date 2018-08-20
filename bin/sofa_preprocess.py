@@ -837,8 +837,11 @@ def sofa_preprocess(logdir, cfg):
             t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_KERNEL',engine)).iloc[0]['start'])
         except BaseException:
             print_info('NO KERNEL')
-        print(t_glb_gpu_bases) 
-        t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]/1e+9
+        print(t_glb_gpu_bases)
+        if len(t_glb_gpu_bases) > 0: 
+            t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]/1e+9
+        else:
+           print_warning("There is no data in tables of NVVP file.") 
 
         print_info("Timestamp of the first GPU trace = " + str(t_glb_gpu_base))
        
