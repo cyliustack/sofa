@@ -45,6 +45,11 @@ def sofa_record(command, logdir, cfg):
         #p_pcm_pcie.communicate('y\n')
         quit()
 
+    if str(subprocess.check_output(['/usr/local/intelpcm/bin/pcm-pcie.x 2>&1'], shell=True)).find('Error: NMI watchdog is enabled.') != -1:
+        print_error('NMI watchdog is enabled.,  please try the command below:')
+        print_error('sudo sysctl -w kernel.nmi_watchdog=0')
+        quit()
+
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
         print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
         quit()
