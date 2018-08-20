@@ -37,18 +37,25 @@ def sofa_record(command, logdir, cfg):
         print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
         quit()
 
-    ret = str(subprocess.check_output(['getcap /usr/local/intelpcm/bin/pcm-pcie.x'], shell=True))
-    if ret.find('cap_sys_rawio+ep') == -1:
-        print_error('To read/write MSR in userspace is not avaiable, please try the command below:')
-        print_error('sudo setcap cap_sys_rawio=ep /usr/local/intelpcm/bin/pcm-pcie.x')
-        #p_pcm_pcie = subprocess.Popen(['/usr/local/intelpcm/bin/pcm-pcie.x','0.1','-csv=sofalog/pcm_pcie.csv','-B'],stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        #p_pcm_pcie.communicate('y\n')
-        quit()
-
-    if str(subprocess.check_output(['/usr/local/intelpcm/bin/pcm-pcie.x 2>&1'], shell=True)).find('Error: NMI watchdog is enabled.') != -1:
-        print_error('NMI watchdog is enabled.,  please try the command below:')
-        print_error('sudo sysctl -w kernel.nmi_watchdog=0')
-        quit()
+    if cfg.enable_pcm:
+        print_info('Test Capability of PCM programs ...')    
+        ret = str(subprocess.check_output(['getcap /usr/local/intelpcm/bin/pcm-pcie.x'], shell=True))
+        if ret.find('cap_sys_rawio+ep') == -1:
+            print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
+            print_error('sudo modprobe msr')
+            print_error('sudo setcap cap_sys_rawio=ep /usr/local/intelpcm/bin/pcm-pcie.x')
+            print_error('/usr/local/intelpcm/bin/pcm-pcie.x')
+            quit()
+        
+        print_info('Read NMI watchlog status ...')
+        try:
+            output = subprocess.check_output('yes | /usr/local/intelpcm/bin/pcm-pcie.x 2>&1', shell=True)
+        except subprocess.CalledProcessError as e: 
+            print_error(e.output)
+        if str(output).find('Error: NMI watchdog is enabled.') != -1:
+            print_error('NMI watchdog is enabled.,  please try the command below:')
+            print_error('sudo sysctl -w kernel.nmi_watchdog=0')
+            quit()
 
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
         print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
@@ -85,7 +92,7 @@ def sofa_record(command, logdir, cfg):
         
         if cfg.enable_pcm:
             with open(os.devnull, 'w') as FNULL:
-                p_pcm_pcie = subprocess.Popen(['/usr/local/intelpcm/bin/pcm-pcie.x','0.1','-csv=sofalog/pcm_pcie.csv','-B'],stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+                p_pcm_pcie = subprocess.Popen(['yes|/usr/local/intelpcm/bin/pcm-pcie.x 0.1 -csv=sofalog/pcm_pcie.csv -B'], shell=True)
         
         print_info("Recording...")    
         if cfg.profile_all_cpus == True:
