@@ -816,7 +816,7 @@ def sofa_preprocess(logdir, cfg):
     for nvvp_filename in glob.glob(logdir + "gputrace*[0-9].nvvp"):
         print_progress("Read " + nvvp_filename + " by nvprof -- begin")
         with open(logdir + "gputrace.tmp", "w") as f:
-            subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "-i", nvvp_filename], stderr=f)
+            subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "--print-api-trace","-i", nvvp_filename], stderr=f)
 
         #Automatically retrieve the timestamp of the first CUDA activity(e.g. kernel, memory op, etc..)
         engine = create_engine("sqlite:///"+nvvp_filename)
