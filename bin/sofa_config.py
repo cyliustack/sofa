@@ -22,3 +22,4 @@ class SOFA_Config:
     enable_deepprof = False
     enable_vmstat = False
     enable_pcm = False
+    cuda_api_tracing = False

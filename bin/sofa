@@ -90,6 +90,9 @@ if __name__ == "__main__":
         help='filters for network, put your ip into it, eg.192.168.0.100 is 192168000100, and first ip must be your localhost')
     parser.add_argument('--enable_pcm', dest='enable_pcm', action='store_true')
     parser.set_defaults(enable_pcm=False)
+    parser.add_argument('--cuda_api_tracing', dest='cuda_api_tracing', action='store_true')
+    parser.set_defaults(cuda_api_tracing=False)
+
     cfg = SOFA_Config()
 
     args = parser.parse_args()
@@ -112,6 +115,9 @@ if __name__ == "__main__":
 
     if args.enable_pcm is not None:
         cfg.enable_pcm = args.enable_pcm
+
+    if args.cuda_api_tracing is not None:
+        cfg.cuda_api_tracing = args.cuda_api_tracing
 
     if args.iterations is not None:
         cfg.iterations = args.iterations
