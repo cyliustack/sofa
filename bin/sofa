@@ -144,6 +144,7 @@ if __name__ == "__main__":
     cfg.gpu_filters.append(Filter('copyKind_1_', 'Red'))
     cfg.gpu_filters.append(Filter('copyKind_2_', 'Peru'))
     cfg.gpu_filters.append(Filter('copyKind_10_', 'Purple'))
+    cfg.gpu_filters.append(Filter('CUDA_API', 'DarkSlateGray'))
     if args.gpu_filters is not None:
         pairs = args.gpu_filters.split(',')
         for pair in pairs:

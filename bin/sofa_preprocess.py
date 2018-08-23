@@ -119,6 +119,8 @@ def gpu_trace_read(
         t_offset):
     values = record.replace('"', '').split(',')
     kernel_name = values[indices.index('Name')]
+    if values[indices.index('Device')] == '' and float(values[indices.index('Duration')]) > 0.000050 :
+        kernel_name = '[CUDA_API]' + kernel_name
     # print("kernel name = %s" % kernel_name)
     time = float(values[indices.index('Start')]) / ts_rescale + t_offset
     duration = float(values[indices.index('Duration')]) / dt_rescale
@@ -180,7 +182,7 @@ def gpu_trace_read(
     else:
         copyKind = 0
 
-    kernel_name = 'gpu%d_'%deviceId + kernel_name
+    kernel_name = '[gpu%d]'%deviceId + kernel_name
     # print("%d:%d [%s] ck:%d, %lf,%lf: %d -> %d: payload:%d, bandwidth:%lf,
     # duration:%lf "%(deviceId, streamId, kernel_name, copyKind,
     # t_begin,t_end, pkt_src, pkt_dst, payload, bandwidth, duration))
@@ -816,11 +818,15 @@ def sofa_preprocess(logdir, cfg):
     for nvvp_filename in glob.glob(logdir + "gputrace*[0-9].nvvp"):
         print_progress("Read " + nvvp_filename + " by nvprof -- begin")
         with open(logdir + "gputrace.tmp", "w") as f:
-            subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "--print-api-trace","-i", nvvp_filename], stderr=f)
+            subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "--print-api-trace", "-i", nvvp_filename], stderr=f)
 
         #Automatically retrieve the timestamp of the first CUDA activity(e.g. kernel, memory op, etc..)
         engine = create_engine("sqlite:///"+nvvp_filename)
         t_glb_gpu_bases = []
+        try:
+            t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['start'])
+        except BaseException:
+            print_info('NO RUNTIME')
         try:
             t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_MEMSET',engine)).iloc[0]['start'])
         except BaseException:
@@ -870,7 +876,6 @@ def sofa_preprocess(logdir, cfg):
                     print_info("The payload unit in gputrace.tmp was not recognized!")
                     quit()
                 
-                
                 ts_rescale = 1.0
                 if records[2].split(',')[0] == 'ms':
                     ts_rescale = 1.0e3
@@ -916,14 +921,14 @@ def sofa_preprocess(logdir, cfg):
                 for filter in cfg.gpu_filters:
                     group = gpu_traces[gpu_traces['name'].str.contains(
                         filter.keyword)]
-                    filtered_gpu_groups.append({'group': group,                                                'color': filter.color,
+                    filtered_gpu_groups.append({'group': group, 'color': filter.color,
                                                 'keyword': filter.keyword})
             else:
                 print_warning(
                     "gputrace existed, but no kernel traces were recorded.")
                 os.system('cat %s/gputrace.tmp' % logdir)
     
-    
+ 
     #=== Intel PCM Trace =======#
     ### Skt,PCIeRdCur,RFO,CRd,DRd,ItoM,PRd,WiL,PCIe Rd (B),PCIe Wr (B)
     ### 0,0,852,0,0,48,0,0,54528,57600
