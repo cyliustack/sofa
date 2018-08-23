@@ -888,7 +888,7 @@ def sofa_preprocess(logdir, cfg):
             print_info('NO KERNEL')
         print(t_glb_gpu_bases)
         if len(t_glb_gpu_bases) > 0: 
-            t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]/1e+9
+            t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]*1.0/1e+9
         else:
            print_warning("There is no data in tables of NVVP file.") 
 
@@ -983,14 +983,15 @@ def sofa_preprocess(logdir, cfg):
             #Automatically retrieve the timestamp of the first CUDA activity(e.g. kernel, memory op, etc..)
             engine = create_engine("sqlite:///"+nvvp_filename)
             t_glb_gpu_bases = []
+            first_corid = 1
             try:
-                t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['start'])
+                t_glb_gpu_bases.append((pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['start'])
+                first_corid = (pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['correlationId']
             except BaseException:
                 print_info('NO RUNTIME')
 
-            print(t_glb_gpu_bases)
             if len(t_glb_gpu_bases) > 0: 
-                t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]/1e+9
+                t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]*1.0/1e+9
             else:
                print_warning("There is no data in tables of NVVP file.") 
 
@@ -1001,7 +1002,6 @@ def sofa_preprocess(logdir, cfg):
             with open(logdir + 'cuda_api_trace.tmp') as f:
                 records = f.readlines()
                 # print(records[1])
-
                 if len(records) > 0 and records[1].split(',')[0] == '"Start"':
                     indices = records[1].replace(
                         '"', '').replace(
@@ -1022,7 +1022,15 @@ def sofa_preprocess(logdir, cfg):
 
                     records = records[3:]
                     print_info("Length of cuda_api_traces = %d" % len(records))
+                    
                     t_base = float(records[0].split(',')[0])
+                    for record in records:
+                        if int(record.split(',')[3]) == first_corid:
+                            t_base = float(record.split(',')[0]) 
+                            print_info('First Correlation_ID ' + str(first_corid) + ' is found in cuda_api_trace.tmp')
+                            print_info('First API trace timestamp is ' + str(t_base))
+                            break 
+                    
                     with mp.Pool(processes=cpu_count) as pool:
                         res = pool.map(
                             partial(
@@ -1142,7 +1150,7 @@ def sofa_preprocess(logdir, cfg):
     for filtered_group in filtered_groups:
         sofatrace = SOFATrace()
         sofatrace.name = filtered_group['keyword']
-        sofatrace.title = 'keyword_' + sofatrace.name
+        sofatrace.title = '[keyword]' + sofatrace.name
         sofatrace.color = filtered_group['color']
         sofatrace.x_field = 'timestamp'
         sofatrace.y_field = 'duration'
@@ -1244,7 +1252,7 @@ def sofa_preprocess(logdir, cfg):
         for filtered_net_group in filtered_net_groups:
             sofatrace = SOFATrace()
             sofatrace.name = filtered_net_group['keyword']
-            sofatrace.title = 'keyword_' + sofatrace.name
+            sofatrace.title = '[keyword]' + sofatrace.name
             sofatrace.color = filtered_net_group['color']
             sofatrace.x_field = 'timestamp'
             sofatrace.y_field = 'duration'
@@ -1263,7 +1271,7 @@ def sofa_preprocess(logdir, cfg):
     for filtered_gpu_group in filtered_gpu_groups:
         sofatrace = SOFATrace()
         sofatrace.name = filtered_gpu_group['keyword']
-        sofatrace.title = 'keyword_' + sofatrace.name
+        sofatrace.title = '[keyword]' + sofatrace.name
         sofatrace.color = filtered_gpu_group['color']
         sofatrace.x_field = 'timestamp'
         sofatrace.y_field = 'duration'
