@@ -128,7 +128,7 @@ if __name__ == "__main__":
     if args.cpu_time_offset_ms is not None:
         cfg.cpu_time_offset = 0.001*args.cpu_time_offset_ms
     else:
-        cfg.cpu_time_offset = 0.8
+        cfg.cpu_time_offset = 0.0
     
     if args.viz_port is not None:
         cfg.viz_port = args.viz_port

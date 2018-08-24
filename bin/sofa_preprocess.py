@@ -417,7 +417,6 @@ sofa_fieldnames = [
 
 def sofa_preprocess(logdir, cfg):
     t_glb_base = 0
-    t_glb_net_base = 0
     t_glb_gpu_base = 0
 
     with open('%s/perf.script' % logdir, 'w') as logfile:
@@ -437,8 +436,6 @@ def sofa_preprocess(logdir, cfg):
         print_info('Time offset applied to perf timestamp (s):' + str(cfg.cpu_time_offset))
         t_glb_base = t_glb_base + cfg.cpu_time_offset
         print_info('Time base of perf (since 1970):' + str(t_glb_base))
-        t_glb_net_base = t_glb_base
-        t_glb_gpu_base = t_glb_base
 
     net_traces = []
     cpu_traces = []
@@ -476,31 +473,6 @@ def sofa_preprocess(logdir, cfg):
     gpulog_mode = 'w'
     gpulog_header = 'True'
     cpu_count = mp.cpu_count()
-
-    # ============ Preprocessing CPU Trace ==========================
-    with open(logdir + 'perf.script') as f:
-        samples = f.readlines()
-        print_info("Length of cpu_traces = %d" % len(samples))
-        if len(samples) > 0:
-            t_base = float((samples[0].split())[1].split(':')[0])
-            with mp.Pool(processes=cpu_count) as pool:
-                res = pool.map(
-                    partial(
-                        cpu_trace_read,
-                        t_offset=t_glb_base -
-                        t_base),
-                    samples)
-            cpu_traces = pd.DataFrame(res)
-            cpu_traces.columns = sofa_fieldnames
-            cpu_traces.to_csv(
-                logdir + 'cputrace.csv',
-                mode='w',
-                header=True,
-                index=False,
-                float_format='%.6f')
-            res_viz = list_downsample(res, cfg.plot_ratio)
-            cpu_traces_viz = pd.DataFrame(res_viz)
-            cpu_traces_viz.columns = sofa_fieldnames
 
     # procs -----------------------memory---------------------- ---swap-- -
     #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
@@ -1056,7 +1028,43 @@ def sofa_preprocess(logdir, cfg):
                         index=False,
                         float_format='%.6f')
     
- 
+    # ============ Preprocessing CPU Trace ==========================
+    with open(logdir + 'perf.script') as f:
+        samples = f.readlines()
+        print_info("Length of cpu_traces = %d" % len(samples))
+        if len(samples) > 0:
+            # TODO: It is better to check pid/tid mapping of the last perf-event of _nv*rm and the last cuda event 
+            t_perf_glb_base = t_glb_base             
+            print_info('Timestamp of default t_perf_glb_base: ' + str(t_perf_glb_base) )
+            t_perf_base =  float(samples[i].split()[1].split(':')[0])
+            for sample in reversed(samples):
+                function_name = sample.split()[5]
+                if re.search('_nv\d+rm', function_name ) is not None: 
+                        t_perf_base = float(sample.split()[1].split(':')[0])
+                        t_perf_glb_base = float(gpu_traces.iat[len(gpu_traces)-1,0])
+                        break 
+            print_info('Timestamp of last _nv*rm event: ' + str(t_perf_base) )
+            print_info('Timestamp of new t_perf_glb_base: ' + str(t_perf_glb_base) )
+             
+            with mp.Pool(processes=cpu_count) as pool:
+                res = pool.map(
+                    partial(
+                        cpu_trace_read,
+                        t_offset = t_perf_glb_base - t_perf_base),
+                    samples)
+            cpu_traces = pd.DataFrame(res)
+            cpu_traces.columns = sofa_fieldnames
+            cpu_traces.to_csv(
+                logdir + 'cputrace.csv',
+                mode='w',
+                header=True,
+                index=False,
+                float_format='%.6f')
+            res_viz = list_downsample(res, cfg.plot_ratio)
+            cpu_traces_viz = pd.DataFrame(res_viz)
+            cpu_traces_viz.columns = sofa_fieldnames
+
+
     #=== Intel PCM Trace =======#
     ### Skt,PCIeRdCur,RFO,CRd,DRd,ItoM,PRd,WiL,PCIe Rd (B),PCIe Wr (B)
     ### 0,0,852,0,0,48,0,0,54528,57600
