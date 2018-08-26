@@ -996,12 +996,13 @@ def sofa_preprocess(logdir, cfg):
                     print_info("Length of cuda_api_traces = %d" % len(records))
                     
                     t_base = float(records[0].split(',')[0])
-                    for record in records:
-                        if int(record.split(',')[3]) == first_corid:
-                            t_base = float(record.split(',')[0]) 
-                            print_info('First Correlation_ID ' + str(first_corid) + ' is found in cuda_api_trace.tmp')
-                            print_info('First API trace timestamp is ' + str(t_base))
-                            break 
+                    if len(records[0].split(',')) == 4: 
+                        for record in records:
+                            if int(record.split(',')[3]) == first_corid:
+                                t_base = float(record.split(',')[0]) 
+                                print_info('First Correlation_ID ' + str(first_corid) + ' is found in cuda_api_trace.tmp')
+                                print_info('First API trace timestamp is ' + str(t_base))
+                                break 
                     
                     with mp.Pool(processes=cpu_count) as pool:
                         res = pool.map(

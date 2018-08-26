@@ -136,7 +136,6 @@ if __name__ == "__main__":
     if args.profile_all_cpus is not None:
         cfg.profile_all_cpus = args.profile_all_cpus
 
-    cfg.cpu_filters.append(Filter('nv_alloc_system_pages', 'red'))
     cfg.cpu_filters.append(Filter('instructions', 'cornflowerblue'))
     cfg.cpu_filters.append(Filter('cache_misses', 'pink'))
     if args.cpu_filters is not None:
