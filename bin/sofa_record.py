@@ -68,6 +68,9 @@ def sofa_record(command, logdir, cfg):
     subprocess.call('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.txt > /dev/null 2> /dev/null' % logdir, shell=True)
+    
+    with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
+            logfile.write(str(int(time()))+'\n')
     try:
         print_info("Prolog of Recording...")
         with open(os.devnull, 'w') as FNULL:
@@ -106,10 +109,9 @@ def sofa_record(command, logdir, cfg):
             profile_command = 'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,cache-misses,instructions -o %s/perf.data -F %s %s -- %s ' % (logdir, logdir, sample_freq, perf_options, command)
         else:
             print_warning('Profile without NVPROF')
-            profile_command = 'perf record -o %s/perf.data -e cycles,instructions -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
+            profile_command = 'perf record -o %s/perf.data -e cycles,cache-misses,instructions -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
         print_info( profile_command)
-        with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
-            logfile.write(str(int(time()))+'\n')
+        
         subprocess.call(profile_command, shell=True)
         
         

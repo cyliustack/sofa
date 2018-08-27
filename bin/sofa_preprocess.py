@@ -768,18 +768,6 @@ def sofa_preprocess(logdir, cfg):
                 nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
                 nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
 
-    # Apply filters for cpu traces
-    
-    filtered_groups = []
-    if len(cpu_traces) > 0:
-        df_grouped = cpu_traces.groupby('name')
-        for filter in cfg.cpu_filters:
-            group = cpu_traces[cpu_traces['name'].str.contains(
-                filter.keyword)]
-            filtered_groups.append({'group': group,
-                                    'color': filter.color,
-                                    'keyword': filter.keyword})
-
     # ============ Preprocessing Network Trace ==========================
     filtered_net_groups = []
     if os.path.isfile('%s/sofa.pcap' % logdir):
@@ -1064,6 +1052,16 @@ def sofa_preprocess(logdir, cfg):
             res_viz = list_downsample(res, cfg.plot_ratio)
             cpu_traces_viz = pd.DataFrame(res_viz)
             cpu_traces_viz.columns = sofa_fieldnames
+        ###  Apply filters for cpu traces
+        filtered_groups = []
+        if len(cpu_traces) > 0:
+            df_grouped = cpu_traces_viz.groupby('name')
+            for filter in cfg.cpu_filters:
+                group = cpu_traces_viz[cpu_traces_viz['name'].str.contains(
+                    filter.keyword)]
+                filtered_groups.append({'group': group,
+                                        'color': filter.color,
+                                        'keyword': filter.keyword})
 
 
     #=== Intel PCM Trace =======#
