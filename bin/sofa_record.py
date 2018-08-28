@@ -20,6 +20,7 @@ def sofa_record(command, logdir, cfg):
     p_tcpdump = None
     p_mpstat  = None
     p_vmstat  = None
+    p_nvprof  = None
     p_nvsmi   = None
     p_nvtopo  = None 
     p_pcm_pcie = None 
@@ -79,17 +80,28 @@ def sofa_record(command, logdir, cfg):
                               '-w',
                               '%s/sofa.pcap' % logdir],
                              stderr=FNULL)
+
         with open('%s/mpstat.txt' % logdir, 'w') as logfile:
             p_mpstat = subprocess.Popen(
                 ['mpstat', '-P', 'ALL', '1', '600'], stdout=logfile)
+
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
             p_vmstat = subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
-        if int(os.system('command -v nvprof')) == 0:
+
+        if int(os.system('command -v nvidia-smi')) == 0:
             with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
                 p_nvsmi = subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
             with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
-                p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)  
-        
+                p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile) 
+ 
+        if int(os.system('command -v nvprof')) == 0:
+            p_nvprof = subprocess.Popen(['nvprof', '--profile-all-processes', '-o', logdir+'/gputrace%p.nvvp'])
+            print_info('Launching nvprof')
+            sleep(3)
+            print_info('nvprof is launched')
+        else:    
+            print_warning('Profile without NVPROF')
+
         if cfg.enable_pcm:
             with open(os.devnull, 'w') as FNULL:
                 p_pcm_pcie = subprocess.Popen(['yes|/usr/local/intelpcm/bin/pcm-pcie.x 0.1 -csv=sofalog/pcm_pcie.csv -B'], shell=True)
@@ -102,19 +114,14 @@ def sofa_record(command, logdir, cfg):
 
         subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
         subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
-        if int(os.system('command -v nvprof')) == 0: 
-            profile_command = 'nvprof --profile-child-processes -o %s/gputrace%%p.nvvp perf record -e cycles,cache-misses,instructions -o %s/perf.data -F %s %s -- %s ' % (logdir, logdir, sample_freq, perf_options, command)
-        else:
-            print_warning('Profile without NVPROF')
-            profile_command = 'perf record -o %s/perf.data -e cycles,instructions -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
-        print_info( profile_command)
+        
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
             logfile.write(str(int(time()))+'\n')
-        subprocess.call(profile_command, shell=True)
         
-        
-        
-        
+        if int(os.system('command -v perf')) == 0: 
+            profile_command = 'perf record -o %s/perf.data -e cycles,instructions -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
+            print_info( profile_command)            
+            subprocess.call(profile_command, shell=True)
         
         print_info("Epilog of Recording...")
         if p_tcpdump != None:
@@ -132,6 +139,9 @@ def sofa_record(command, logdir, cfg):
         if p_nvsmi != None:
             p_nvsmi.terminate()
             print_info("tried terminating nvidia-smi dmon")
+        if p_nvprof != None:
+            p_nvprof.terminate()
+            print_info("tried terminating nvprof")
         if cfg.enable_pcm:
             if p_pcm_pcie != None:
                 p_pcm_pcie.terminate()
@@ -157,6 +167,9 @@ def sofa_record(command, logdir, cfg):
         if p_nvsmi != None:
             p_nvsmi.kill()
             print_info("tried killing nvidia-smi dmon")
+        if p_nvprof != None:
+            p_nvprof.kill()
+            print_info("tried killing nvprof")
         if cfg.enable_pcm:
             if p_pcm_pcie != None:
                 p_pcm_pcie.kill()
