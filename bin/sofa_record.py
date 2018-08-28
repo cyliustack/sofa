@@ -69,6 +69,9 @@ def sofa_record(command, logdir, cfg):
     subprocess.call('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.txt > /dev/null 2> /dev/null' % logdir, shell=True)
+    
+    with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
+            logfile.write(str(int(time()))+'\n')
     try:
         print_info("Prolog of Recording...")
         with open(os.devnull, 'w') as FNULL:
@@ -114,10 +117,7 @@ def sofa_record(command, logdir, cfg):
 
         subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
         subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
-        
-        with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
-            logfile.write(str(int(time()))+'\n')
-        
+       
         if int(os.system('command -v perf')) == 0: 
             profile_command = 'perf record -o %s/perf.data -e cycles,instructions -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
             print_info( profile_command)            

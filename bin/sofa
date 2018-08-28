@@ -90,6 +90,9 @@ if __name__ == "__main__":
         help='filters for network, put your ip into it, eg.192.168.0.100 is 192168000100, and first ip must be your localhost')
     parser.add_argument('--enable_pcm', dest='enable_pcm', action='store_true')
     parser.set_defaults(enable_pcm=False)
+    parser.add_argument('--cuda_api_tracing', dest='cuda_api_tracing', action='store_true')
+    parser.set_defaults(cuda_api_tracing=False)
+
     cfg = SOFA_Config()
 
     args = parser.parse_args()
@@ -113,6 +116,9 @@ if __name__ == "__main__":
     if args.enable_pcm is not None:
         cfg.enable_pcm = args.enable_pcm
 
+    if args.cuda_api_tracing is not None:
+        cfg.cuda_api_tracing = args.cuda_api_tracing
+
     if args.iterations is not None:
         cfg.iterations = args.iterations
 
@@ -122,7 +128,7 @@ if __name__ == "__main__":
     if args.cpu_time_offset_ms is not None:
         cfg.cpu_time_offset = 0.001*args.cpu_time_offset_ms
     else:
-        cfg.cpu_time_offset = 0.8
+        cfg.cpu_time_offset = 0.0
     
     if args.viz_port is not None:
         cfg.viz_port = args.viz_port
@@ -130,9 +136,8 @@ if __name__ == "__main__":
     if args.profile_all_cpus is not None:
         cfg.profile_all_cpus = args.profile_all_cpus
 
-    cfg.cpu_filters.append(Filter('nv_alloc_system_pages', 'red'))
-    cfg.cpu_filters.append(Filter('instructions', 'cornflowerblue'))
-    cfg.cpu_filters.append(Filter('cache_misses', 'pink'))
+    #cfg.cpu_filters.append(Filter('instructions', 'cornflowerblue'))
+    #cfg.cpu_filters.append(Filter('cache_misses', 'pink'))
     if args.cpu_filters is not None:
         pairs = args.cpu_filters.split(',')
         for pair in pairs:
@@ -144,6 +149,7 @@ if __name__ == "__main__":
     cfg.gpu_filters.append(Filter('copyKind_1_', 'Red'))
     cfg.gpu_filters.append(Filter('copyKind_2_', 'Peru'))
     cfg.gpu_filters.append(Filter('copyKind_10_', 'Purple'))
+    cfg.gpu_filters.append(Filter('CUDA_API', 'DarkSlateGray'))
     if args.gpu_filters is not None:
         pairs = args.gpu_filters.split(',')
         for pair in pairs:
