@@ -20,7 +20,7 @@ Highcharts.chart('container', {
     },
     yAxis: {
         title: {
-            text: 'Overhead (s)'
+            text: 'Performance Metrics'
         },
         type: "logarithmic"
     },

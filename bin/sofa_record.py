@@ -45,18 +45,28 @@ def sofa_record(command, logdir, cfg):
             print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
             print_error('sudo modprobe msr')
             print_error('sudo setcap cap_sys_rawio=ep /usr/local/intelpcm/bin/pcm-pcie.x')
-            print_error('/usr/local/intelpcm/bin/pcm-pcie.x')
             quit()
         
         print_info('Read NMI watchlog status ...')
+        nmi_output = ""
         try:
-            output = subprocess.check_output('yes | /usr/local/intelpcm/bin/pcm-pcie.x 2>&1', shell=True)
+            with open(logdir+"nmi_status.txt", 'w') as f:
+                p_pcm_pcie = subprocess.Popen(['yes | timeout 3 /usr/local/intelpcm/bin/pcm-pcie.x 0.1 -csv=sofalog/pcm_pcie.csv -B'], shell=True, stdout=f)
+                if p_pcm_pcie != None:
+                    p_pcm_pcie.kill()
+                    print_info("tried terminating pcm-pcie.x") 
+            with open(logdir+"nmi_status.txt", 'r') as f:
+                lines = f.readlines()
+                if len(lines) > 0:
+                    if lines[0].find('Error: NMI watchdog is enabled.') != -1:
+                        print_error('NMI watchdog is enabled., please try the command below:')
+                        print_error('sudo sysctl -w kernel.nmi_watchdog=0')
+#            output = subprocess.check_output('yes | timeout 3 /usr/local/intelpcm/bin/pcm-pcie.x 2>&1', shell=True)
         except subprocess.CalledProcessError as e: 
-            print_error(e.output)
-        if str(output).find('Error: NMI watchdog is enabled.') != -1:
-            print_error('NMI watchdog is enabled.,  please try the command below:')
-            print_error('sudo sysctl -w kernel.nmi_watchdog=0')
-            quit()
+            print_warning("There was error while reading NMI status.")  
+          
+      
+       
 
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
         print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
@@ -70,32 +80,9 @@ def sofa_record(command, logdir, cfg):
     subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.txt > /dev/null 2> /dev/null' % logdir, shell=True)
     
-    with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
-            logfile.write(str(int(time()))+'\n')
+
     try:
         print_info("Prolog of Recording...")
-        with open(os.devnull, 'w') as FNULL:
-           p_tcpdump =  subprocess.Popen(["tcpdump",
-                              '-i',
-                              'any',
-                              '-v',
-                              'tcp',
-                              '-w',
-                              '%s/sofa.pcap' % logdir],
-                             stderr=FNULL)
-
-        with open('%s/mpstat.txt' % logdir, 'w') as logfile:
-            p_mpstat = subprocess.Popen(
-                ['mpstat', '-P', 'ALL', '1', '600'], stdout=logfile)
-
-        with open('%s/vmstat.txt' % logdir, 'w') as logfile:
-            p_vmstat = subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
-
-        if int(os.system('command -v nvidia-smi')) == 0:
-            with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
-                p_nvsmi = subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
-            with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
-                p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile) 
  
         if int(os.system('command -v nvprof')) == 0:
             p_nvprof = subprocess.Popen(['nvprof', '--profile-all-processes', '-o', logdir+'/gputrace%p.nvvp'])
@@ -117,9 +104,38 @@ def sofa_record(command, logdir, cfg):
 
         subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
         subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
+
+        # sofa_time is time base for mpstat, vmstat, nvidia-smi 
+        with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
+            logfile.write(str(int(time()))+'\n')
+
+        with open('%s/mpstat.txt' % logdir, 'w') as logfile:
+            p_mpstat = subprocess.Popen(
+                ['mpstat', '-P', 'ALL', '1', '600'], stdout=logfile)
+
+        with open('%s/vmstat.txt' % logdir, 'w') as logfile:
+            p_vmstat = subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
+
+        with open(os.devnull, 'w') as FNULL:
+           p_tcpdump =  subprocess.Popen(["tcpdump",
+                              '-i',
+                              'any',
+                              '-v',
+                              'tcp',
+                              '-w',
+                              '%s/sofa.pcap' % logdir],
+                             stderr=FNULL)
+
+        if int(os.system('command -v nvidia-smi')) == 0:
+            with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
+                p_nvsmi = subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
+            with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
+                p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)
+
+
        
         if int(os.system('command -v perf')) == 0: 
-            profile_command = 'perf record -o %s/perf.data -e cycles,instructions -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
+            profile_command = 'perf record -o %s/perf.data -e cycles,instructions,cache-misses,branch-misses -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
             print_info( profile_command)            
             subprocess.call(profile_command, shell=True)
         

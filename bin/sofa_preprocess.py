@@ -49,12 +49,12 @@ def cpu_trace_read(sample, t_offset):
 
     if re.match('\[\d+\]', fields[1]) is not None:
         time = float(fields[2].split(':')[0])
-        func_name = '[%s]'%fields[4].replace('-','_') + fields[6] 
+        func_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7] 
         cycles = float(fields[3])
         event = np.log(1.0 * int("0x01" + fields[5], 16))
     else:
         time = float(fields[1].split(':')[0])
-        func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] 
+        func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6] 
         cycles = float(fields[2])
         event = np.log(1.0 * int("0x01" + fields[4], 16))
 
@@ -62,7 +62,7 @@ def cpu_trace_read(sample, t_offset):
     t_end = time + t_offset
     trace = [t_begin,
              event,  # % 1000000
-             cycles / 1e9,
+             cycles/1e9,
              -1,
              -1,
              0,
@@ -427,10 +427,11 @@ def sofa_preprocess(logdir, cfg):
                          '-i',
                          '%s/perf.data' % logdir,
                          '-F',
-                         'time,pid,tid,ip,sym,period,event'],
+                         'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'
+],
                         stdout=logfile)
+#'time,pid,tid,ip,sym,period,event'
 
-    # sys.stdout.flush()
     with open(logdir + 'sofa_time.txt') as f:
         t_glb_base = float(f.readline())
         print_info('Time offset applied to perf timestamp (s):' + str(cfg.cpu_time_offset))
@@ -712,8 +713,7 @@ def sofa_preprocess(logdir, cfg):
                 nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
                 t_base = t = 0
                 for i in range(len(lines)):
-                    if lines[i].find('gpu') == -1 \
-                            and lines[i].find('Idx') == -1:
+                    if lines[i].find('gpu') == -1 and lines[i].find('Idx') == -1:
                         fields = lines[i].split()
                         if len(fields) < 5:
                             continue
@@ -746,7 +746,8 @@ def sofa_preprocess(logdir, cfg):
                             tid,
                             nvsmi_info,
                             cpuid]
-                        nvsmi_sm_list.append(trace)
+                        if t - t_base > 3 :
+                            nvsmi_sm_list.append(trace)
 
                         trace = [
                             t_begin,
@@ -762,7 +763,8 @@ def sofa_preprocess(logdir, cfg):
                             tid,
                             nvsmi_info,
                             cpuid]
-                        nvsmi_mem_list.append(trace)
+                        if t - t_base > 3 :
+                            nvsmi_mem_list.append(trace)
                         if nvsmi_id == 0:
                             t = t + 1
                 nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
@@ -932,90 +934,89 @@ def sofa_preprocess(logdir, cfg):
                 os.system('cat %s/gputrace.tmp' % logdir)
  
     # ============ Preprocessing GPU API Trace ==========================
-    if cfg.cuda_api_tracing:
-        num_cudaproc = 0
-        indices = []
-        for nvvp_filename in glob.glob(logdir + "gputrace*[0-9].nvvp"):
-            print_progress("Read " + nvvp_filename + " for API traces by nvprof -- begin")
-            with open(logdir + "cuda_api_trace.tmp", "w") as f:
-                subprocess.call(["nvprof", "--csv", "--print-api-trace", "-i", nvvp_filename], stderr=f)
+    num_cudaproc = 0
+    indices = []
+    for nvvp_filename in glob.glob(logdir + "gputrace*[0-9].nvvp"):
+        print_progress("Read " + nvvp_filename + " for API traces by nvprof -- begin")
+        with open(logdir + "cuda_api_trace.tmp", "w") as f:
+            subprocess.call(["nvprof", "--csv", "--print-api-trace", "-i", nvvp_filename], stderr=f)
 
-            #Automatically retrieve the timestamp of the first CUDA activity(e.g. kernel, memory op, etc..)
-            engine = create_engine("sqlite:///"+nvvp_filename)
-            t_glb_gpu_bases = []
-            first_corid = 1
-            try:
-                t_glb_gpu_bases.append((pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['start'])
-                first_corid = (pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['correlationId']
-            except BaseException:
-                print_info('NO RUNTIME')
+        #Automatically retrieve the timestamp of the first CUDA activity(e.g. kernel, memory op, etc..)
+        engine = create_engine("sqlite:///"+nvvp_filename)
+        t_glb_gpu_bases = []
+        first_corid = 1
+        try:
+            t_glb_gpu_bases.append((pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['start'])
+            first_corid = (pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['correlationId']
+        except BaseException:
+            print_info('NO RUNTIME')
 
-            if len(t_glb_gpu_bases) > 0: 
-                t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]*1.0/1e+9
-            else:
-               print_warning("There is no data in tables of NVVP file.") 
+        if len(t_glb_gpu_bases) > 0: 
+            t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]*1.0/1e+9
+        else:
+           print_warning("There is no data in tables of NVVP file.") 
 
-            print_info("Timestamp of the first CUDA API trace = " + str(t_glb_gpu_base))
-           
-            print_progress("Read " + nvvp_filename + " by nvprof -- end")
-            num_cudaproc = num_cudaproc + 1
-            with open(logdir + 'cuda_api_trace.tmp') as f:
-                records = f.readlines()
-                # print(records[1])
-                if len(records) > 0 and records[1].split(',')[0] == '"Start"':
-                    indices = records[1].replace(
-                        '"', '').replace(
-                        '\n', '').split(',')
-                    print(indices)
-                    
-                    ts_rescale = 1.0
-                    if records[2].split(',')[0] == 'ms':
-                        ts_rescale = 1.0e3
-                    elif records[2].split(',')[0] == 'us':
-                        ts_rescale = 1.0e6
+        print_info("Timestamp of the first CUDA API trace = " + str(t_glb_gpu_base))
+       
+        print_progress("Read " + nvvp_filename + " by nvprof -- end")
+        num_cudaproc = num_cudaproc + 1
+        with open(logdir + 'cuda_api_trace.tmp') as f:
+            records = f.readlines()
+            # print(records[1])
+            if len(records) > 0 and records[1].split(',')[0] == '"Start"':
+                indices = records[1].replace(
+                    '"', '').replace(
+                    '\n', '').split(',')
+                print(indices)
+                
+                ts_rescale = 1.0
+                if records[2].split(',')[0] == 'ms':
+                    ts_rescale = 1.0e3
+                elif records[2].split(',')[0] == 'us':
+                    ts_rescale = 1.0e6
 
-                    dt_rescale = 1.0
-                    if records[2].split(',')[1] == 'ms':
-                        dt_rescale = 1.0e3
-                    elif records[2].split(',')[1] == 'us':
-                        dt_rescale = 1.0e6
+                dt_rescale = 1.0
+                if records[2].split(',')[1] == 'ms':
+                    dt_rescale = 1.0e3
+                elif records[2].split(',')[1] == 'us':
+                    dt_rescale = 1.0e6
 
-                    records = records[3:]
-                    print_info("Length of cuda_api_traces = %d" % len(records))
-                    
-                    t_base = float(records[0].split(',')[0])
-                    if len(records[0].split(',')) == 4: 
-                        for record in records:
-                            if int(record.split(',')[3]) == first_corid:
-                                t_base = float(record.split(',')[0]) 
-                                print_info('First Correlation_ID ' + str(first_corid) + ' is found in cuda_api_trace.tmp')
-                                print_info('First API trace timestamp is ' + str(t_base))
-                                break 
-                    
-                    with mp.Pool(processes=cpu_count) as pool:
-                        res = pool.map(
-                            partial(
-                                cuda_api_trace_read,
-                                indices=indices,
-                                ts_rescale=ts_rescale,
-                                dt_rescale=dt_rescale,
-                                payload_unit=payload_unit,
-                                n_cudaproc=num_cudaproc,
-                                t_offset=t_glb_gpu_base -
-                                t_base),
-                            records)
-                    cuda_api_traces = pd.DataFrame(res)
-                    cuda_api_traces.columns = sofa_fieldnames
-                    res_viz = list_downsample(res, cfg.plot_ratio)
-                    cuda_api_traces_viz = pd.DataFrame(res_viz)
-                    cuda_api_traces_viz.columns = sofa_fieldnames
+                records = records[3:]
+                print_info("Length of cuda_api_traces = %d" % len(records))
+                
+                t_base = float(records[0].split(',')[0])
+                if len(records[0].split(',')) == 4: 
+                    for record in records:
+                        if int(record.split(',')[3]) == first_corid:
+                            t_base = float(record.split(',')[0]) 
+                            print_info('First Correlation_ID ' + str(first_corid) + ' is found in cuda_api_trace.tmp')
+                            print_info('First API trace timestamp is ' + str(t_base))
+                            break 
+                
+                with mp.Pool(processes=cpu_count) as pool:
+                    res = pool.map(
+                        partial(
+                            cuda_api_trace_read,
+                            indices=indices,
+                            ts_rescale=ts_rescale,
+                            dt_rescale=dt_rescale,
+                            payload_unit=payload_unit,
+                            n_cudaproc=num_cudaproc,
+                            t_offset=t_glb_gpu_base -
+                            t_base),
+                        records)
+                cuda_api_traces = pd.DataFrame(res)
+                cuda_api_traces.columns = sofa_fieldnames
+                res_viz = list_downsample(res, cfg.plot_ratio)
+                cuda_api_traces_viz = pd.DataFrame(res_viz)
+                cuda_api_traces_viz.columns = sofa_fieldnames
 
-                    cuda_api_traces.to_csv(
-                        logdir + 'cuda_api_trace.csv',
-                        mode='w',
-                        header=True,
-                        index=False,
-                        float_format='%.6f')
+                cuda_api_traces.to_csv(
+                    logdir + 'cuda_api_trace.csv',
+                    mode='w',
+                    header=True,
+                    index=False,
+                    float_format='%.6f')
     
     # ============ Preprocessing CPU Trace ==========================
     with open(logdir + 'perf.script') as f:
@@ -1023,16 +1024,23 @@ def sofa_preprocess(logdir, cfg):
         print_info("Length of cpu_traces = %d" % len(samples))
         if len(samples) > 0:
             # TODO: It is better to check pid/tid mapping of the last perf-event of _nv*rm and the last cuda event 
+            t_perf_base =  float(samples[0].split()[1].split(':')[0])
             t_perf_glb_base = t_glb_base             
             print_info('Timestamp of default t_perf_glb_base: ' + str(t_perf_glb_base) )
-            t_perf_base =  float(samples[0].split()[1].split(':')[0])
             for sample in reversed(samples):
-                function_name = sample.split()[5]
-                if re.search('_nv\d+rm', function_name ) is not None: 
-                        print_info('Timestamp of last _nv*rm event: ' + str(t_perf_base) )
-                        t_perf_base = float(sample.split()[1].split(':')[0])
-                        t_perf_glb_base = float(gpu_traces.iat[len(gpu_traces)-1,0])
-                        break 
+                fields = sample.split()
+                function_name = "" 
+                if re.match('\[\d+\]', fields[1]) is not None:
+                    function_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7] 
+                else:
+                    function_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6] 
+
+                if function_name.find('libcuda.so') != -1 and len(gpu_traces)>0: 
+                #if re.search('*libcuda*', function_name ) is not None: 
+                    print_info('Timestamp of the last libcuda.so ' + str(t_perf_base) )
+                    t_perf_base = float(sample.split()[1].split(':')[0])
+                    t_perf_glb_base = float(gpu_traces.iat[-1,0])
+                    break 
             print_info('Timestamp of new t_perf_glb_base: ' + str(t_perf_glb_base) )
              
             with mp.Pool(processes=cpu_count) as pool:
