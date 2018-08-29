@@ -1,8 +1,13 @@
 #!/bin/bash
-
 C_NONE="\033[0;00m"
 C_GREEN="\033[1;32m"
 C_RED_BK="\033[1;41m"
+
+WITH_SUDO=""
+if [[ $(which sudo) ]]; then 
+    echo -e "${C_GREEN}You are going to install SOFA with sudo${C_NONE}"
+    WITH_SUDO="sudo" 
+fi
 
 # Detect OS distribution
 # Try source all the release files
@@ -39,10 +44,7 @@ function install_python_packages()
     # Install Python packages
     echo -e "${C_GREEN}Installing python packages...${C_NONE}"
     source ~/.bashrc
-    WITH_SUDO=""
-    if [[ $(which sudo) ]]; then 
-        WITH_SUDO="sudo" 
-    fi
+    
 
     if [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install epel-release
@@ -82,11 +84,7 @@ function install_packages()
 {
     echo -e "${C_GREEN}Installing other packages...${C_NONE}"
 
-    WITH_SUDO=""
-    if [[ $(which sudo) ]]; then 
-        echo -e "${C_GREEN}You are going to install SOFA with sudo${C_NONE}"
-        WITH_SUDO="sudo" 
-    fi
+
 
     #inform_$WITH_SUDO "Running $WITH_SUDO for installing packages"
     if [[ $(which apt) ]] ; then
@@ -117,11 +115,6 @@ function install_packages()
 
 function install_utility_from_source()
 {
-    WITH_SUDO=""
-    if [[ $(which sudo) ]]; then 
-        echo -e "${C_GREEN}You are going to install SOFA with sudo${C_NONE}"
-        WITH_SUDO="sudo" 
-    fi
     echo -e "${C_GREEN}Installing utilities from source...${C_NONE}"
     rm -rf pcm
     git clone https://github.com/opcm/pcm.git 

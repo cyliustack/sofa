@@ -419,7 +419,7 @@ def sofa_preprocess(logdir, cfg):
     t_glb_base = 0
     t_glb_gpu_base = 0
 
-    with open('%s/perf.script' % logdir, 'w') as logfile:
+    with open(logdir + 'perf.script', 'w') as logfile:
         subprocess.call(['perf',
                          'script',
                          '--kallsym',
@@ -1025,14 +1025,14 @@ def sofa_preprocess(logdir, cfg):
             # TODO: It is better to check pid/tid mapping of the last perf-event of _nv*rm and the last cuda event 
             t_perf_glb_base = t_glb_base             
             print_info('Timestamp of default t_perf_glb_base: ' + str(t_perf_glb_base) )
-            t_perf_base =  float(samples[i].split()[1].split(':')[0])
+            t_perf_base =  float(samples[0].split()[1].split(':')[0])
             for sample in reversed(samples):
                 function_name = sample.split()[5]
                 if re.search('_nv\d+rm', function_name ) is not None: 
+                        print_info('Timestamp of last _nv*rm event: ' + str(t_perf_base) )
                         t_perf_base = float(sample.split()[1].split(':')[0])
                         t_perf_glb_base = float(gpu_traces.iat[len(gpu_traces)-1,0])
                         break 
-            print_info('Timestamp of last _nv*rm event: ' + str(t_perf_base) )
             print_info('Timestamp of new t_perf_glb_base: ' + str(t_perf_glb_base) )
              
             with mp.Pool(processes=cpu_count) as pool:

@@ -1,5 +1,14 @@
 #!/bin/bash
 # Copyright (c) Jul. 2017, Cheng-Yueh Liu (cyliustack@gmail.com)
+C_NONE="\033[0;00m"
+C_GREEN="\033[1;32m"
+C_RED_BK="\033[1;41m"
+
+WITH_SUDO=""
+if [[ $(which sudo) ]]; then 
+    echo -e "${C_GREEN}You are going to empower tcpdump for users with sudo${C_NONE}"
+    WITH_SUDO="sudo" 
+fi
 
 C_NONE="\033[0;00m"
 C_CYAN="\033[1;36m"
@@ -32,11 +41,12 @@ function print_help()
 
 function set_tcpdump_group()
 {
+    
     inform_sudo "Running sudo for setting '/usr/sbin/tcpdump' with 'pcap' group."
     sudo chgrp pcap /usr/sbin/tcpdump
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-    sudo chmod 750 /usr/sbin/tcpdump
-    sudo setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump
+    $WITH_SUDO chmod 750 /usr/sbin/tcpdump
+    $WITH_SUDO setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
@@ -49,7 +59,7 @@ function main()
 
     # Creating new group
     inform_sudo "Running sudo for creating 'pcap' group."
-    sudo groupadd pcap
+    $WITH_SUDO groupadd pcap
 
     # Change the group setting of tcpdump binary
     set_tcpdump_group
@@ -63,7 +73,7 @@ function main()
         echo -e "${C_GREEN}Empower user - '$username' with Tcpdump${C_NONE}"
 
         inform_sudo "Running sudo for adding '$username' to 'pcap' group."
-        sudo usermod -a -G pcap ${username}
+        $WITH_SUDO usermod -a -G pcap ${username}
         shift
     done
     echo -e "\n\n${C_GREEN}Please logout and then login to make group setting effective.${C_NONE}"
