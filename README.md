@@ -1,4 +1,4 @@
-#![Alt text](https://travis-ci.org/cyliustack/sofa.svg?branch=master)
+![Alt text](https://travis-ci.org/cyliustack/sofa.svg?branch=master)
 # Introduction
 SOFA: Swarm of Functions Analysis
 Authors: All the contributors of SOFA
