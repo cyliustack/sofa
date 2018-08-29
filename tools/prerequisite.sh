@@ -38,7 +38,7 @@ function install_python_packages()
 {
     # Install Python packages
     echo -e "${C_GREEN}Installing python packages...${C_NONE}"
-    
+    source ~/.bashrc
     WITH_SUDO=""
     if [[ $(which sudo) ]]; then 
         WITH_SUDO="sudo" 
@@ -73,8 +73,8 @@ function install_python_packages()
     fi
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip" 
-    $WITH_SUDO python3.6 -m pip install --upgrade pip
-    $WITH_SUDO python3.6 -m pip install numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy 
+    python3.6 -m pip install --user --upgrade pip
+    python3.6 -m pip install --user numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
