@@ -10,4 +10,6 @@ install:
 before_script:
   - source /usr/local/sofa/tools/activate.sh
 script:
+  - sudo sysctl -w kernel.kptr_restrict=0
+  - sudo sysctl -w kernel.perf_event_paranoid=-1   
   - sofa stat "wget http://www.bbc.com/news"
