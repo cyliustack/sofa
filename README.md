@@ -41,7 +41,7 @@ SOFA supports serveral different usages, like how one can use perf.
     * [http://localhost:8000/cpu-report.html](http://localhost:8000/cpu-report.html)
     * [http://localhost:8000/gpu-report.html](http://localhost:8000/gpu-report.html)
 
-## Run SOFA __step-by-stey__ 
+## Run SOFA __Step-by-step__ 
 1. Run `sofa record "wget http://www.bbc.com/news"` __only once__ to record the events.
 2. Run `sofa preprocess` __only once__ to process raw performance data and generate immediate results.
 3. Run `sofa analyze` performance statistics will be displayed on your console
@@ -56,9 +56,9 @@ SOFA provides options for configurations. Some examples are shown below. Please 
 
 
 # Examples of Visualization Results:
-`sofa record "python3.6 main.py -a resnet50 /mnt/dataset/imagenet/mini-imagenet/raw-data --epochs=1 --batch-size=64"`
-![Alt text](./figures/pytorch_resnet50)
-`sofa record "./scout dt-bench ps:resnet50 --hosts='192.168.0.100,192.168.0.101'"`
+`sofa record "python3.6 main.py -a resnet50 /mnt/dataset/imagenet/mini-imagenet/raw-data --epochs=1 --batch-size=64"`   
+![Alt text](./figures/pytorch_resnet50.png)
+`sofa record "./scout dt-bench ps:resnet50 --hosts='192.168.0.100,192.168.0.101'"`   
 ![Alt text](./figures/sofa_network.png)
-`sofa record "~/cuda_samples/1_Utilities/bandwidthTest/bandwidthTest"`
+`sofa record "~/cuda_samples/1_Utilities/bandwidthTest/bandwidthTest"`  
 ![Alt text](./figures/bandwidth.png)
