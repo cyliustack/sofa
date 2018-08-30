@@ -41,19 +41,18 @@ SOFA supports serveral different usages, like how one can use perf.
     * [http://localhost:8000/cpu-report.html](http://localhost:8000/cpu-report.html)
     * [http://localhost:8000/gpu-report.html](http://localhost:8000/gpu-report.html)
 
-## Run with different __plugins__
+## Run SOFA __step-by-stey__ 
 1. Run `sofa record "wget http://www.bbc.com/news"` __only once__ to record the events.
-2. Run `sofa preprocess` __only once__ to process the events.
-3. Run `sofa analyze` with __A__ plugin.
-4. Run `sofa analyze` with __B__ plugin.
-5. Run `sofa analyze` with __C__ plugin.
+2. Run `sofa preprocess` __only once__ to process raw performance data and generate immediate results.
+3. Run `sofa analyze` performance statistics will be displayed on your console
+3. Run `sofa viz --viz_port=8000` dynamic trace will be displayed on port 8000 (default)
 
 
 # Configurations
 
 SOFA provides options for configurations. Some examples are shown below. Please use `sofa --help` to see more info.  
 1. `sofa --cpu_filters="idle:black,tensorflow:orange" record "python tf_cnn_benchmarks.py"`   
-2. `sofa --gpu_filters="tensorflow:orange" --verbose=True record "python tf_cnn_benchmarks.py"`   
+2. `sofa --gpu_filters="tensorflow:orange" record "python tf_cnn_benchmarks.py"`   
 
 
 # Examples of Visualization Results:
@@ -61,9 +60,5 @@ SOFA provides options for configurations. Some examples are shown below. Please 
 ![Alt text](./figures/bandwidth.png)
 `sofa record "python tf_cnn_benchmarks.py --num_gpus=8 --batch_size=64 --model=resnet50 --variable_update=parameter_server --num_warmup_batches=1 --num_batches=3"`
 ![Alt text](./figures/timeline.png)
-`sofa record "python tf_cnn_benchmarks.py --num_gpus=8 --batch_size=64 --model=resnet50 --variable_update=parameter_server --num_warmup_batches=1 --num_batches=3"`
-![Alt text](./figures/timeline_zoomin.png)
-`sofa record "python tf_cnn_benchmarks.py --num_gpus=8 --batch_size=64 --model=alexnet --variable_update=replicated --all_reduce_spec=xring --num_warmup_batches=1 --num_batches=3"`
-![Alt text](./figures/parcord.png)
-`sofa record "mpirun -f hosts.txt -n 4 ./compute_pi"`
-![Alt text](./figures/mpi.png)
+`sofa record "./scout dt-bench ps:resnet50 --hosts='192.168.0.100,192.168.0.101'"`
+![Alt text](./figures/sofa_network.png)
