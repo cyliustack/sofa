@@ -983,7 +983,8 @@ def sofa_preprocess(logdir, cfg):
 
                 records = records[3:]
                 print_info("Length of cuda_api_traces = %d" % len(records))
-                
+               
+                #TODO: Apply parallel search to speed up  
                 t_base = float(records[0].split(',')[0])
                 if len(records[0].split(',')) == 4: 
                     for record in records:
@@ -1078,6 +1079,7 @@ def sofa_preprocess(logdir, cfg):
     ### 0,0,852,0,0,48,0,0,54528,57600
     ### 1,0,600,0,0,0,0,0,38400,38400
     if cfg.enable_pcm and os.path.isfile('%s/pcm_pcie.csv' % logdir):
+        pcm_pcie_delay = 0.1
         with open( logdir + '/pcm_pcie.csv' ) as f:
             lines = f.readlines()
             print_info("Length of pcm_pcie_traces = %d" % len(lines))
@@ -1097,18 +1099,18 @@ def sofa_preprocess(logdir, cfg):
                         event = -1
                         copyKind = -1
                         payload = -1
-                        pcm_pcie_wt_bandwidth = int(fields[len(fields)-1])
-                        pcm_pcie_rd_bandwidth = int(fields[len(fields)-2])
+                        pcm_pcie_wt_bandwidth = int(float(fields[len(fields)-1])/pcm_pcie_delay/1024)
+                        pcm_pcie_rd_bandwidth = int(float(fields[len(fields)-2])/pcm_pcie_delay/1024)
                         pkt_src = pkt_dst = -1
                         pid = tid = -1
-                        nvsmi_info = "PCM_PCIE=%d|RD:%d|WT:%d" % (
-                            skt, pcm_pcie_rd_bandwidth, pcm_pcie_wt_bandwidth)
+                        pcm_pcie_info = "PCM=pcie | skt=%d | RD=%d (KB/s)" % (
+                            skt, pcm_pcie_rd_bandwidth)
 
                         bandwidth = pcm_pcie_rd_bandwidth
                         trace = [
                             t_begin,
                             event,
-                            nvsmi_sm,
+                            bandwidth,
                             deviceId,
                             copyKind,
                             payload,
@@ -1117,15 +1119,17 @@ def sofa_preprocess(logdir, cfg):
                             pkt_dst,
                             pid,
                             tid,
-                            nvsmi_info,
+                            pcm_pcie_info,
                             cpuid]
                         pcm_pcie_list.append(trace)
  
+                        pcm_pcie_info = "PCM=pcie | skt=%d | WT=%d (KB/s)" % (
+                            skt, pcm_pcie_wt_bandwidth)
                         bandwidth = pcm_pcie_wt_bandwidth
                         trace = [
                             t_begin,
                             event,
-                            nvsmi_sm,
+                            bandwidth,
                             deviceId,
                             copyKind,
                             payload,
@@ -1134,10 +1138,10 @@ def sofa_preprocess(logdir, cfg):
                             pkt_dst,
                             pid,
                             tid,
-                            nvsmi_info,
+                            pcm_pcie_info,
                             cpuid]
                         pcm_pcie_list.append(trace)                 
-                        t = t + 0.1
+                        t = t + pcm_pcie_delay
                 pcm_pcie_traces = list_to_csv_and_traces(logdir, pcm_pcie_list, 'pcm_pcie_trace.csv', 'w')
 
             else:

@@ -46,15 +46,20 @@ def sofa_record(command, logdir, cfg):
             print_error('sudo modprobe msr')
             print_error('sudo setcap cap_sys_rawio=ep /usr/local/intelpcm/bin/pcm-pcie.x')
             quit()
+
+    if subprocess.call(['mkdir', '-p', logdir]) != 0:
+        print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
+        quit()
         
         print_info('Read NMI watchlog status ...')
         nmi_output = ""
         try:
             with open(logdir+"nmi_status.txt", 'w') as f:
-                p_pcm_pcie = subprocess.Popen(['yes | timeout 3 /usr/local/intelpcm/bin/pcm-pcie.x 0.1 -csv=sofalog/pcm_pcie.csv -B'], shell=True, stdout=f)
+                p_pcm_pcie = subprocess.Popen(['yes | timeout 3 /usr/local/intelpcm/bin/pcm-pcie.x -B'], shell=True, stdout=f)
                 if p_pcm_pcie != None:
                     p_pcm_pcie.kill()
-                    print_info("tried terminating pcm-pcie.x") 
+                    print_info("tried killing pcm-pcie.x")
+                os.system('pkill pcm-pcie.x') 
             with open(logdir+"nmi_status.txt", 'r') as f:
                 lines = f.readlines()
                 if len(lines) > 0:
@@ -65,12 +70,6 @@ def sofa_record(command, logdir, cfg):
         except subprocess.CalledProcessError as e: 
             print_warning("There was error while reading NMI status.")  
           
-      
-       
-
-    if subprocess.call(['mkdir', '-p', logdir]) != 0:
-        print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
-        quit()
     
     print_info('Clean previous logged files')
     subprocess.call('rm %s/perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
@@ -161,7 +160,8 @@ def sofa_record(command, logdir, cfg):
         if cfg.enable_pcm:
             if p_pcm_pcie != None:
                 p_pcm_pcie.terminate()
-                print_info("tried terminating pcm-pcie.x")
+                os.system('yes|pkill pcm-pcie.x') 
+                print_info("tried killing pcm-pcie.x")
         #os.system('pkill tcpdump')
         #os.system('pkill mpstat')
         #os.system('pkill vmstat')
@@ -189,6 +189,7 @@ def sofa_record(command, logdir, cfg):
         if cfg.enable_pcm:
             if p_pcm_pcie != None:
                 p_pcm_pcie.kill()
+                os.system('yes|pkill pcm-pcie.x') 
                 print_info("tried killing pcm-pcie.x")
         raise
     print_info("End of Recording")
