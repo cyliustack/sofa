@@ -92,7 +92,12 @@ if __name__ == "__main__":
     parser.set_defaults(enable_pcm=False)
     parser.add_argument('--cuda_api_tracing', dest='cuda_api_tracing', action='store_true')
     parser.set_defaults(cuda_api_tracing=False)
-
+    parser.add_argument(
+        '--perf_events',
+        metavar='"cycles,instructions,cache-misses"',
+        type=str,
+        required=False,
+        help='Declare which perf events are going to be recorded')
     cfg = SOFA_Config()
 
     args = parser.parse_args()
@@ -166,6 +171,10 @@ if __name__ == "__main__":
         pairs = args.network_filters.split(',')
         for pair in pairs:
             cfg.net_filters.append(pair)
+
+    if args.perf_events is not None:
+        cfg.perf_events = args.perf_events
+
 
     print("Ratio of raw data points to plotting points : %d" % cfg.plot_ratio)
     for filter in cfg.cpu_filters:

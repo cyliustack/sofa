@@ -135,7 +135,7 @@ def sofa_record(command, logdir, cfg):
 
        
         if int(os.system('command -v perf')) == 0: 
-            profile_command = 'perf record -o %s/perf.data -e cycles,instructions,cache-misses,branch-misses -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
+            profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -- %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command)
             print_info( profile_command)            
             subprocess.call(profile_command, shell=True)
         

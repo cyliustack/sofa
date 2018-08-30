@@ -56,9 +56,9 @@ SOFA provides options for configurations. Some examples are shown below. Please 
 
 
 # Examples of Visualization Results:
-`sofa record "~/cuda_samples/1_Utilities/bandwidthTest/bandwidthTest"`
-![Alt text](./figures/bandwidth.png)
-`sofa record "python tf_cnn_benchmarks.py --num_gpus=8 --batch_size=64 --model=resnet50 --variable_update=parameter_server --num_warmup_batches=1 --num_batches=3"`
-![Alt text](./figures/timeline.png)
+`sofa record "python3.6 main.py -a resnet50 /mnt/dataset/imagenet/mini-imagenet/raw-data --epochs=1 --batch-size=64"`
+![Alt text](./figures/pytorch_resnet50)
 `sofa record "./scout dt-bench ps:resnet50 --hosts='192.168.0.100,192.168.0.101'"`
 ![Alt text](./figures/sofa_network.png)
+`sofa record "~/cuda_samples/1_Utilities/bandwidthTest/bandwidthTest"`
+![Alt text](./figures/bandwidth.png)

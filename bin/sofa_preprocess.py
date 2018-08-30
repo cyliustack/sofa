@@ -1040,7 +1040,8 @@ def sofa_preprocess(logdir, cfg):
                     print_info('Timestamp of the last libcuda.so ' + str(t_perf_base) )
                     t_perf_base = float(sample.split()[1].split(':')[0])
                     t_perf_glb_base = float(gpu_traces.iat[-1,0])
-                    break 
+                    break
+            t_perf_glb_base = t_perf_glb_base + cfg.cpu_time_offset 
             print_info('Timestamp of new t_perf_glb_base: ' + str(t_perf_glb_base) )
              
             with mp.Pool(processes=cpu_count) as pool:
