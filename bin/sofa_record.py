@@ -55,7 +55,7 @@ def sofa_record(command, logdir, cfg):
         nmi_output = ""
         try:
             with open(logdir+"nmi_status.txt", 'w') as f:
-                p_pcm_pcie = subprocess.Popen(['yes | timeout 3 /usr/local/intelpcm/bin/pcm-pcie.x -B'], shell=True, stdout=f)
+                p_pcm_pcie = subprocess.Popen(['yes | timeout 3 /usr/local/intelpcm/bin/pcm-pcie.x'], shell=True, stdout=f)
                 if p_pcm_pcie != None:
                     p_pcm_pcie.kill()
                     print_info("tried killing pcm-pcie.x")
@@ -93,7 +93,8 @@ def sofa_record(command, logdir, cfg):
 
         if cfg.enable_pcm:
             with open(os.devnull, 'w') as FNULL:
-                p_pcm_pcie = subprocess.Popen(['yes|/usr/local/intelpcm/bin/pcm-pcie.x 0.1 -csv=sofalog/pcm_pcie.csv -B'], shell=True)
+                delay_pcie = 0.1
+                p_pcm_pcie = subprocess.Popen(['yes|/usr/local/intelpcm/bin/pcm-pcie.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_pcie.csv -B '], shell=True)
         
         print_info("Recording...")    
         if cfg.profile_all_cpus == True:

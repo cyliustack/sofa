@@ -767,8 +767,9 @@ def sofa_preprocess(logdir, cfg):
                             nvsmi_mem_list.append(trace)
                         if nvsmi_id == 0:
                             t = t + 1
-                nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
-                nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
+                if len(nvsmi_sm_list)>1:
+                    nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
+                    nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
 
     # ============ Preprocessing Network Trace ==========================
     filtered_net_groups = []
@@ -1099,14 +1100,14 @@ def sofa_preprocess(logdir, cfg):
                         event = -1
                         copyKind = -1
                         payload = -1
-                        pcm_pcie_wt_bandwidth = int(float(fields[len(fields)-1])/pcm_pcie_delay/1024)
-                        pcm_pcie_rd_bandwidth = int(float(fields[len(fields)-2])/pcm_pcie_delay/1024)
+                        pcm_pcie_wt_count = int(float(fields[1])*64/1e3)
+                        pcm_pcie_rd_count = int(float(fields[5])*64/1e3)
                         pkt_src = pkt_dst = -1
                         pid = tid = -1
-                        pcm_pcie_info = "PCM=pcie | skt=%d | RD=%d (KB/s)" % (
-                            skt, pcm_pcie_rd_bandwidth)
+                        pcm_pcie_info = "PCM=pcie | skt=%d | RD=%d (KB)" % (
+                            skt, pcm_pcie_rd_count)
 
-                        bandwidth = pcm_pcie_rd_bandwidth
+                        bandwidth = pcm_pcie_rd_count
                         trace = [
                             t_begin,
                             event,
@@ -1123,9 +1124,9 @@ def sofa_preprocess(logdir, cfg):
                             cpuid]
                         pcm_pcie_list.append(trace)
  
-                        pcm_pcie_info = "PCM=pcie | skt=%d | WT=%d (KB/s)" % (
-                            skt, pcm_pcie_wt_bandwidth)
-                        bandwidth = pcm_pcie_wt_bandwidth
+                        pcm_pcie_info = "PCM=pcie | skt=%d | WT=%d (KB)" % (
+                            skt, pcm_pcie_wt_count)
+                        bandwidth = pcm_pcie_wt_count
                         trace = [
                             t_begin,
                             event,
