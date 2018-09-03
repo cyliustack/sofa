@@ -150,9 +150,11 @@ def sofa_record(command, logdir, cfg):
             p_mpstat.terminate()
             print_info("tried terminating mpstat")
         if p_nvtopo != None:
+            sleep(1)
             p_nvtopo.terminate()
             print_info("tried terminating nvidia-smi topo")
         if p_nvsmi != None:
+            sleep(1)
             p_nvsmi.terminate()
             print_info("tried terminating nvidia-smi dmon")
         if p_nvprof != None:

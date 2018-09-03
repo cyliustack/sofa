@@ -342,16 +342,15 @@ def sofa_analyze(logdir, cfg):
                    num_gpus = num_gpus + 1 
             print_info('# of GPUs: ' + str(num_gpus) )
             edges = []
-            if len(lines) > 1:
+            if len(lines) >= num_gpus+1:
                 for i in range(num_gpus):
                     connections = lines[1+i].split()
                     for j in range(len(connections)):
                         if connections[j] == 'NV1' or connections[j] == 'NV2':
                             edges.append((i,j-1))
                             #print('%d connects to %d' % (i, j-1))
-            
-            ring_found = False
-            if num_gpus > 1:
+                
+                ring_found = False
                 G = nx.DiGraph(edges)           
                 # Try to find ring with its length of num_gpus
                 for cycle in nx.simple_cycles(G):
