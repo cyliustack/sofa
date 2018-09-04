@@ -40,11 +40,11 @@ def sofa_record(command, logdir, cfg):
 
     if cfg.enable_pcm:
         print_info('Test Capability of PCM programs ...')    
-        ret = str(subprocess.check_output(['getcap /usr/local/intelpcm/bin/pcm-pcie.x'], shell=True))
+        ret = str(subprocess.check_output(['getcap `which pcm-pcie.x`'], shell=True))
         if ret.find('cap_sys_rawio+ep') == -1:
             print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
             print_error('sudo modprobe msr')
-            print_error('sudo setcap cap_sys_rawio=ep /usr/local/intelpcm/bin/pcm-pcie.x')
+            print_error('sudo setcap cap_sys_rawio=ep `which pcm-pcie.x`')
             quit()
 
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
@@ -55,7 +55,7 @@ def sofa_record(command, logdir, cfg):
         nmi_output = ""
         try:
             with open(logdir+"nmi_status.txt", 'w') as f:
-                p_pcm_pcie = subprocess.Popen(['yes | timeout 3 /usr/local/intelpcm/bin/pcm-pcie.x'], shell=True, stdout=f)
+                p_pcm_pcie = subprocess.Popen(['yes | timeout 3 pcm-pcie.x'], shell=True, stdout=f)
                 if p_pcm_pcie != None:
                     p_pcm_pcie.kill()
                     print_info("tried killing pcm-pcie.x")
@@ -66,7 +66,7 @@ def sofa_record(command, logdir, cfg):
                     if lines[0].find('Error: NMI watchdog is enabled.') != -1:
                         print_error('NMI watchdog is enabled., please try the command below:')
                         print_error('sudo sysctl -w kernel.nmi_watchdog=0')
-#            output = subprocess.check_output('yes | timeout 3 /usr/local/intelpcm/bin/pcm-pcie.x 2>&1', shell=True)
+#            output = subprocess.check_output('yes | timeout 3 pcm-pcie.x 2>&1', shell=True)
         except subprocess.CalledProcessError as e: 
             print_warning("There was error while reading NMI status.")  
           
@@ -93,8 +93,8 @@ def sofa_record(command, logdir, cfg):
 
         if cfg.enable_pcm:
             with open(os.devnull, 'w') as FNULL:
-                delay_pcie = 0.1
-                p_pcm_pcie = subprocess.Popen(['yes|/usr/local/intelpcm/bin/pcm-pcie.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_pcie.csv -B '], shell=True)
+                delay_pcie = 0.02
+                p_pcm_pcie = subprocess.Popen(['yes|pcm-pcie.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_pcie.csv -B '], shell=True)
         
         print_info("Recording...")    
         if cfg.profile_all_cpus == True:

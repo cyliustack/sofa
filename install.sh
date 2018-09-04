@@ -20,6 +20,9 @@ BIN_FILES=(bin/sofa
            bin/sofa_viz.py
            bin/sofa_config.py
            bin/sofa_print.py
+           sofa-pcm/pcm-core.x
+           sofa-pcm/pcm-numa.x
+           sofa-pcm/pcm-pcie.x
            )
 PLUGIN_FILES=(plugins/.placeholder
               )
@@ -57,6 +60,10 @@ function clear_install_dir()
 function install_sofa()
 {
     echo "Installing..."
+    cp sofa-pcm/pcm-pcie.x          ${PREFIX}/bin
+    cp sofa-pcm/pcm-numa.x          ${PREFIX}/bin
+    cp sofa-pcm/pcm-core.x          ${PREFIX}/bin
+    cp -rf ${SCRIPT_PATH}/bin       ${PREFIX}
     cp -rf ${SCRIPT_PATH}/bin       ${PREFIX}
     cp -rf ${SCRIPT_PATH}/plugins   ${PREFIX}
     cp -rf ${SCRIPT_PATH}/sofaboard ${PREFIX}

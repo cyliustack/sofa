@@ -1,4 +1,4 @@
-#!/bin/bash
+# !/bin/bash
 C_NONE="\033[0;00m"
 C_GREEN="\033[1;32m"
 C_RED_BK="\033[1;41m"
@@ -116,12 +116,13 @@ function install_packages()
 function install_utility_from_source()
 {
     echo -e "${C_GREEN}Installing utilities from source...${C_NONE}"
-    rm -rf pcm
-    git clone https://github.com/opcm/pcm.git 
-    sed -i -- 's/-DPCM_USE_PERF//g' pcm/Makefile
-    cd pcm && make -j && cd - 
-    $WITH_SUDO mkdir -p /usr/local/intelpcm/bin 
-    $WITH_SUDO cp pcm/pcm-*.x /usr/local/intelpcm/bin
+    make -C sofa-pcm -j 
+    #rm -rf pcm
+    #git clone https://github.com/opcm/pcm.git 
+    #sed -i -- 's/-DPCM_USE_PERF//g' pcm/Makefile
+    #cd pcm && make -j && cd - 
+    #$WITH_SUDO mkdir -p /usr/local/intelpcm/bin 
+    #$WITH_SUDO cp pcm/pcm-*.x /usr/local/intelpcm/bin
 }
 
 # main
