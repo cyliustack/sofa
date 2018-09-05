@@ -23,6 +23,7 @@ BIN_FILES=(bin/sofa
            sofa-pcm/pcm-core.x
            sofa-pcm/pcm-numa.x
            sofa-pcm/pcm-pcie.x
+           sofa-pcm/pcm-memory.x
            )
 PLUGIN_FILES=(plugins/.placeholder
               )
@@ -63,6 +64,7 @@ function install_sofa()
     cp sofa-pcm/pcm-pcie.x          ${PREFIX}/bin
     cp sofa-pcm/pcm-numa.x          ${PREFIX}/bin
     cp sofa-pcm/pcm-core.x          ${PREFIX}/bin
+    cp sofa-pcm/pcm-memory.x    ${PREFIX}/bin
     cp -rf ${SCRIPT_PATH}/bin       ${PREFIX}
     cp -rf ${SCRIPT_PATH}/bin       ${PREFIX}
     cp -rf ${SCRIPT_PATH}/plugins   ${PREFIX}
