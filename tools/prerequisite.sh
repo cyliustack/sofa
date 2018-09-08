@@ -77,7 +77,7 @@ function install_python_packages()
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip" 
     python3.6 -m pip install --user --upgrade pip
-    python3.6 -m pip install --user numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy 
+    python3.6 -m pip install --user numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy psutil 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
@@ -118,7 +118,7 @@ function install_utility_from_source()
     make -C sofa-pcm -j 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     nvccx tools/cuhello.cu -o ./bin/cuhello
-    [[ $? != 0 ]] && echo -e "${C_YELLOW}No nvcc found; nvcc is required to improve perf timestamp accuracy.${C_NONE}" 
+    [[ $? != 0 ]] && echo -e "${C_YELLOW}No nvcc found. Which is required to improve perf timestamp accuracy.${C_NONE}" 
     g++  tools/sofa_perf_timebase.cc -o ./bin/sofa_perf_timebase
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     #rm -rf pcm
