@@ -427,17 +427,15 @@ def sofa_preprocess(logdir, cfg):
                          '-i',
                          '%s/perf.data' % logdir,
                          '-F',
-                         'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'
-],
+                         'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'],
                         stdout=logfile)
-#'time,pid,tid,ip,sym,period,event'
-
+    
     with open(logdir + 'sofa_time.txt') as f:
-        t_glb_base = float(f.readline())
-        print_info('Time offset applied to perf timestamp (s):' + str(cfg.cpu_time_offset))
-        t_glb_base = t_glb_base + cfg.cpu_time_offset
-        print_info('Time base of perf (since 1970):' + str(t_glb_base))
-
+        lines = f.readlines() 
+        t_glb_base = float(lines[0]) + cfg.cpu_time_offset
+        print_info('Time offset applied to timestamp (s):' + str(cfg.cpu_time_offset))
+        print_info('SOFA global time base (s):' + str(t_glb_base))
+    
     net_traces = []
     cpu_traces = []
     cpu_traces_viz = []
@@ -499,7 +497,7 @@ def sofa_preprocess(logdir, cfg):
             vm_cs_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             vm_wa_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             vm_st_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            t_base = t = 0
+            t = 0
             for i in range(len(lines)):
                 if lines[i].find('procs') == - \
                         1 and lines[i].find('swpd') == -1:
@@ -524,7 +522,7 @@ def sofa_preprocess(logdir, cfg):
                     vm_wa = float(fields[15]) + 1e-5
                     vm_st = float(fields[16]) + 1e-5
 
-                    t_begin = t - t_base + t_glb_base
+                    t_begin = t + t_glb_base
                     deviceId = cpuid = -1
                     event = -1
                     copyKind = -1
@@ -711,7 +709,7 @@ def sofa_preprocess(logdir, cfg):
                 nvsmi_mem_list = []
                 nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
                 nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-                t_base = t = 0
+                t = 0
                 for i in range(len(lines)):
                     if lines[i].find('gpu') == -1 and lines[i].find('Idx') == -1:
                         fields = lines[i].split()
@@ -721,7 +719,7 @@ def sofa_preprocess(logdir, cfg):
                         nvsmi_sm = float(fields[1]) + 1e-5
                         nvsmi_mem = float(fields[2]) + 1e-5
 
-                        t_begin = t - t_base + t_glb_base
+                        t_begin = t + t_glb_base
                         deviceId = cpuid = nvsmi_id
                         event = -1
                         copyKind = -1
@@ -746,7 +744,7 @@ def sofa_preprocess(logdir, cfg):
                             tid,
                             nvsmi_info,
                             cpuid]
-                        if t - t_base > 3 :
+                        if t > 3 :
                             nvsmi_sm_list.append(trace)
 
                         trace = [
@@ -763,7 +761,7 @@ def sofa_preprocess(logdir, cfg):
                             tid,
                             nvsmi_info,
                             cpuid]
-                        if t - t_base > 3 :
+                        if t > 3 :
                             nvsmi_mem_list.append(trace)
                         if nvsmi_id == 0:
                             t = t + 1
@@ -782,7 +780,6 @@ def sofa_preprocess(logdir, cfg):
             packets = lines = f.readlines()
             print_info("Length of net_traces = %d" % len(packets))
             if packets:
-                #DEPRECATED: t_base = float(lines[0].split()[0])
                 with mp.Pool(processes=cpu_count) as pool:
                     res = pool.map(
                         partial(
@@ -1022,36 +1019,84 @@ def sofa_preprocess(logdir, cfg):
                         float_format='%.6f')
     
     # ============ Preprocessing CPU Trace ==========================
+    
+    # Determine time base for perf traces
+    perf_timebase_uptime = 0
+    perf_timebase_unix = 0
+    last_nvvp_ts = 0
+    for nvvp_filename in glob.glob(logdir + "cuhello*[0-9].nvvp"):
+        print_progress("Read " + nvvp_filename + " by nvprof -- begin")
+        engine = create_engine('sqlite:///' + nvvp_filename)
+        last_nvvp_tss = []
+        try:
+            last_nvvp_tss.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_MEMSET',engine)).iloc[-1]['start'])
+        except BaseException:
+            print_info('NO MEMSET')
+        
+        try:
+            last_nvvp_tss.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_MEMCPY',engine)).iloc[-1]['start'])
+        except BaseException:
+            print_info('NO MEMCPY')
+        
+        try: 
+            last_nvvp_tss.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL',engine)).iloc[-1]['start'])
+        except BaseException:
+            print_info('NO CONCURRENT KERNEL')
+        
+        try: 
+            last_nvvp_tss.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_KERNEL',engine)).iloc[-1]['start'])
+        except BaseException:
+            print_info('NO KERNEL')
+        if len(last_nvvp_tss) > 0: 
+            last_nvvp_ts = sorted(last_nvvp_tss,reverse=True)[0]*1.0/1e+9
+        else:
+           print_warning("There is no data in tables of NVVP file.") 
+        
+        with open(logdir + 'cuhello.perf.script', 'w') as logfile:
+            subprocess.call(['perf',
+                     'script',
+                     '--kallsym',
+                     '%s/kallsyms' % logdir,
+                     '-i',
+                     '%s/cuhello.perf.data' % logdir,
+                     '-F',
+                     'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'],
+                    stdout=logfile)
+
+        with open(logdir + 'cuhello.perf.script') as f:
+            samples = f.readlines()
+            print_info("Length of cpu_traces = %d" % len(samples))
+            if len(samples) > 0:
+                for sample in reversed(samples):
+                    fields = sample.split()
+                    function_name = "" 
+                    if re.match('\[\d+\]', fields[1]) is not None:
+                        function_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7] 
+                    else:
+                        function_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6] 
+
+                    if function_name.find('libcuda.so') != -1 and len(last_nvvp_tss)>0: 
+                        perf_timebase_uptime = float(sample.split()[1].split(':')[0])
+                        perf_timebase_unix = last_nvvp_ts 
+                        break
+        print_progress("Read " + nvvp_filename + " by nvprof -- end")
+    
+    if perf_timebase_unix == 0:
+        with open(logdir + 'perf_timebase.txt') as f:
+            lines = f.readlines()
+            perf_timebase_uptime = float(lines[-2].split()[2].split(':')[0])
+            perf_timebase_unix = float(lines[-1].split()[0])
+    
+    
     with open(logdir + 'perf.script') as f:
         samples = f.readlines()
         print_info("Length of cpu_traces = %d" % len(samples))
         if len(samples) > 0:
-            # TODO: It is better to check pid/tid mapping of the last perf-event of _nv*rm and the last cuda event 
-            t_perf_base =  float(samples[0].split()[1].split(':')[0])
-            t_perf_glb_base = t_glb_base             
-            print_info('Timestamp of default t_perf_glb_base: ' + str(t_perf_glb_base) )
-            for sample in reversed(samples):
-                fields = sample.split()
-                function_name = "" 
-                if re.match('\[\d+\]', fields[1]) is not None:
-                    function_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7] 
-                else:
-                    function_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6] 
-
-                if function_name.find('libcuda.so') != -1 and len(gpu_traces)>0: 
-                #if re.search('*libcuda*', function_name ) is not None: 
-                    print_info('Timestamp of the last libcuda.so ' + str(t_perf_base) )
-                    t_perf_base = float(sample.split()[1].split(':')[0])
-                    t_perf_glb_base = float(gpu_traces.iat[-1,0])
-                    break
-            t_perf_glb_base = t_perf_glb_base + cfg.cpu_time_offset 
-            print_info('Timestamp of new t_perf_glb_base: ' + str(t_perf_glb_base) )
-             
             with mp.Pool(processes=cpu_count) as pool:
                 res = pool.map(
                     partial(
                         cpu_trace_read,
-                        t_offset = t_perf_glb_base - t_perf_base),
+                        t_offset = perf_timebase_unix - perf_timebase_uptime),
                     samples)
             cpu_traces = pd.DataFrame(res)
             cpu_traces.columns = sofa_fieldnames
@@ -1081,14 +1126,12 @@ def sofa_preprocess(logdir, cfg):
     ### 0,0,852,0,0,48,0,0,54528,57600
     ### 1,0,600,0,0,0,0,0,38400,38400
     if cfg.enable_pcm and os.path.isfile('%s/pcm_pcie.csv' % logdir):
-        pcm_pcie_delay = 0.01
         with open( logdir + '/pcm_pcie.csv' ) as f:
             lines = f.readlines()
             print_info("Length of pcm_pcie_traces = %d" % len(lines))
             if len(lines) > 0:
                 pcm_pcie_list = []
                 pcm_pcie_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-                t_base = t = 0
                 for line in lines:
                     if line.find('Skt') == -1:
                         fields = line.split(',')
@@ -1097,7 +1140,6 @@ def sofa_preprocess(logdir, cfg):
                        
                         skt = int(fields[1])
                         t_begin = float(fields[0]) 
-                        #t_begin = t - t_base + t_glb_base
                         deviceId = skt
                         event = -1
                         copyKind = -1
@@ -1144,7 +1186,6 @@ def sofa_preprocess(logdir, cfg):
                             pcm_pcie_info,
                             cpuid]
                         pcm_pcie_list.append(trace)                 
-                        t = t + pcm_pcie_delay
                 pcm_pcie_traces = list_to_csv_and_traces(logdir, pcm_pcie_list, 'pcm_pcie_trace.csv', 'w')
 
             else:
@@ -1179,26 +1220,44 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.y_field = 'duration'
         sofatrace.data = filtered_group['group'].copy()
         traces.append(sofatrace)
-
+    
     sofatrace = SOFATrace()
-    sofatrace.name = 'vmstat_usr'
-    sofatrace.title = 'CPU_USAGE_USR'
-    sofatrace.color = 'Magenta'
+    sofatrace.name = 'vmstat_bi'
+    sofatrace.title = 'VMSTAT_BI'
+    sofatrace.color = 'DarkOrange'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
-    sofatrace.data = vm_usr_traces
+    sofatrace.data = vm_bi_traces
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()
-    sofatrace.name = 'vmstat_sys'
-    sofatrace.title = 'CPU_USAGE_SYS'
-    sofatrace.color = 'LightBlue'
+    sofatrace.name = 'vmstat_bo'
+    sofatrace.title = 'VMSTAT_BO'
+    sofatrace.color = 'DarkOrchid'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
-    sofatrace.data = vm_sys_traces
+    sofatrace.data = vm_bo_traces
     traces.append(sofatrace)
-
+    
     if cfg.enable_vmstat:
+        sofatrace = SOFATrace()
+        sofatrace.name = 'vmstat_usr'
+        sofatrace.title = 'CPU_USAGE_USR'
+        sofatrace.color = 'Magenta'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = vm_usr_traces
+        traces.append(sofatrace)
+    
+        sofatrace = SOFATrace()
+        sofatrace.name = 'vmstat_sys'
+        sofatrace.title = 'CPU_USAGE_SYS'
+        sofatrace.color = 'LightBlue'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = vm_sys_traces
+
+        traces.append(sofatrace)
         sofatrace = SOFATrace()
         sofatrace.name = 'vmstat_in'
         sofatrace.title = 'VMSTAT_IN'
@@ -1217,23 +1276,7 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.data = vm_cs_traces
         traces.append(sofatrace)
 
-        sofatrace = SOFATrace()
-        sofatrace.name = 'vmstat_bi'
-        sofatrace.title = 'VMSTAT_BI'
-        sofatrace.color = 'DarkOrange'
-        sofatrace.x_field = 'timestamp'
-        sofatrace.y_field = 'duration'
-        sofatrace.data = vm_bi_traces
-        traces.append(sofatrace)
 
-        sofatrace = SOFATrace()
-        sofatrace.name = 'vmstat_bo'
-        sofatrace.title = 'VMSTAT_BO'
-        sofatrace.color = 'DarkOrchid'
-        sofatrace.x_field = 'timestamp'
-        sofatrace.y_field = 'duration'
-        sofatrace.data = vm_bo_traces
-        traces.append(sofatrace)
 
     sofatrace = SOFATrace()
     sofatrace.name = 'nvsmi_mem'

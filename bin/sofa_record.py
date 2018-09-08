@@ -10,10 +10,9 @@ import os
 from functools import partial
 from sofa_print import *
 import subprocess
-from time import sleep, time
 from pwd import getpwuid
-
-
+import psutil
+import time
 
 def sofa_record(command, logdir, cfg):
 
@@ -86,7 +85,7 @@ def sofa_record(command, logdir, cfg):
         if int(os.system('command -v nvprof')) == 0:
             p_nvprof = subprocess.Popen(['nvprof', '--profile-all-processes', '-o', logdir+'/gputrace%p.nvvp'])
             print_info('Launching nvprof')
-            sleep(3)
+            time.sleep(3)
             print_info('nvprof is launched')
         else:    
             print_warning('Profile without NVPROF')
@@ -105,13 +104,20 @@ def sofa_record(command, logdir, cfg):
         subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
         subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
 
+        # To improve perf timestamp accuracy
+        subprocess.call('sofa_perf_timebase > %s/perf_timebase.txt' % (logdir), shell=True)
+        subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -o %s/cuhello.perf.data cuhello' % (logdir,logdir), shell=True)
+
         # sofa_time is time base for mpstat, vmstat, nvidia-smi 
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
-            logfile.write(str(int(time()))+'\n')
-
+            unix_time = time.time()
+            boot_time = psutil.boot_time()
+            logfile.write(str('%.9lf'%unix_time)+'\n')
+            logfile.write(str('%.9lf'%boot_time)+'\n')
+        
         with open('%s/mpstat.txt' % logdir, 'w') as logfile:
             p_mpstat = subprocess.Popen(
-                ['mpstat', '-P', 'ALL', '1', '600'], stdout=logfile)
+                    ['mpstat', '-P', 'ALL', '1', '600'], stdout=logfile)
 
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
             p_vmstat = subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
@@ -150,11 +156,9 @@ def sofa_record(command, logdir, cfg):
             p_mpstat.terminate()
             print_info("tried terminating mpstat")
         if p_nvtopo != None:
-            sleep(1)
             p_nvtopo.terminate()
             print_info("tried terminating nvidia-smi topo")
         if p_nvsmi != None:
-            sleep(1)
             p_nvsmi.terminate()
             print_info("tried terminating nvidia-smi dmon")
         if p_nvprof != None:
@@ -165,10 +169,6 @@ def sofa_record(command, logdir, cfg):
                 p_pcm_pcie.terminate()
                 os.system('yes|pkill pcm-pcie.x') 
                 print_info("tried killing pcm-pcie.x")
-        #os.system('pkill tcpdump')
-        #os.system('pkill mpstat')
-        #os.system('pkill vmstat')
-        #os.system('pkill nvidia-smi')
     except BaseException:
         print("Unexpected error:", sys.exc_info()[0])
         if p_tcpdump != None:

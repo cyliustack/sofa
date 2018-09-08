@@ -2,6 +2,7 @@
 C_NONE="\033[0;00m"
 C_GREEN="\033[1;32m"
 C_RED_BK="\033[1;41m"
+C_YELLOW="\033[1;93m"
 
 WITH_SUDO=""
 if [[ $(which sudo) ]]; then 
@@ -84,8 +85,6 @@ function install_packages()
 {
     echo -e "${C_GREEN}Installing other packages...${C_NONE}"
 
-
-
     #inform_$WITH_SUDO "Running $WITH_SUDO for installing packages"
     if [[ $(which apt) ]] ; then
         $WITH_SUDO apt-get update
@@ -117,6 +116,11 @@ function install_utility_from_source()
 {
     echo -e "${C_GREEN}Installing utilities from source...${C_NONE}"
     make -C sofa-pcm -j 
+    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+    nvccx tools/cuhello.cu -o ./bin/cuhello
+    [[ $? != 0 ]] && echo -e "${C_YELLOW}No nvcc found; nvcc is required to improve perf timestamp accuracy.${C_NONE}" 
+    g++  tools/sofa_perf_timebase.cc -o ./bin/sofa_perf_timebase
+    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     #rm -rf pcm
     #git clone https://github.com/opcm/pcm.git 
     #sed -i -- 's/-DPCM_USE_PERF//g' pcm/Makefile
