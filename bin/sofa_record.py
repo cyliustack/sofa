@@ -11,7 +11,6 @@ from functools import partial
 from sofa_print import *
 import subprocess
 from pwd import getpwuid
-import psutil
 import time
 
 def sofa_record(command, logdir, cfg):
@@ -112,9 +111,7 @@ def sofa_record(command, logdir, cfg):
         # sofa_time is time base for mpstat, vmstat, nvidia-smi 
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
             unix_time = time.time()
-            boot_time = psutil.boot_time()
             logfile.write(str('%.9lf'%unix_time)+'\n')
-            logfile.write(str('%.9lf'%boot_time)+'\n')
         
         with open('%s/mpstat.txt' % logdir, 'w') as logfile:
             p_mpstat = subprocess.Popen(
