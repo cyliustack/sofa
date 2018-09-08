@@ -1,0 +1,13 @@
+            perf 28670 2894744.112171:          1 cycles:ppp:                 0 [unknown] ([unknown])
+            perf 28670 2894744.112178:          1 cycles:ppp:  ffffffffbb46c084 native_write_msr ([kernel.kallsyms])
+            perf 28670 2894744.112182:          5 cycles:ppp:  ffffffffbb46c084 native_write_msr ([kernel.kallsyms])
+            perf 28670 2894744.112186:         43 cycles:ppp:  ffffffffbb46c086 native_write_msr ([kernel.kallsyms])
+            perf 28670 2894744.112190:        378 cycles:ppp:  ffffffffbb40d9d4 intel_bts_enable_local ([kernel.kallsyms])
+            perf 28670 2894744.112194:       3277 cycles:ppp:  ffffffffbbe01a1d end_repeat_nmi ([kernel.kallsyms])
+            perf 28670 2894744.112199:      28247 cycles:ppp:  ffffffffbb5b4859 perf_event_addr_filters_exec ([kernel.kallsyms])
+              ls 28670 2894744.112225:     203260 cycles:ppp:  ffffffffbb5b8781 perf_iterate_ctx ([kernel.kallsyms])
+              ls 28670 2894744.112398:     420829 cycles:ppp:  ffffffffbb6773a6 get_empty_filp ([kernel.kallsyms])
+              ls 28670 2894744.112755:     393011 cycles:ppp:  ffffffffbbe017e7 error_entry ([kernel.kallsyms])
+              ls 28670 2894744.113087:     378231 cycles:ppp:      7fda04998a47 _dl_fixup (/lib/x86_64-linux-gnu/ld-2.23.so)
+              ls 28670 2894744.113407:     366558 cycles:ppp:  ffffffffbbe017e7 error_entry ([kernel.kallsyms])
+1536426174.006527 1536426174.006527
