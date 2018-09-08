@@ -66,3 +66,6 @@ SOFA provides options for configurations. Some examples are shown below. Please 
 
 `sofa record "~/cuda_samples/1_Utilities/bandwidthTest/bandwidthTest"`  
 ![Alt text](./figures/bandwidth.png)
+
+`sofa record "./scout t-bench resnet50_real"`   
+![Alt text](./figures/realdata.png)

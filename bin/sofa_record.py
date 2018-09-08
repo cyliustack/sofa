@@ -106,6 +106,7 @@ def sofa_record(command, logdir, cfg):
 
         # To improve perf timestamp accuracy
         subprocess.call('sofa_perf_timebase > %s/perf_timebase.txt' % (logdir), shell=True)
+        subprocess.call('rm %s/*.nvvp' % (logdir), shell=True)
         subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -o %s/cuhello.perf.data cuhello' % (logdir,logdir), shell=True)
 
         # sofa_time is time base for mpstat, vmstat, nvidia-smi 
