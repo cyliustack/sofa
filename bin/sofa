@@ -98,7 +98,9 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help='Declare which perf events are going to be recorded')
+    
     cfg = SOFA_Config()
+    cfg.script_path = os.path.dirname(os.path.abspath( __file__ )) 
 
     args = parser.parse_args()
     if args.logdir is not None:

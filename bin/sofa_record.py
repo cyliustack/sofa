@@ -104,9 +104,10 @@ def sofa_record(command, logdir, cfg):
         subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
 
         # To improve perf timestamp accuracy
-        subprocess.call('sofa_perf_timebase > %s/perf_timebase.txt' % (logdir), shell=True)
+        print_info("Script path of SOFA: "+cfg.script_path)
+        subprocess.call('%s/sofa_perf_timebase > %s/perf_timebase.txt' % (cfg.script_path,logdir), shell=True)
         subprocess.call('rm %s/*.nvvp' % (logdir), shell=True)
-        subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -o %s/cuhello.perf.data cuhello' % (logdir,logdir), shell=True)
+        subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -o %s/cuhello.perf.data %s/cuhello' % (logdir,logdir,cfg.script_path), shell=True)
 
         # sofa_time is time base for mpstat, vmstat, nvidia-smi 
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
