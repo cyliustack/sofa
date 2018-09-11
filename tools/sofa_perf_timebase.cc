@@ -13,7 +13,7 @@ double gettime(){
 }
 int main(int argc, char* argv[]){
     double time = gettime();
-    system("perf record ls > /dev/null");
+    system("perf record -F 999 ls -lah /usr/bin > /dev/null");
     printf("%.6lf %.6lf\n",time,time);
     system("perf script 2>&1");
     return 0;
