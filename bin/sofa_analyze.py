@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 import os
 import sys
 import pandas as pd
@@ -115,7 +115,7 @@ def comm_profile(logdir, cfg, df_gpu):
             continue
 
     print_title("New Bandwidth Report")
-    gp = df_gpu.groupby(by='copyKind')['bandwidth']
+    gp = df_gpu.query('payload > 64000').groupby(by='copyKind')['bandwidth']
     for key, item in gp:
         print(("[%s]: %.3lf (GB/s)" % (cktable[key], gp.get_group(key).mean())))
 
