@@ -114,6 +114,12 @@ def comm_profile(logdir, cfg, df_gpu):
         else:
             continue
 
+    print_title("New Bandwidth Report")
+    gp = df_gpu.groupby(by='copyKind')['bandwidth']
+    for key, item in gp:
+        print(("[%s]: %.3lf (GB/s)" % (cktable[key], gp.get_group(key).mean())))
+
+
     print_title("Summary of Comm.")
     print(("MeasuredTotalTraffic : %lf (MB)" % total_traffic))
     print(("MeasuredTotalH2DTraffic : %lf (MB)" % total_h2d_traffic))
