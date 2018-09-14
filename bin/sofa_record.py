@@ -13,6 +13,23 @@ import subprocess
 from pwd import getpwuid
 import time
 
+def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa): 
+    if p_pcm_pcie != None:
+        p_pcm_pcie.terminate()
+        os.system('yes|pkill pcm-pcie.x') 
+        print_info("tried killing pcm-pcie.x")
+    if p_pcm_memory != None:
+        p_pcm_memory.terminate()
+        os.system('yes|pkill pcm-memory.x') 
+        print_info("tried killing pcm-memory.x")
+    if p_pcm_numa != None:
+        p_pcm_numa.terminate()
+        os.system('yes|pkill pcm-numa.x') 
+        print_info("tried killing pcm-numa.x")
+        print_info("tried killing pcm-numa.x")
+
+
+
 def sofa_record(command, logdir, cfg):
 
     p_tcpdump = None
@@ -22,6 +39,8 @@ def sofa_record(command, logdir, cfg):
     p_nvsmi   = None
     p_nvtopo  = None 
     p_pcm_pcie = None 
+    p_pcm_memory = None 
+    p_pcm_numa = None 
 
     print_info('SOFA_COMMAND: %s' % command)
     sample_freq = 99
@@ -43,6 +62,18 @@ def sofa_record(command, logdir, cfg):
             print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
             print_error('sudo modprobe msr')
             print_error('sudo setcap cap_sys_rawio=ep `which pcm-pcie.x`')
+            quit()
+        ret = str(subprocess.check_output(['getcap `which pcm-memory.x`'], shell=True))
+        if ret.find('cap_sys_rawio+ep') == -1:
+            print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
+            print_error('sudo modprobe msr')
+            print_error('sudo setcap cap_sys_rawio=ep `which pcm-memory.x`')
+            quit()
+        ret = str(subprocess.check_output(['getcap `which pcm-numa.x`'], shell=True))
+        if ret.find('cap_sys_rawio+ep') == -1:
+            print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
+            print_error('sudo modprobe msr')
+            print_error('sudo setcap cap_sys_rawio=ep `which pcm-numa.x`')
             quit()
 
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
@@ -93,6 +124,8 @@ def sofa_record(command, logdir, cfg):
             with open(os.devnull, 'w') as FNULL:
                 delay_pcie = 0.02
                 p_pcm_pcie = subprocess.Popen(['yes|pcm-pcie.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_pcie.csv -B '], shell=True)
+                p_pcm_memory = subprocess.Popen(['yes|pcm-memory.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_memory.csv '], shell=True)
+                p_pcm_numa = subprocess.Popen(['yes|pcm-numa.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_numa.csv '], shell=True)
         
         print_info("Recording...")    
         if cfg.profile_all_cpus == True:
@@ -164,10 +197,7 @@ def sofa_record(command, logdir, cfg):
             p_nvprof.terminate()
             print_info("tried terminating nvprof")
         if cfg.enable_pcm:
-            if p_pcm_pcie != None:
-                p_pcm_pcie.terminate()
-                os.system('yes|pkill pcm-pcie.x') 
-                print_info("tried killing pcm-pcie.x")
+            kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa)
     except BaseException:
         print("Unexpected error:", sys.exc_info()[0])
         if p_tcpdump != None:
@@ -189,9 +219,6 @@ def sofa_record(command, logdir, cfg):
             p_nvprof.kill()
             print_info("tried killing nvprof")
         if cfg.enable_pcm:
-            if p_pcm_pcie != None:
-                p_pcm_pcie.kill()
-                os.system('yes|pkill pcm-pcie.x') 
-                print_info("tried killing pcm-pcie.x")
+            kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa)
         raise
     print_info("End of Recording")
