@@ -146,13 +146,11 @@ def comm_profile(logdir, cfg, df_gpu):
         bandwidth = df_gpu.iat[i, 6]
         accum[src][dst] = float(accum[src][dst] + payload)
         accum_count[src][dst] = int(accum_count[src][dst] + 1)
-        if bandwidth > 0:
+        if payload > 64000:
             accum_bw[src][dst] = float(accum_bw[src][dst] + bandwidth)
             accum_bw_count[src][dst] = int(accum_bw_count[src][dst] + 1)
-        else:
-            print("zero bw")
 
-    print("Traffic Payload Matrix (MB):")
+    print_title("Traffic Payload Matrix (MB):")
     row_str = "\tHOST\t"
     for i in range(1, accum.shape[1]):
         row_str = row_str + "GPU%d" % i + "\t"
@@ -168,7 +166,7 @@ def comm_profile(logdir, cfg, df_gpu):
         print(row_str)
 
 
-    print("Traffic Bandwidth Matrix (GB/s):")
+    print_title("Traffic Bandwidth Matrix 64K+ (GB/s):")
     row_str = "\tHOST\t"
     for i in range(1, accum_bw.shape[1]):
         row_str = row_str + "GPU%d" % i + "\t"
