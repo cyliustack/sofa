@@ -26,7 +26,6 @@ def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa):
         p_pcm_numa.terminate()
         os.system('yes|pkill pcm-numa.x') 
         print_info("tried killing pcm-numa.x")
-        print_info("tried killing pcm-numa.x")
 
 
 

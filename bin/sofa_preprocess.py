@@ -125,7 +125,7 @@ def cuda_api_trace_read(
     t_begin = time
     t_end = time + duration
     payload = 0
-    bandwidth = 1e-6
+    bandwidth = 0
     pid = n_cudaproc
     deviceId = -1 
     tid = stream_id = -1
@@ -177,7 +177,7 @@ def gpu_trace_read(
     try:
         bandwidth = float(values[indices.index('Throughput')])
     except BaseException:
-        bandwidth = 1e-6
+        bandwidth = 0
 
     pid = n_cudaproc
 

@@ -114,7 +114,7 @@ def comm_profile(logdir, cfg, df_gpu):
         else:
             continue
 
-    print_title("New Bandwidth Report")
+    print_title("Bandwidth Report for Large Data-copy (64KB+)")
     gp = df_gpu.query('payload > 64000').groupby(by='copyKind')['bandwidth']
     for key, item in gp:
         print(("[%s]: %.3lf (GB/s)" % (cktable[key], gp.get_group(key).mean())))
@@ -127,7 +127,9 @@ def comm_profile(logdir, cfg, df_gpu):
     print(("MeasuredTotalP2PTraffic : %lf (MB)" % total_p2p_traffic))
 
     accum = np.zeros((1 + n_gpus, 1 + n_gpus))
+    accum_bw = np.zeros((1 + n_gpus, 1 + n_gpus))
     accum_count = np.zeros((1 + n_gpus, 1 + n_gpus))
+    accum_bw_count = np.zeros((1 + n_gpus, 1 + n_gpus))
 
     # TODO: Parallelize payload accumulatoin
     #print("df length: %d" % len(df_gpu))
@@ -141,11 +143,16 @@ def comm_profile(logdir, cfg, df_gpu):
         src = df_gpu.iat[i, 7]
         dst = df_gpu.iat[i, 8]
         payload = df_gpu.iat[i, 5]
+        bandwidth = df_gpu.iat[i, 6]
         accum[src][dst] = float(accum[src][dst] + payload)
         accum_count[src][dst] = int(accum_count[src][dst] + 1)
+        if bandwidth > 0:
+            accum_bw[src][dst] = float(accum_bw[src][dst] + bandwidth)
+            accum_bw_count[src][dst] = int(accum_bw_count[src][dst] + 1)
+        else:
+            print("zero bw")
 
-
-    print("Traffic Matrix (MB):")
+    print("Traffic Payload Matrix (MB):")
     row_str = "\tHOST\t"
     for i in range(1, accum.shape[1]):
         row_str = row_str + "GPU%d" % i + "\t"
@@ -158,6 +165,25 @@ def comm_profile(logdir, cfg, df_gpu):
         
         for j in range(accum.shape[1]):
             row_str = row_str + "%d" % (accum[i][j] / (1024 * 1024)) + "\t"
+        print(row_str)
+
+
+    print("Traffic Bandwidth Matrix (GB/s):")
+    row_str = "\tHOST\t"
+    for i in range(1, accum_bw.shape[1]):
+        row_str = row_str + "GPU%d" % i + "\t"
+    print(row_str)
+    for i in range(accum_bw.shape[0]):
+        if i == 0:
+            row_str = "HOST\t"
+        else:
+            row_str = "GPU%d\t" % i
+        
+        for j in range(accum_bw.shape[1]):
+            if  accum_bw_count[i][j] > 0:
+                row_str = row_str + "%.2lf" % (accum_bw[i][j]/accum_bw_count[i][j]) + "\t"
+            else:
+                row_str = row_str + "0" + "\t"
         print(row_str)
 
 
