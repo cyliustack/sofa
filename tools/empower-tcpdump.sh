@@ -24,10 +24,10 @@ C_RED_BK="\033[1;41m"
 function inform_sudo()
 {
     [[ ! -z "$1" ]] && echo "$1"
-    sudo -n true 2> /dev/null
+    $WITH_SUDO -n true 2> /dev/null
     # Exit without printing messages if password is still in the cache.
     [[ $? == 0 ]] && return 0;
-    sudo >&2 echo -e "\033[1;33mRunning with root privilege now...\033[0m";
+    $WITH_SUDO >&2 echo -e "\033[1;33mRunning with root privilege now...\033[0m";
     [[ $? != 0 ]] && >&2 echo -e "\033[1;31mAbort\033[0m" && exit 1;
 }
 
@@ -43,7 +43,7 @@ function set_tcpdump_group()
 {
     
     inform_sudo "Running sudo for setting '/usr/sbin/tcpdump' with 'pcap' group."
-    sudo chgrp pcap /usr/sbin/tcpdump
+    $WITH_SUDO chgrp pcap /usr/sbin/tcpdump
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     $WITH_SUDO chmod 750 /usr/sbin/tcpdump
     $WITH_SUDO setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump
