@@ -704,7 +704,7 @@ def sofa_preprocess(logdir, cfg):
         with open('%s/nvsmi.txt' % logdir) as f:
             lines = f.readlines()
             print_info("Length of nvsmi_traces = %d" % len(lines))
-            if len(lines) > 0:
+            if len(lines) > 0 and lines[0].find('failed')==-1:
                 nvsmi_sm_list = []
                 nvsmi_mem_list = []
                 nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
