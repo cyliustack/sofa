@@ -165,8 +165,8 @@ if __name__ == "__main__":
             cfg.gpu_filters.append(
                 Filter(str(pair.split(':')[0]), str(pair.split(':')[1])))
     else:
-        cfg.gpu_filters.append(Filter('_fw_', 'yellow'))
-        cfg.gpu_filters.append(Filter('_bw_', 'orange'))
+        cfg.gpu_filters.append(Filter('_fw_', 'royalblue'))
+        cfg.gpu_filters.append(Filter('_bw_', 'darkviolet'))
         cfg.gpu_filters.append(Filter('AllReduceKernel', 'indigo'))
 
     if args.network_filters is not None:
