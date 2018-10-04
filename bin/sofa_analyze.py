@@ -119,12 +119,14 @@ def comm_profile(logdir, cfg, df_gpu):
     for key, item in gp:
         print(("[%s]: %.3lf (GB/s)" % (cktable[key], gp.get_group(key).mean())))
 
-
     print_title("Summary of Comm.")
     print(("MeasuredTotalTraffic : %lf (MB)" % total_traffic))
     print(("MeasuredTotalH2DTraffic : %lf (MB)" % total_h2d_traffic))
     print(("MeasuredTotalD2HTraffic : %lf (MB)" % total_d2h_traffic))
     print(("MeasuredTotalP2PTraffic : %lf (MB)" % total_p2p_traffic))
+
+    print("Payload Report for Data-copy:")
+    print(df_gpu['payload'].value_counts())
 
     accum = np.zeros((1 + n_gpus, 1 + n_gpus))
     accum_bw = np.zeros((1 + n_gpus, 1 + n_gpus))
@@ -365,45 +367,46 @@ def sofa_analyze(logdir, cfg):
         
         with open(logdir + 'nvlink_topo.txt') as f:
             lines = f.readlines()
-            title = lines[0]
-            num_gpus = 1 
-            for word in title.split():
-                if re.match(r'GPU', word) != None :
-                   num_gpus = num_gpus + 1 
-            print_info('# of GPUs: ' + str(num_gpus) )
-            edges = []
-            if len(lines) >= num_gpus+1:
-                for i in range(num_gpus):
-                    connections = lines[1+i].split()
-                    for j in range(len(connections)):
-                        if connections[j] == 'NV1' or connections[j] == 'NV2':
-                            edges.append((i,j-1))
-                            #print('%d connects to %d' % (i, j-1))
-                
-                ring_found = False
-                G = nx.DiGraph(edges)           
-                # Try to find ring with its length of num_gpus
-                for cycle in nx.simple_cycles(G):
-                    if len(cycle) == num_gpus:
-                        print(("One of the recommended ring having length of %d" % len(cycle) ))
-                        ring_found = True
-                        os.system("mkdir -p sofalog/sofa_hints/")
-                        xring_order = ','.join(map(str, cycle))
-                        with open("sofalog/sofa_hints/xring_order.txt", "w") as f:
-                            f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
-                        break
-                
-                # Try to find ring with its length of num_gpus/2 
-                if not ring_found:
+            if len(lines) > 0:
+                title = lines[0]
+                num_gpus = 1 
+                for word in title.split():
+                    if re.match(r'GPU', word) != None :
+                       num_gpus = num_gpus + 1 
+                print_info('# of GPUs: ' + str(num_gpus) )
+                edges = []
+                if len(lines) >= num_gpus+1:
+                    for i in range(num_gpus):
+                        connections = lines[1+i].split()
+                        for j in range(len(connections)):
+                            if connections[j] == 'NV1' or connections[j] == 'NV2':
+                                edges.append((i,j-1))
+                                #print('%d connects to %d' % (i, j-1))
+                    
+                    ring_found = False
+                    G = nx.DiGraph(edges)           
+                    # Try to find ring with its length of num_gpus
                     for cycle in nx.simple_cycles(G):
-                        if len(cycle) == num_gpus/2:
+                        if len(cycle) == num_gpus:
                             print(("One of the recommended ring having length of %d" % len(cycle) ))
                             ring_found = True
                             os.system("mkdir -p sofalog/sofa_hints/")
                             xring_order = ','.join(map(str, cycle))
                             with open("sofalog/sofa_hints/xring_order.txt", "w") as f:
                                 f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
-                            break   
+                            break
+                    
+                    # Try to find ring with its length of num_gpus/2 
+                    if not ring_found:
+                        for cycle in nx.simple_cycles(G):
+                            if len(cycle) == num_gpus/2:
+                                print(("One of the recommended ring having length of %d" % len(cycle) ))
+                                ring_found = True
+                                os.system("mkdir -p sofalog/sofa_hints/")
+                                xring_order = ','.join(map(str, cycle))
+                                with open("sofalog/sofa_hints/xring_order.txt", "w") as f:
+                                    f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
+                                break   
     try:
         df_cpu = pd.read_csv(filein_cpu)
         cpu_profile(logdir, cfg, df_cpu)
