@@ -17,6 +17,8 @@ from random import *
 from sqlalchemy import create_engine
 from sklearn.cluster import KMeans
 import cxxfilt 
+from operator import itemgetter
+
 
 def list_downsample(list_in, plot_ratio):
     new_list = []
@@ -87,6 +89,7 @@ def net_trace_read(packet, t_offset):
     payload = int(packet.split()[6])
     duration = float(payload / 125.0e6)
     bandwidth = 125.0e6
+    pkt_src = 0
     pkt_src = 0
     pkt_dst = 0
     for i in range(4):
@@ -1129,6 +1132,13 @@ def sofa_preprocess(logdir, cfg):
             res_viz = list_downsample(res, cfg.plot_ratio)
             cpu_traces_viz = pd.DataFrame(res_viz)
             cpu_traces_viz.columns = sofa_fieldnames
+            
+            char1 = ']'
+            char2 = '+'
+            # demangle c++ symbol, little dirty work here...
+            cpu_traces_viz['name'] = cpu_traces_viz['name'].apply(
+                lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
+            )            
         ###  Apply filters for cpu traces
         filtered_groups = []
         if len(cpu_traces) > 0:
@@ -1161,25 +1171,28 @@ def sofa_preprocess(logdir, cfg):
             res_viz = list_downsample(res, cfg.plot_ratio)
             swarm_cpu_traces_viz = pd.DataFrame(res_viz)
             swarm_cpu_traces_viz.columns = sofa_fieldnames        
+           
             char1 = ']'
             char2 = '+'      
-            # demangle c++ symbol, little dirty work here...          
+            # demangle c++ symbol, little dirty work here...
             swarm_cpu_traces_viz['name'] = swarm_cpu_traces_viz['name'].apply(
                 lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
             )
 
         ### swarm seperation by memory location 
         swarm_groups = []
+        idx = 0
+        showing_idx = 0
         if len(cpu_traces) > 0:            
             # get memory index by cheange float to integer
             swarm_cpu_traces_viz['event_int'] = swarm_cpu_traces_viz.event.apply(lambda x: int(x)) # add new column 'event_int'            
             # swarm seperate
             event_groups = swarm_cpu_traces_viz.groupby('event_int')
             # add different swarm groups                        
-            for mem_index, group in event_groups:                
+            for mem_index, group in event_groups:                                
                 # kmeans 
                 X = pd.DataFrame(group["event"])                                
-                num_of_cluster=5
+                num_of_cluster = 5
                 y_pred = kmeans_cluster(num_of_cluster, X)
 
                 # add new column                
@@ -1194,7 +1207,7 @@ def sofa_preprocess(logdir, cfg):
                     for pid, pid_cluster in pid_clusters:                              
                         # kmeans
                         X = pd.DataFrame(pid_cluster["event"])
-                        num_of_cluster=4
+                        num_of_cluster = 4
                         y_pred_pid_cluster = kmeans_cluster(num_of_cluster, X)
 
                         # add new column
@@ -1203,11 +1216,18 @@ def sofa_preprocess(logdir, cfg):
                         cluster_in_pid_clusters = pid_cluster.groupby('cluster_in_pid')
 
                         for mini_cluster_id, cluster_in_pid_cluster in cluster_in_pid_clusters:                                  
+                            total_duration = cluster_in_pid_cluster.duration.sum()                            
+
                             swarm_groups.append({'group': cluster_in_pid_cluster.drop(columns = ['event_int', 'cluster', 'cluster_in_pid']), # data of each group
                                                 'color':  random_generate_color(),
-                                                'keyword': 'MEM_' + str(mem_index) + '_SWARM_' + str(num_cluster) 
-                                                            + '_PID_' + str(pid) + '_MINI_CLUSTER_ID_' + str(mini_cluster_id)})                  
-
+                                                'keyword': 'SWARM_' + str(idx) +  ('_' * showing_idx), 
+                                                'total_duration': total_duration})
+                            idx += 1                                                                      
+                showing_idx += 1 
+            
+            swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
+            number_of_swarm = 10
+            topN_swarm_groups = swarm_groups[:number_of_swarm]                        
 
     #=== Intel PCM Trace =======#
     ### Skt,PCIeRdCur,RFO,CRd,DRd,ItoM,PRd,WiL,PCIe Rd (B),PCIe Wr (B)
@@ -1309,7 +1329,7 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.data = filtered_group['group'].copy()
         traces.append(sofatrace)
 
-    for swarm in swarm_groups:        
+    for swarm in topN_swarm_groups:        
         sofatrace = SOFATrace()
         sofatrace.name = swarm['keyword']
         sofatrace.title = swarm['keyword'] # add number of swarm
