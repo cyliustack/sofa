@@ -20,7 +20,8 @@ class SOFA_Config:
     viz_port = 8000
     cpu_time_offset = 0
     profile_all_cpus = False
-    enable_deepprof = False
+    enable_aisi = False
+    enable_hsg = False
     enable_vmstat = False
     enable_pcm = False
     cuda_api_tracing = False

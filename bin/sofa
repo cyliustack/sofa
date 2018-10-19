@@ -68,10 +68,12 @@ if __name__ == "__main__":
     parser.set_defaults(profile_all_cpus=False)
     parser.add_argument('--verbose', dest='verbose', action='store_true')
     parser.set_defaults(verbose=False)
-    parser.add_argument('--enable_deepprof', dest='enable_deepprof', action='store_true')
-    parser.set_defaults(enable_deepprof=False)
+    parser.add_argument('--enable_aisi', dest='enable_aisi', action='store_true')
+    parser.set_defaults(enable_aisi=False)
+    parser.add_argument('--enable_hsg', dest='enable_hsg', action='store_true')
+    parser.set_defaults(enable_hsg=False)
     parser.add_argument('--enable_vmstat', dest='enable_vmstat', action='store_true')
-    parser.set_defaults(enable_deepprof=False)
+    parser.set_defaults(enable_aisi=False)
     parser.add_argument(
         'command',
         type=str,
@@ -114,8 +116,11 @@ if __name__ == "__main__":
     if args.verbose is not None:
         cfg.verbose = args.verbose
 
-    if args.enable_deepprof is not None:
-        cfg.enable_deepprof = args.enable_deepprof
+    if args.enable_aisi is not None:
+        cfg.enable_aisi = args.enable_aisi
+
+    if args.enable_hsg is not None:
+        cfg.enable_hsg = args.enable_hsg
 
     if args.enable_vmstat is not None:
         cfg.enable_vmstat = args.enable_vmstat

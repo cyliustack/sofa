@@ -1147,82 +1147,83 @@ def sofa_preprocess(logdir, cfg):
                                         'color': filter.color,
                                         'keyword': filter.keyword})
     ### hierarchical swarm generation
-    with open(logdir + 'perf.script') as f:
-        samples = f.readlines()
-        print_info("Length of cpu_traces = %d" % len(samples))
-        if len(samples) > 0:
-            with mp.Pool(processes=cpu_count) as pool:
-                res = pool.map(
-                    partial(
-                        cpu_trace_read,
-                        t_offset = perf_timebase_unix - perf_timebase_uptime),
-                    samples)
-            cpu_traces = pd.DataFrame(res)
-            cpu_traces.columns = sofa_fieldnames
-            cpu_traces.to_csv(
-                logdir + 'cputrace.csv',
-                mode='w',
-                header=True,
-                index=False,
-                float_format='%.6f')
-            res_viz = list_downsample(res, cfg.plot_ratio)
-            swarm_cpu_traces_viz = pd.DataFrame(res_viz)
-            swarm_cpu_traces_viz.columns = sofa_fieldnames        
-           
-            char1 = ']'
-            char2 = '+'      
-            # demangle c++ symbol, little dirty work here...
-            swarm_cpu_traces_viz['name'] = swarm_cpu_traces_viz['name'].apply(
-                lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
-            )
+    if cfg.enable_hsg:
+        with open(logdir + 'perf.script') as f:
+            samples = f.readlines()
+            print_info("Length of cpu_traces = %d" % len(samples))
+            if len(samples) > 0:
+                with mp.Pool(processes=cpu_count) as pool:
+                    res = pool.map(
+                        partial(
+                            cpu_trace_read,
+                            t_offset = perf_timebase_unix - perf_timebase_uptime),
+                        samples)
+                cpu_traces = pd.DataFrame(res)
+                cpu_traces.columns = sofa_fieldnames
+                cpu_traces.to_csv(
+                    logdir + 'cputrace.csv',
+                    mode='w',
+                    header=True,
+                    index=False,
+                    float_format='%.6f')
+                res_viz = list_downsample(res, cfg.plot_ratio)
+                swarm_cpu_traces_viz = pd.DataFrame(res_viz)
+                swarm_cpu_traces_viz.columns = sofa_fieldnames        
+               
+                char1 = ']'
+                char2 = '+'      
+                # demangle c++ symbol, little dirty work here...
+                swarm_cpu_traces_viz['name'] = swarm_cpu_traces_viz['name'].apply(
+                    lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
+                )
 
-        ### swarm seperation by memory location 
-        swarm_groups = []        
-        idx = 0
-        showing_idx = 0
-        if len(cpu_traces) > 0:            
-            # get memory index by cheange float to integer
-            swarm_cpu_traces_viz['event_int'] = swarm_cpu_traces_viz.event.apply(lambda x: int(x)) # add new column 'event_int'            
-            # swarm seperate
-            event_groups = swarm_cpu_traces_viz.groupby('event_int')
-            # add different swarm groups                        
-            for mem_index, group in event_groups:                                
-                # kmeans 
-                X = pd.DataFrame(group["event"])                                
-                num_of_cluster = 5
-                y_pred = kmeans_cluster(num_of_cluster, X)
+            ### swarm seperation by memory location 
+            swarm_groups = []        
+            idx = 0
+            showing_idx = 0
+            if len(cpu_traces) > 0:            
+                # get memory index by cheange float to integer
+                swarm_cpu_traces_viz['event_int'] = swarm_cpu_traces_viz.event.apply(lambda x: int(x)) # add new column 'event_int'            
+                # swarm seperate
+                event_groups = swarm_cpu_traces_viz.groupby('event_int')
+                # add different swarm groups                        
+                for mem_index, group in event_groups:                                
+                    # kmeans 
+                    X = pd.DataFrame(group["event"])                                
+                    num_of_cluster = 5
+                    y_pred = kmeans_cluster(num_of_cluster, X)
 
-                # add new column                
-                group['cluster'] = y_pred                 
-                # group by new column
-                clusters = group.groupby('cluster')
-                                
-                for num_cluster, cluster in clusters:                       
-                    # group by process id
-                    pid_clusters = cluster.groupby('pid')
+                    # add new column                
+                    group['cluster'] = y_pred                 
+                    # group by new column
+                    clusters = group.groupby('cluster')
+                                    
+                    for num_cluster, cluster in clusters:                       
+                        # group by process id
+                        pid_clusters = cluster.groupby('pid')
 
-                    for pid, pid_cluster in pid_clusters:                              
-                        # kmeans
-                        X = pd.DataFrame(pid_cluster["event"])
-                        num_of_cluster = 4
-                        y_pred_pid_cluster = kmeans_cluster(num_of_cluster, X)
+                        for pid, pid_cluster in pid_clusters:                              
+                            # kmeans
+                            X = pd.DataFrame(pid_cluster["event"])
+                            num_of_cluster = 4
+                            y_pred_pid_cluster = kmeans_cluster(num_of_cluster, X)
 
-                        # add new column
-                        pid_cluster['cluster_in_pid'] = y_pred_pid_cluster
-                        # group by new column
-                        cluster_in_pid_clusters = pid_cluster.groupby('cluster_in_pid')
+                            # add new column
+                            pid_cluster['cluster_in_pid'] = y_pred_pid_cluster
+                            # group by new column
+                            cluster_in_pid_clusters = pid_cluster.groupby('cluster_in_pid')
 
-                        for mini_cluster_id, cluster_in_pid_cluster in cluster_in_pid_clusters:                                  
-                            total_duration = cluster_in_pid_cluster.duration.sum()                            
+                            for mini_cluster_id, cluster_in_pid_cluster in cluster_in_pid_clusters:                                  
+                                total_duration = cluster_in_pid_cluster.duration.sum()                            
 
-                            swarm_groups.append({'group': cluster_in_pid_cluster.drop(columns = ['event_int', 'cluster', 'cluster_in_pid']), # data of each group
-                                                'color':  random_generate_color(),
-                                                'keyword': 'SWARM_' + str(idx) +  ('_' * showing_idx), 
-                                                'total_duration': total_duration})
-                            idx += 1                                                                      
-                showing_idx += 1 
-            
-            swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
+                                swarm_groups.append({'group': cluster_in_pid_cluster.drop(columns = ['event_int', 'cluster', 'cluster_in_pid']), # data of each group
+                                                    'color':  random_generate_color(),
+                                                    'keyword': 'SWARM_' + str(idx) +  ('_' * showing_idx), 
+                                                    'total_duration': total_duration})
+                                idx += 1                                                                      
+                    showing_idx += 1 
+                
+                swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
 
 
     #=== Intel PCM Trace =======#
@@ -1325,17 +1326,18 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.data = filtered_group['group'].copy()
         traces.append(sofatrace)
 
-    # top 10 cumulative time of a swarm
-    number_of_swarm = 10                            
-    for swarm in swarm_groups[:number_of_swarm]: 
-        sofatrace = SOFATrace()
-        sofatrace.name = swarm['keyword']
-        sofatrace.title = swarm['keyword'] # add number of swarm
-        sofatrace.color = swarm['color']        
-        sofatrace.x_field = 'timestamp'
-        sofatrace.y_field = 'duration'        
-        sofatrace.data = swarm['group'].copy()               
-        traces.append(sofatrace)
+    if cfg.enable_hsg:
+        # top 10 cumulative time of a swarm
+        number_of_swarm = 10                            
+        for swarm in swarm_groups[:number_of_swarm]: 
+            sofatrace = SOFATrace()
+            sofatrace.name = swarm['keyword']
+            sofatrace.title = swarm['keyword'] # add number of swarm
+            sofatrace.color = swarm['color']        
+            sofatrace.x_field = 'timestamp'
+            sofatrace.y_field = 'duration'        
+            sofatrace.data = swarm['group'].copy()               
+            traces.append(sofatrace)
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_bi'
