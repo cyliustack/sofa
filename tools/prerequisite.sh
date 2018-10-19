@@ -77,7 +77,7 @@ function install_python_packages()
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip" 
     python3.6 -m pip install --user --upgrade pip
-    python3.6 -m pip install --user numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy  
+    python3.6 -m pip install --user numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
