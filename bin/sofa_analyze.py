@@ -12,7 +12,7 @@ import multiprocessing as mp
 from functools import partial
 from sofa_print import *
 from sofa_config import *
-from sofa_deepprof import *
+from sofa_aisi import *
 import networkx as nx
 import re 
 

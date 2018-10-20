@@ -3,6 +3,9 @@ perf.script
 tools/activate.sh
 sofalog
 tags
+*.x
+*.o
+*.d 
 *.cfg
 *.pyc
 __pycache__
