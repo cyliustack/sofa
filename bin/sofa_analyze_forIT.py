@@ -12,7 +12,7 @@ import multiprocessing as mp
 from functools import partial
 from sofa_print import *
 from sofa_config import *
-from sofa_deepprof import *
+from sofa_aisi import *
 import networkx as nx
 import re 
 
@@ -281,44 +281,3 @@ def cpu_profile(cfg, df):
 #            values='usage',
 #            aggfunc=np.std)
 #        print(table[1:].astype(int))
-
-
-class ProfiledDomainDNN:
-    domain_name = "DNN"
-    prefix = "[ProfiledDomain%s]\t" % domain_name
-
-    def __init__(self):
-        self.name = "general"
-        self.batch_size = 64
-        self.iterations = 11
-        self.throughput = 1
-        self.avg_cpu_time = 1
-
-    def get_batch_size(self, filepath):
-        with open(filepath) as f:
-            lines = f.readlines()
-            for line in lines:
-                pos = line.find("--batch_size")
-                if pos >= 0:
-                    self.batch_size = int(line[pos:].split()[0].split('=')[1])
-                    print((self.prefix + "batch_size: %d" % self.batch_size))
-                    break
-
-    def get_iterations(self, filepath):
-        with open(filepath) as f:
-            lines = f.readlines()
-            for line in lines:
-                pos = line.find("--num_batches")
-                if pos >= 0:
-                    self.iterations = int(
-                        line[pos:].split()[0].split('=')[1]) + 11
-                    print((self.prefix + "iterations: %d" % self.iterations))
-                    break
-
-    def get_throughput(self, filepath):
-        with open(filepath) as f:
-            lines = f.readlines()
-            for line in lines:
-                if line.find("total images/sec:") != -1:
-                    self.throughput = float(line.split()[2])
-                    print((self.prefix + "Throughput: %.2lf" % self.throughput))

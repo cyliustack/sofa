@@ -119,6 +119,8 @@ def iterationDetection(logdir, cfg, df_gpu, time_interval, threshold, iteration_
     #building suffix tree to find patter0
     #print(iteration_timelines)
     mainString = "".join(iteration_timelines)
+    print_title('Main string of events:')
+    print(mainString)
     #mainString='00000101001001001'
     #mainString = 'aabbcccaabbcccaabbccc' 
     st = STree(mainString)
@@ -253,7 +255,7 @@ similarityCount = 50
 def sofa_deepprof(logdir, cfg, df_cpu, df_gpu):
     global iteration_begin, iteration_end, iteration_table_memcpy
     a = 0
-    IT_num = 1
+    IT_num = 3
     try: 
         iterationDetection(logdir, cfg, df_gpu, 0.002, 0.7, cfg.iterations) 
         traces_to_json(logdir + 'report.js')
