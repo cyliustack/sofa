@@ -5,7 +5,8 @@ sofalog
 tags
 *.x
 *.o
-*.d 
+*.d
+sofa-pcm/*.d 
 *.cfg
 *.pyc
 __pycache__

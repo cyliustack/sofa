@@ -20,6 +20,7 @@ BIN_FILES=(bin/sofa
            bin/sofa_viz.py
            bin/sofa_config.py
            bin/sofa_print.py
+           bin/sofa_common.py
            sofa-pcm/pcm-core.x
            sofa-pcm/pcm-numa.x
            sofa-pcm/pcm-pcie.x
@@ -69,6 +70,7 @@ function install_sofa()
     cp -rf ${SCRIPT_PATH}/bin       ${PREFIX}
     cp -rf ${SCRIPT_PATH}/plugins   ${PREFIX}
     cp -rf ${SCRIPT_PATH}/sofaboard ${PREFIX}
+    cp -rf ${SCRIPT_PATH}/papi/src/build ${PREFIX}
 
     # Create a new file for SOFA environment
 ################## heredoc style
