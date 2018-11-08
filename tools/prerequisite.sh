@@ -98,24 +98,16 @@ function install_packages()
     if [[ $(which apt) ]] ; then
         $WITH_SUDO apt-get update
         $WITH_SUDO apt-get update --fix-missing
-	    $WITH_SUDO apt-get install -y curl wget cmake tcpdump sysstat \
-            libboost-dev libpcap-dev libconfig-dev libconfig++-dev linux-tools-common \
+	    $WITH_SUDO apt-get install -y curl wget make gcc g++ cmake \
+            linux-tools-common tcpdump sysstat \
             linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic 
-        
-	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install -y epel-release 
-        $WITH_SUDO yum install -y \
-            perf tcpdump\
-            centos-release-scl devtoolset-4-gcc* sysstat
+        $WITH_SUDO yum install -y curl wget make gcc gcc-c++ cmake \
+            perf tcpdump sysstat \
+            centos-release-scl devtoolset-4-gcc* 
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-    elif [[ $(which dnf) ]]  ; then
-        $WITH_SUDO dnf -y install \
-            perf cmake tcpdump boost-devel libconfig-devel libpcap-devel cmake sysstat
-        [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-    elif [[ $(which pacman) ]]  ; then
-        $WITH_SUDO pacman -S \
-            linux-tools cmake boost cmake tcpdump sysstat
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"
     fi
@@ -135,7 +127,15 @@ function install_utility_from_source()
     #sed -i -- 's/-DPCM_USE_PERF//g' pcm/Makefile
     #cd pcm && make -j && cd - 
     #$WITH_SUDO mkdir -p /usr/local/intelpcm/bin 
-    #$WITH_SUDO cp pcm/pcm-*.x /usr/local/intelpcm/bin
+    #$WITH_SUDO cp pcm/pcm-*.x /usr/local/intelpcm/bin 
+    rm -r papi
+    if [[ ! -f papi-5.6.0.tar.gz ]]; then  
+        wget http://icl.utk.edu/projects/papi/downloads/papi-5.6.0.tar.gz
+    fi
+    tar xvf papi-5.6.0.tar.gz
+    mv papi-5.6.0 papi
+    cd papi/src && ./configure --prefix=$(pwd)/build && make -j && make install && cd - 
+    rm papi-5.6.0.tar.gz
 }
 
 # main
