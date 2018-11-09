@@ -17,9 +17,16 @@ iteration_table = []
 blank_count = 0
 def iter_profile(cfg, fields, df_gpu):
     elapsed_time = df_gpu['timestamp'].iat[len(df_gpu)-1] - df_gpu['timestamp'].iat[0]
-    kernel_time = df_gpu['duration'].sum()
+    fw_time = df_gpu[df_gpu['name'].str.contains("_fw")].loc[:,'duration'].sum()
+    bw_time = df_gpu[df_gpu['name'].str.contains("_bw")].loc[:,'duration'].sum()
+    gemm_time = df_gpu[df_gpu['name'].str.contains("gemm")].loc[:,'duration'].sum()
+    copy_time = df_gpu[df_gpu['name'].str.contains("copyKind")].loc[:,'duration'].sum()
+    allreduce_time = df_gpu[df_gpu['name'].str.contains("AllReduceKernel")].loc[:,'duration'].sum()
+    gpu_time = df_gpu['duration'].sum() 
+    copy_time = copy_time + allreduce_time
+    kernel_time = gpu_time - copy_time
     payload = df_gpu['payload'].sum()
-    return {'elapsed_time': elapsed_time, 'kernel_time': kernel_time, 'payload': payload}
+    return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time}
 
 def gpu_profile(logdir, cfg, df_gpu):
     total_kernel_time = 0.0
@@ -156,8 +163,13 @@ def select_pattern(candidate_pattern):
             
     if len(candidate_pattern_filtered) > 0:
         pattern = max(candidate_pattern_filtered, key = len)
-        print("pattern selected:", pattern)
-        return pattern  
+        words = pattern.split(',')[1:-2]
+        if len(words) > 0:
+            pattern = ','.join(words)
+            #print("pattern selected:", pattern)
+            return pattern 
+        else:
+            print_warning('trimmed pattern is [], all candidated patterns are not selected')
     else:
         print_warning('all candidate patterns are not selected')
 
@@ -174,14 +186,13 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
     #print("main_string:", main_string) 
     pattern = select_pattern(candidate_pattern)
     if pattern:
-        print('original string length of main_string = %d' % len(main_string))
+        #print('original string length of main_string = %d' % len(main_string))
         wid_seq = main_string.split(',')
         pat_seq = pattern.split(',')
         total_length = num_wids = len(wid_seq)
-        print('context string length = %d' % num_wids )
-        print('pattern length = %d' % len(pat_seq) )
+        #print('context string length = %d' % num_wids )
+        #print('pattern length = %d' % len(pat_seq) )
         #block_size = pattern.count(',') + 1
-        print(pat_seq) 
         block_size = len(pat_seq)
         
         block_begin = 0
@@ -206,7 +217,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
         endTable = []
         beg = 0
         end = 0
-        fw_threshold = 80 
+        fw_threshold = 85 
         for i in range(len(fuzzyRatioTable)):
             if fuzzyRatioTable[i][1] > fw_threshold:
                 ind.append(fuzzyRatioTable[i][0])
@@ -225,7 +236,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
             #beg = ind[0]
             #end = ind[0] + block_size
         else:
-            print_warning("No matched strings by fuzzywuzzy of threshold %d."%fw_threshold)
+            print_warning("Used pattern: %s. No matched strings by fuzzywuzzy of threshold %d."%(pattern,fw_threshold))
     else:
         print('No iteration patterns detected.')
 
@@ -318,7 +329,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
         times = np.sort(times)
         trace_timeline(logdir + 'iteration_timeline.txt')
         
-        iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'comm_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload']
+        iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'copy_time', 'gpu_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload', 'gemm_time']
         iter_list = []
         for i in range(1,len(times)):
             #print_title("Perormance analyze of iteration-%d"%(i))
@@ -333,16 +344,27 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
 
         print_title('Per-iteration Performance Summary')
         mean_step_time = iter_summary.loc[1:,'elapsed_time'].mean()
-        mean_kernel_time = iter_summary.loc[1:,'kernel_time'].mean()
+        mean_fw_time = iter_summary.loc[1:,'fw_time'].mean()
+        mean_bw_time = iter_summary.loc[1:,'bw_time'].mean()
+        mean_copy_time = iter_summary.loc[1:,'copy_time'].mean()
+        mean_gpu_time = iter_summary.loc[1:,'gpu_time'].mean()
+        mean_gemm_time = iter_summary.loc[1:,'gemm_time'].mean()
+        mean_kernel_time = mean_gpu_time - mean_copy_time 
+        mean_payload = iter_summary.loc[1:,'payload'].mean()
         print("Elapsed time of initial iteration (s): ", iter_summary.loc[0,'elapsed_time'])
         print("Averaged elapsed time of iterations excluding initial one (s): ", iter_summary.loc[1:,'elapsed_time'].mean())
-        print("Total CUDA kernel time (s): ", iter_summary.loc[1:,'kernel_time'].mean())
-        print("Total CUDA  payload (B): ", iter_summary.loc[1:,'payload'].mean())
+        print("Averaged CUDA GPU time (s): ", mean_gpu_time)
+        print("Averaged CUDA FW time (s): ", mean_fw_time)
+        print("Averaged CUDA BW time (s): ", mean_bw_time)
+        print("Averaged CUDA gemm time (s): ", mean_gemm_time)
+        print("Averaged CUDA COPY time (s): ", mean_copy_time)
+        print("Averaged CUDA  payload (B): ", mean_payload)
         print_title('Performance Optimization Hints')
-        if mean_kernel_time / mean_step_time > 0.8: 
+        if mean_copy_time / mean_step_time < 0.15: 
             print("The profiled program is a compute-bound workload, try increasing # of GPUs to improve throughput")
-        elif mean_kernel_time / mean_step_time < 0.5:
-            print("The profiled program is a communication-bound workload, %d bytes are monitored on PCIe bus"%payload)
+        else: 
+            print("The profiled program is a communication-bound workload, %d bytes are monitored on PCIe bus"%mean_payload)
+            print("Try using RP Mode parameter synchronization method instead of PS Mode.")
         print('\n\n')
     except IOError:
         print_warning(
