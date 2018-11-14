@@ -102,7 +102,31 @@ def cpu_profile(logdir, cfg, df):
     print(("total execution time = %.3lf" % total_exec_time))
     print(("average execution time across devices = %.3lf" % avg_exec_time))
 
-# TODO: Analyze vmstat instead.
+def vmstat_profile(logdir, cfg, df):
+    print_title("VMSTAT Profiling:")
+    df_name = df['name']
+    
+    vmstat_fieldnames = []
+    fields = df_name.iloc[0].split('|')
+    for field in fields:
+       vmstat_fieldnames.append(field.split('=')[0]) 
+    
+    records = []
+    for name in df_name:
+        fields = name.split('|')
+        row = []
+        for field in fields:
+            row.append(int(field.split('=')[1]))
+        records.append(row)
+
+#1542188143.006416,-1,0.000010,-1,-1,-1,-1,-1,-1,-1,-1,r=1|b=0|sw=0|fr=12566580|bu=2140|ca=17433464|si=0|so=0|bi=0|bo=3|in=3|cs=2|usr=0|sys=0|idl=100|wa=0|st=0,-1
+    vmstat_traces = pd.DataFrame(records)
+    vmstat_traces.columns = vmstat_fieldnames
+
+    print('sum of vmstat bi: ',vmstat_traces['bi'].sum())
+    print('sum of vmstat bo: ',vmstat_traces['bo'].sum())
+
+
 #def mpstat_profile(logdir, cfg, df):
 #    print_title("VMSTAT Profiling:")
 #    df.rename(columns={'event': 'cpuid'}, inplace=True)
@@ -247,8 +271,10 @@ def sofa_analyze(logdir, cfg):
                                 break   
     try:
         df_cpu = pd.read_csv(filein_cpu)
+        df_vmstat = pd.read_csv(filein_vmstat)
         cpu_profile(logdir, cfg, df_cpu)
         net_profile(logdir, cfg, df_cpu)
+        vmstat_profile(logdir, cfg, df_vmstat)
     except IOError:
         print_warning("cputrace.csv is not found")
         #quit()
