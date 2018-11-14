@@ -50,18 +50,17 @@ function install_python_packages()
     if [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install epel-release
         $WITH_SUDO yum install https://centos7.iuscommunity.org/ius-release.rpm
-        $WITH_SUDO yum install python36u
-        $WITH_SUDO yum install python36u-pip
+        $WITH_SUDO yum install python36u python36u-pip python36u-devel
     elif [[ "${OS}" == "Ubuntu" ]] && ( [[ "${VERSION}" == "14.04"* ]] || [[ "${VERSION}" == "16.04"* ]] ) ; then	
         $WITH_SUDO apt-get install software-properties-common -y
         $WITH_SUDO add-apt-repository ppa:deadsnakes/ppa -y
         $WITH_SUDO apt-get update -y
-        $WITH_SUDO apt-get install python3.6 -y
+        $WITH_SUDO apt-get install python3.6 python3.6-dev -y
 	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
 	    $WITH_SUDO python3.6 get-pip.py
         $WITH_SUDO rm get-pip.py
     elif [[ $(which apt) ]] ; then	
-        $WITH_SUDO apt install python3.6 python3-pip -y
+        $WITH_SUDO apt install python3.6 python3-pip python3-devel -y
     else
 	    file_pytar="Python-3.6.0.tar.xz"
 	    wget https://www.python.org/ftp/python/3.6.0/$file_pytar
