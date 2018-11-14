@@ -22,11 +22,13 @@ def iter_profile(cfg, fields, df_gpu):
     gemm_time = df_gpu[df_gpu['name'].str.contains("gemm")].loc[:,'duration'].sum()
     copy_time = df_gpu[df_gpu['name'].str.contains("copyKind")].loc[:,'duration'].sum()
     allreduce_time = df_gpu[df_gpu['name'].str.contains("AllReduceKernel")].loc[:,'duration'].sum()
+    streams = len(df_gpu['tid'].value_counts())
+    print("streams: ",streams)
     gpu_time = df_gpu['duration'].sum() 
     copy_time = copy_time + allreduce_time
     kernel_time = gpu_time - copy_time
     payload = df_gpu['payload'].sum()
-    return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time}
+    return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams}
 
 def gpu_profile(logdir, cfg, df_gpu):
     total_kernel_time = 0.0
@@ -329,7 +331,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
         times = np.sort(times)
         trace_timeline(logdir + 'iteration_timeline.txt')
         
-        iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'copy_time', 'gpu_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload', 'gemm_time']
+        iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'copy_time', 'gpu_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload', 'gemm_time', 'streams']
         iter_list = []
         for i in range(1,len(times)):
             #print_title("Perormance analyze of iteration-%d"%(i))
@@ -351,6 +353,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
         mean_gemm_time = iter_summary.loc[1:,'gemm_time'].mean()
         mean_kernel_time = mean_gpu_time - mean_copy_time 
         mean_payload = iter_summary.loc[1:,'payload'].mean()
+        mean_streams = iter_summary.loc[1:,'streams'].mean()
         print("Elapsed time of initial iteration (s): ", iter_summary.loc[0,'elapsed_time'])
         print("Averaged elapsed time of iterations excluding initial one (s): ", iter_summary.loc[1:,'elapsed_time'].mean())
         print("Averaged CUDA GPU time (s): ", mean_gpu_time)
@@ -358,7 +361,8 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
         print("Averaged CUDA BW time (s): ", mean_bw_time)
         print("Averaged CUDA gemm time (s): ", mean_gemm_time)
         print("Averaged CUDA COPY time (s): ", mean_copy_time)
-        print("Averaged CUDA  payload (B): ", mean_payload)
+        print("Averaged CUDA payload (B): ", mean_payload)
+        print("Averaged number of CUDA streams (B): ", mean_streams)
         print_title('Performance Optimization Hints')
         if mean_copy_time / mean_step_time < 0.15: 
             print("The profiled program is a compute-bound workload, try increasing # of GPUs to improve throughput")
