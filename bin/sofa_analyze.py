@@ -119,12 +119,14 @@ def vmstat_profile(logdir, cfg, df):
             row.append(int(field.split('=')[1]))
         records.append(row)
 
-#1542188143.006416,-1,0.000010,-1,-1,-1,-1,-1,-1,-1,-1,r=1|b=0|sw=0|fr=12566580|bu=2140|ca=17433464|si=0|so=0|bi=0|bo=3|in=3|cs=2|usr=0|sys=0|idl=100|wa=0|st=0,-1
+    #1542188143.006416,-1,0.000010,-1,-1,-1,-1,-1,-1,-1,-1,r=1|b=0|sw=0|fr=12566580|bu=2140|ca=17433464|si=0|so=0|bi=0|bo=3|in=3|cs=2|usr=0|sys=0|idl=100|wa=0|st=0,-1
     vmstat_traces = pd.DataFrame(records)
     vmstat_traces.columns = vmstat_fieldnames
 
     print('sum of vmstat bi: ',vmstat_traces['bi'].sum())
     print('sum of vmstat bo: ',vmstat_traces['bo'].sum())
+    print('max of vmstat wa (%%): %d' % vmstat_traces['wa'].max())
+    print('mean of vmstat wa (%%): %.2lf' % vmstat_traces['wa'].mean())
 
 
 #def mpstat_profile(logdir, cfg, df):
