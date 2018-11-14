@@ -10,6 +10,7 @@ from sofa_config import *
 from sofa_common import *
 from STree import *
 from sklearn.cluster import KMeans
+import re 
 
 table_size = 0
 iteration_timelines = []
@@ -23,7 +24,7 @@ def iter_profile(cfg, fields, df_gpu):
     copy_time = df_gpu[df_gpu['name'].str.contains("copyKind")].loc[:,'duration'].sum()
     allreduce_time = df_gpu[df_gpu['name'].str.contains("AllReduceKernel")].loc[:,'duration'].sum()
     streams = len(df_gpu['tid'].value_counts())
-    print("streams: ",streams)
+    #print("streams: ",streams)
     gpu_time = df_gpu['duration'].sum() 
     copy_time = copy_time + allreduce_time
     kernel_time = gpu_time - copy_time
@@ -87,15 +88,18 @@ def main_string_generate_v1(df_gpu):
     id_seq = []
     for i in range(len(df_gpu)):
         trace  = df_gpu.iloc[i]
-        value = name_table.get(trace['name'])
+        name = trace['name'] 
+        name = re.sub(r'\[.+\]', '', name.rstrip());
+        value = name_table.get(name)
         if value == None:
+            #print('new name: ', name, 'wid: ', wid)
             wid = wid + 1
-            name_table[trace['name']] = wid 
+            name_table[name] = wid 
             value = wid
         id_seq.append(str(value))
         #id_seq.append(str(int(trace['duration']/1e-5)))
     main_string = ','.join(id_seq)
-    return main_string
+    return (main_string,name_table)
 
 def main_string_generate_v2(df_gpu):
     tick = 0
@@ -153,27 +157,20 @@ def get_memcpyHtoD(df):
     
     return HtoD
 
-def select_pattern(candidate_pattern):
-    #print("candidate_pattern:", candidate_pattern)
-    candidate_pattern_filtered = []
-    for cp in candidate_pattern: 
-        if len(cp)>1:
-            if cp.count(cp[0])+cp.count(cp[1]) != len(cp): 
-               # if cp.count('0') < 2: 
-                candidate_pattern_filtered.append(cp)
-                    #print('filtered cp = '+cp)
-            
-    if len(candidate_pattern_filtered) > 0:
-        pattern = max(candidate_pattern_filtered, key = len)
-        words = pattern.split(',')[1:-2]
-        if len(words) > 0:
-            pattern = ','.join(words)
-            #print("pattern selected:", pattern)
-            return pattern 
-        else:
-            print_warning('trimmed pattern is [], all candidated patterns are not selected')
-    else:
-        print_warning('all candidate patterns are not selected')
+def pattern_filter(candidate_patterns):
+    filtered_candidate_patterns = []
+    for pattern in candidate_patterns:
+        #print("0>"+pattern)
+        if pattern.startswith(','):
+            pattern = pattern[1:len(pattern)]
+        #print("1>"+pattern)
+        if pattern.endswith(','):
+            pattern = pattern[0:len(pattern)-1]
+        #print("2>"+pattern)
+        seq = list(map(int, pattern.split(',')))
+        if sum(seq) != seq[0]*len(seq):
+            filtered_candidate_patterns.append(pattern)
+    return filtered_candidate_patterns
 
 def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
     global iteration_timelines, iteration_table, blank_count, \
@@ -181,66 +178,65 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
     df_gpu.to_csv('dfgpu.csv')
     t_df_begin = df_gpu.iloc[0]['timestamp'] 
     t_df_end = df_gpu.iloc[-1]['timestamp'] 
-    candidate_pattern=[]
-    main_string = main_string_generate_v1(df_gpu)
+    candidate_patterns=[]
+    (main_string,name_table) = main_string_generate_v1(df_gpu)
+    #main_string = "0,1,1,1,1,1,0,2,3,2,3,2,3"
+    #main_string = "49,49,49,49,49,49,1,1,2,2,1,2,1,2"
+    #print('main_string: '+main_string)
     st = STree(main_string)
-    st.find_repeat_pattern(candidate_pattern, iteration_times)
-    #print("main_string:", main_string) 
-    pattern = select_pattern(candidate_pattern)
-    if pattern:
+    st.find_repeat_pattern(candidate_patterns, iteration_times)
+    candidate_patterns.sort(key = lambda s: len(s), reverse=True)
+    filtered_candidate_patterns = pattern_filter(candidate_patterns)
+    print('There are %d candidate patterns.'%len(candidate_patterns))
+    pattern_pre = ""
+    for pattern in filtered_candidate_patterns:
+        #print('A: ',pattern_pre)
+        #print('B: ',pattern)
+        pp_ratio = fuzz.ratio(pattern,pattern_pre)
+        if pp_ratio > 80:
+            print("pattern too similar: ",pp_ratio) 
+            continue
+        else:
+            pattern_pre = pattern 
         #print('original string length of main_string = %d' % len(main_string))
         wid_seq = main_string.split(',')
         pat_seq = pattern.split(',')
         total_length = num_wids = len(wid_seq)
-        #print('context string length = %d' % num_wids )
-        #print('pattern length = %d' % len(pat_seq) )
-        #block_size = pattern.count(',') + 1
+        #print('runtime string length = %d' % num_wids )
+        #print('pattern length (block_size) = %d' % len(pat_seq)) 
         block_size = len(pat_seq)
-        
+        matched_block_end_pre = 0 
         block_begin = 0
+        block_end = 0
         block_end = block_size
         step = 1
-        #step = int(block_size/8)
         iteration_count = 0
-        fuzzyRatioTable = []
+        b_overlap = False
+        fw_threshold = 100
+        ind = []
         while block_begin <= (total_length - block_size):
             blockString = ",".join(wid_seq[block_begin:block_end])
-            #print('A(%d): %s' % (len(blockString),blockString))
-            #print('B(%d): %s' % (len(pattern), pattern))
             fuzz_ratio = fuzz.ratio(blockString,pattern)
-            
-            fuzzyRatioTable.append((block_begin,fuzz_ratio))
-            #print(fuzz_ratio)
-            block_begin = block_begin + step
-            block_end = block_begin + block_size
-        #find largest fuzzy ratio n blocks (n = iteration_times)
-        ind = []
-        begTable = []
-        endTable = []
-        beg = 0
-        end = 0
-        fw_threshold = 85 
-        for i in range(len(fuzzyRatioTable)):
-            if fuzzyRatioTable[i][1] > fw_threshold:
-                ind.append(fuzzyRatioTable[i][0])
-        
-        if len(ind) > 0:    
-            #plot event by event 
+            if fuzz_ratio >= fw_threshold:
+                ind.append(block_begin)
+                block_begin = block_end
+                block_end = block_begin + block_size
+            else:
+                block_begin = block_begin + step
+                block_end = block_begin + block_size
+
+        print('Non-overlapped %d-times pattern: %s'%(len(ind),pattern))
+        if len(ind) == cfg.iterations:    
             for i in ind:
                 iteration_table.append((df_gpu.iloc[i]['timestamp'],df_gpu.iloc[i+block_size-1]['timestamp']))
-            begTable.append(ind[0])
-            beg = ind[0]
-            end = ind[0] + block_size
-            #plot window by window
-            #for index in ind:
-            #    iteration_table.append((float(index*step) * time_interval + t_df_begin, float(index*step + block_size) * time_interval + t_df_begin))
-            #begTable.append(ind[0])
-            #beg = ind[0]
-            #end = ind[0] + block_size
+            break  
         else:
-            print_warning("Used pattern: %s. No matched strings by fuzzywuzzy of threshold %d."%(pattern,fw_threshold))
-    else:
-        print('No iteration patterns detected.')
+            #print_warning("No matched strings by fuzzywuzzy of threshold %d."%fw_threshold)
+            continue
+
+    print("Selected pattern:")
+    print(pat_seq)
+    print("End of AISI")
 
 def event_count(column, eventName, df):
         #get the count of rows that contain eventName
@@ -316,19 +312,29 @@ def trace_timeline(path):
 
 def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
     global iteration_table
+    df_gpu_x1 = df_gpu[df_gpu.deviceId == 1]
     a = 0
+    times = []
+    times2 = []
     try: 
-        iter_detect(logdir, cfg, df_gpu, 0.01, 0.8, cfg.iterations) 
+        iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.iterations) 
         traces_to_json(logdir + 'report.js')
         xlist = []
+       
+        if len(iteration_table) == 0:
+            return
+
         for t in iteration_table:
             xlist.append((t[0],0))
+            times2.append(t[0])
+        
         X = np.array(xlist)
         kmeans = KMeans(n_clusters=cfg.iterations, random_state=0).fit(X)
-        times = [] 
+         
         for c in kmeans.cluster_centers_:
             times.append(c[0])
-        times = np.sort(times)
+        
+        times = np.sort(times2)
         trace_timeline(logdir + 'iteration_timeline.txt')
         
         iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'copy_time', 'gpu_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload', 'gemm_time', 'streams']
@@ -336,10 +342,10 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
         for i in range(1,len(times)):
             #print_title("Perormance analyze of iteration-%d"%(i))
             overlapness = 0.0
-            cond1 = (df_gpu['timestamp'] >= times[i-1])
-            cond2 = (df_gpu['timestamp'] <  times[i])
-            df_gpu_iteration = df_gpu[ cond1 & cond2]
-            df_cpu_iteration = df_cpu[ cond1 & cond2]
+            cond1 = (df_gpu_x1['timestamp'] >= times[i-1])
+            cond2 = (df_gpu_x1['timestamp'] <  times[i])
+            df_gpu_iteration = df_gpu_x1[ cond1 & cond2 ]
+            #df_cpu_iteration = df_cpu[ cond1 & cond2 ]
             if len(df_gpu_iteration) > 0:
                 iter_list.append(iter_profile(cfg, iter_summary_fields, df_gpu_iteration))
         iter_summary = pd.DataFrame( iter_list, columns=iter_summary_fields )
