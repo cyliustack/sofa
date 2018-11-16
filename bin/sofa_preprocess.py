@@ -53,19 +53,19 @@ def cpu_trace_read(sample, t_offset):
     if re.match('\[\d+\]', fields[1]) is not None:
         time = float(fields[2].split(':')[0])
         func_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7] 
-        cycles = float(fields[3])
+        counts = float(fields[3])
         event = np.log(1.0 * int("0x01" + fields[5], 16))
     else:
         time = float(fields[1].split(':')[0])
         func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6] 
-        cycles = float(fields[2])
+        counts = float(fields[2])
         event = np.log(1.0 * int("0x01" + fields[4], 16))
 
     t_begin = time + t_offset
     t_end = time + t_offset
     trace = [t_begin,
              event,  # % 1000000
-             cycles/1e9,
+             counts/1e9,
              -1,
              -1,
              0,
@@ -1190,7 +1190,7 @@ def sofa_preprocess(logdir, cfg):
                 for mem_index, group in event_groups:                                
                     # kmeans 
                     X = pd.DataFrame(group["event"])                                
-                    num_of_cluster = 5
+                    num_of_cluster = 2
                     y_pred = kmeans_cluster(num_of_cluster, X)
 
                     # add new column                
@@ -1198,20 +1198,28 @@ def sofa_preprocess(logdir, cfg):
                     # group by new column
                     clusters = group.groupby('cluster')
                                     
-                    for num_cluster, cluster in clusters:                       
+                    for subgroup_idx, subgroup in clusters:                       
                         # group by process id
-                        pid_clusters = cluster.groupby('pid')
+                        #pid_clusters = cluster.groupby('pid')
+                        X = pd.DataFrame(subgroup["event"])                                
+                        num_of_cluster = 4
+                        y_pred = kmeans_cluster(num_of_cluster, X)
 
-                        for pid, pid_cluster in pid_clusters:                              
+                        # add new column                
+                        subgroup['cluster'] = y_pred                 
+                        # group by new column
+                        last_clusters = subgroup.groupby('cluster')
+ 
+                        for last_cluster_idx, last_cluster in last_clusters:                              
                             # kmeans
-                            X = pd.DataFrame(pid_cluster["event"])
+                            X = pd.DataFrame(last_cluster["event"])
                             num_of_cluster = 4
                             y_pred_pid_cluster = kmeans_cluster(num_of_cluster, X)
 
                             # add new column
-                            pid_cluster['cluster_in_pid'] = y_pred_pid_cluster
+                            last_cluster['cluster_in_pid'] = y_pred_pid_cluster
                             # group by new column
-                            cluster_in_pid_clusters = pid_cluster.groupby('cluster_in_pid')
+                            cluster_in_pid_clusters = last_cluster.groupby('cluster_in_pid')
 
                             for mini_cluster_id, cluster_in_pid_cluster in cluster_in_pid_clusters:                                  
                                 total_duration = cluster_in_pid_cluster.duration.sum()                            
