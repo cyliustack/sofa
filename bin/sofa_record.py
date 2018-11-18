@@ -148,10 +148,10 @@ def sofa_record(command, logdir, cfg):
         
         with open('%s/mpstat.txt' % logdir, 'w') as logfile:
             p_mpstat = subprocess.Popen(
-                    ['mpstat', '-P', 'ALL', '1', '600'], stdout=logfile)
+                    ['mpstat', '-P', 'ALL', '1'], stdout=logfile)
 
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
-            p_vmstat = subprocess.Popen(['vmstat', '-w', '1', '600'], stdout=logfile)
+            p_vmstat = subprocess.Popen(['vmstat', '-w', '1'], stdout=logfile)
 
         with open(os.devnull, 'w') as FNULL:
            p_tcpdump =  subprocess.Popen(["tcpdump",
