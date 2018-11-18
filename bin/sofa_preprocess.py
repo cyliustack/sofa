@@ -18,6 +18,7 @@ from sqlalchemy import create_engine
 from sklearn.cluster import KMeans
 import cxxfilt 
 from operator import itemgetter
+import warnings
 
 def list_downsample(list_in, plot_ratio):
     new_list = []
@@ -65,7 +66,7 @@ def cpu_trace_read(sample, t_offset):
     t_end = time + t_offset
     trace = [t_begin,
              event,  # % 1000000
-             counts/1e9,
+             1.0*counts/1e9,
              -1,
              -1,
              0,
@@ -1148,7 +1149,8 @@ def sofa_preprocess(logdir, cfg):
                                         'keyword': filter.keyword})
     ### hierarchical swarm generation
     if cfg.enable_hsg:
-        with open(logdir + 'perf.script') as f:
+        with open(logdir + 'perf.script') as f, warnings.catch_warnings():
+            warnings.filterwarnings("ignore")
             samples = f.readlines()
             print_info("Length of cpu_traces = %d" % len(samples))
             if len(samples) > 0:
@@ -1186,6 +1188,7 @@ def sofa_preprocess(logdir, cfg):
                 swarm_cpu_traces_viz['event_int'] = swarm_cpu_traces_viz.event.apply(lambda x: int(x)) # add new column 'event_int'            
                 # swarm seperate
                 event_groups = swarm_cpu_traces_viz.groupby('event_int')
+                swarm_stats = []
                 # add different swarm groups                        
                 for mem_index, group in event_groups:                                
                     # kmeans 
@@ -1193,8 +1196,12 @@ def sofa_preprocess(logdir, cfg):
                     num_of_cluster = 2
                     y_pred = kmeans_cluster(num_of_cluster, X)
 
-                    # add new column                
-                    group['cluster'] = y_pred                 
+                    # add new column
+                    # TODO: Eliminate warning of SettingWithCopyWarning 
+                    group['cluster'] = y_pred
+                    #for i in range(len(y_pred)):
+                    #    group.loc[i, 'cluster'] = y_pred[i]
+                    
                     # group by new column
                     clusters = group.groupby('cluster')
                                     
@@ -1205,8 +1212,11 @@ def sofa_preprocess(logdir, cfg):
                         num_of_cluster = 4
                         y_pred = kmeans_cluster(num_of_cluster, X)
 
-                        # add new column                
+                        # add new column 
                         subgroup['cluster'] = y_pred                 
+                        #for i in range(len(y_pred)):
+                        #    subgroup.loc[i, 'cluster'] = y_pred[i]       
+                        
                         # group by new column
                         last_clusters = subgroup.groupby('cluster')
  
@@ -1223,16 +1233,28 @@ def sofa_preprocess(logdir, cfg):
 
                             for mini_cluster_id, cluster_in_pid_cluster in cluster_in_pid_clusters:                                  
                                 total_duration = cluster_in_pid_cluster.duration.sum()                            
-
+                                mean_duration = cluster_in_pid_cluster.duration.mean()                            
+                                swarm_stats.append({'keyword':'SWARM_' + str(idx) +  ('_' * showing_idx),
+                                                    'duration_sum': total_duration,
+                                                    'duration_mean': mean_duration,
+                                                    'example':cluster_in_pid_cluster.head(1)['name'].to_string().split('  ')[2] 
+                                                    }) 
                                 swarm_groups.append({'group': cluster_in_pid_cluster.drop(columns = ['event_int', 'cluster', 'cluster_in_pid']), # data of each group
                                                     'color':  random_generate_color(),
                                                     'keyword': 'SWARM_' + str(idx) +  ('_' * showing_idx), 
                                                     'total_duration': total_duration})
-                                idx += 1                                                                      
-                    showing_idx += 1 
+                                idx += 1
+                            
                 
                 swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
-
+                print_title('HSG Statistics - Top-20 Swarms') 
+                swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True) # reverse = True: descending
+                for i in range(len(swarm_stats)):
+                    if i >= 20:
+                        break
+                    else:
+                        swarm = swarm_stats[i]
+                        print('%s: execution_time(sum,mean): %.6lf(s),%.6lf(s)  caption: %s'%(swarm['keyword'],swarm['duration_sum']/4.0,swarm['duration_mean']/4.0,swarm['example']))
 
     #=== Intel PCM Trace =======#
     ### Skt,PCIeRdCur,RFO,CRd,DRd,ItoM,PRd,WiL,PCIe Rd (B),PCIe Wr (B)
