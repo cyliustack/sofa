@@ -352,31 +352,35 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
         iter_summary = pd.DataFrame( iter_list, columns=iter_summary_fields )
 
         print_title('Per-iteration Performance Summary')
-        mean_step_time = iter_summary.loc[1:,'elapsed_time'].mean()
-        mean_fw_time = iter_summary.loc[1:,'fw_time'].mean()
-        mean_bw_time = iter_summary.loc[1:,'bw_time'].mean()
-        mean_copy_time = iter_summary.loc[1:,'copy_time'].mean()
-        mean_gpu_time = iter_summary.loc[1:,'gpu_time'].mean()
-        mean_gemm_time = iter_summary.loc[1:,'gemm_time'].mean()
-        mean_kernel_time = mean_gpu_time - mean_copy_time 
-        mean_payload = iter_summary.loc[1:,'payload'].mean()
-        mean_streams = iter_summary.loc[1:,'streams'].mean()
-        print("Elapsed time of initial iteration (s): ", iter_summary.loc[0,'elapsed_time'])
-        print("Averaged elapsed time of iterations excluding initial one (s): ", iter_summary.loc[1:,'elapsed_time'].mean())
-        print("Averaged CUDA GPU time (s): ", mean_gpu_time)
-        print("Averaged CUDA FW time (s): ", mean_fw_time)
-        print("Averaged CUDA BW time (s): ", mean_bw_time)
-        print("Averaged CUDA gemm time (s): ", mean_gemm_time)
-        print("Averaged CUDA COPY time (s): ", mean_copy_time)
-        print("Averaged CUDA payload (B): ", mean_payload)
-        print("Averaged number of CUDA streams (B): ", mean_streams)
-        print_title('Performance Optimization Hints')
-        if mean_copy_time / mean_step_time < 0.15: 
-            print("The profiled program is a compute-bound workload, try increasing # of GPUs to improve throughput")
-        else: 
-            print("The profiled program is a communication-bound workload, %d bytes are monitored on PCIe bus"%mean_payload)
-            print("Try using RP Mode parameter synchronization method instead of PS Mode.")
-        print('\n\n')
+        if len(iter_summary) > 0:
+            mean_step_time = iter_summary['elapsed_time'].mean()
+            mean_fw_time = iter_summary['fw_time'].mean()
+            mean_bw_time = iter_summary['bw_time'].mean()
+            mean_copy_time = iter_summary['copy_time'].mean()
+            mean_gpu_time = iter_summary['gpu_time'].mean()
+            mean_gemm_time = iter_summary['gemm_time'].mean()
+            mean_kernel_time = mean_gpu_time - mean_copy_time 
+            mean_payload = iter_summary['payload'].mean()
+            mean_streams = iter_summary['streams'].mean()
+            print("Elapsed time of initial iteration (s): ", iter_summary.loc[0,'elapsed_time'])
+            if cfg.iterations > 1:
+                print("Averaged elapsed time of iterations excluding initial one (s): ", iter_summary.loc[1:,'elapsed_time'].mean())
+            print("Averaged CUDA GPU time (s): ", mean_gpu_time)
+            print("Averaged CUDA FW time (s): ", mean_fw_time)
+            print("Averaged CUDA BW time (s): ", mean_bw_time)
+            print("Averaged CUDA gemm time (s): ", mean_gemm_time)
+            print("Averaged CUDA COPY time (s): ", mean_copy_time)
+            print("Averaged CUDA payload (B): ", mean_payload)
+            print("Averaged number of CUDA streams (B): ", mean_streams)
+            print_title('Performance Optimization Hints')
+            if mean_copy_time / mean_step_time < 0.15: 
+                print("The profiled program is a compute-bound workload, try increasing # of GPUs to improve throughput")
+            else: 
+                print("The profiled program is a communication-bound workload, %d bytes are monitored on PCIe bus"%mean_payload)
+                print("Try using RP Mode parameter synchronization method instead of PS Mode.")
+            print('\n\n')
+        else:
+            print_warning('No iteration detected after scanning runtime string!')
     except IOError:
         print_warning(
             "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
