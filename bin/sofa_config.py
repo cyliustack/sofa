@@ -14,7 +14,8 @@ class SOFA_Config:
     net_filters = []
     perf_events = 'cycles,instructions' 
     verbose = False
-    iterations = 20
+    num_iterations = 20
+    num_swarms = 20
     cpu_top_k = 20
     plot_ratio = 1
     viz_port = 8000

@@ -187,8 +187,9 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
     st.find_repeat_pattern(candidate_patterns, iteration_times)
     candidate_patterns.sort(key = lambda s: len(s), reverse=True)
     filtered_candidate_patterns = pattern_filter(candidate_patterns)
-    print('There are %d candidate patterns.'%len(candidate_patterns))
+    print('There are %d candidate patterns for %d-iteration'%(len(candidate_patterns),cfg.num_iterations))
     pattern_pre = ""
+    pat_seq = []
     for pattern in filtered_candidate_patterns:
         #print('A: ',pattern_pre)
         #print('B: ',pattern)
@@ -226,7 +227,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
                 block_end = block_begin + block_size
 
         print('Non-overlapped %d-times pattern: %s'%(len(ind),pattern))
-        if len(ind) == cfg.iterations:    
+        if len(ind) == cfg.num_iterations:    
             for i in ind:
                 iteration_table.append((df_gpu.iloc[i]['timestamp'],df_gpu.iloc[i+block_size-1]['timestamp']))
             break  
@@ -317,7 +318,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
     times = []
     times2 = []
     try: 
-        iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.iterations) 
+        iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations) 
         traces_to_json(logdir + 'report.js')
         xlist = []
        
@@ -329,7 +330,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
             times2.append(t[0])
         
         X = np.array(xlist)
-        kmeans = KMeans(n_clusters=cfg.iterations, random_state=0).fit(X)
+        kmeans = KMeans(n_clusters=cfg.num_iterations, random_state=0).fit(X)
          
         for c in kmeans.cluster_centers_:
             times.append(c[0])

@@ -48,7 +48,9 @@ if __name__ == "__main__":
         help='A string of list of pairs of keyword and color')
     parser.add_argument('--cpu_top_k', metavar='N', type=int, required=False,
                         help='K functions of the highest overheads')
-    parser.add_argument('--iterations', metavar='N', type=int, required=False,
+    parser.add_argument('--num_iterations', metavar='N', type=int, required=False,
+                        help='number of iterations by which a program runs')
+    parser.add_argument('--num_swarms', metavar='N', type=int, required=False,
                         help='number of iterations by which a program runs')
     parser.add_argument('--cpu_time_offset_ms', metavar='N', type=int, required=False,
             help='timestamp offset (unit: ms) between CPU and GPU, +N or -N')
@@ -131,8 +133,11 @@ if __name__ == "__main__":
     if args.cuda_api_tracing is not None:
         cfg.cuda_api_tracing = args.cuda_api_tracing
 
-    if args.iterations is not None:
-        cfg.iterations = args.iterations
+    if args.num_iterations is not None:
+        cfg.num_iterations = args.num_iterations
+
+    if args.num_swarms is not None:
+        cfg.num_swarms = args.num_swarms
 
     if args.plot_ratio is not None:
         cfg.plot_ratio = args.plot_ratio

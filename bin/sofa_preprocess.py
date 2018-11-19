@@ -1247,10 +1247,10 @@ def sofa_preprocess(logdir, cfg):
                             
                 
                 swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
-                print_title('HSG Statistics - Top-20 Swarms') 
+                print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms)) 
                 swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True) # reverse = True: descending
                 for i in range(len(swarm_stats)):
-                    if i >= 20:
+                    if i >= cfg.num_swarms:
                         break
                     else:
                         swarm = swarm_stats[i]
@@ -1358,7 +1358,7 @@ def sofa_preprocess(logdir, cfg):
 
     if cfg.enable_hsg:
         # top 10 cumulative time of a swarm
-        number_of_swarm = 10                            
+        number_of_swarm = cfg.num_swarms                           
         for swarm in swarm_groups[:number_of_swarm]: 
             sofatrace = SOFATrace()
             sofatrace.name = swarm['keyword']
