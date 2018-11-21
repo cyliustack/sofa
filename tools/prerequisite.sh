@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/bin/bash
 C_NONE="\033[0;00m"
 C_GREEN="\033[1;32m"
 C_RED_BK="\033[1;41m"
@@ -60,7 +60,7 @@ function install_python_packages()
 	    $WITH_SUDO python3.6 get-pip.py
         $WITH_SUDO rm get-pip.py
     elif [[ $(which apt) ]] ; then	
-        $WITH_SUDO apt install python3.6 python3-pip python3-devel -y
+        $WITH_SUDO apt install python3.6 python3-pip python3-dev -y
     else
 	    file_pytar="Python-3.6.0.tar.xz"
 	    wget https://www.python.org/ftp/python/3.6.0/$file_pytar
@@ -133,7 +133,7 @@ function install_utility_from_source()
     fi
     tar xvf papi-5.6.0.tar.gz
     mv papi-5.6.0 papi
-    cd papi/src && ./configure --prefix=$(pwd)/build && make -j && make install && cd - 
+    cd papi/src && ./configure --prefix=$(pwd)/build && make -j4 && make install && cd - 
     rm papi-5.6.0.tar.gz
 }
 

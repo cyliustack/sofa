@@ -30,7 +30,7 @@ def list_downsample(list_in, plot_ratio):
 
 
 def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
-    traces = pd.DataFrame(_list[1:])
+    traces = pd.DataFrame(_list[1:])    
     traces.columns = sofa_fieldnames
     _header = True if _mode == 'w' else False
     traces.to_csv(logdir +
@@ -47,6 +47,42 @@ def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
 # 359342/359342 2493492.850128:          1 cycles:  ffffffff8106450a
 # native_write_msr_safe
 
+def cpu_trace_read_hsg(sample, t_offset):
+    fields = sample.split()
+
+    if re.match('\[\d+\]', fields[1]) is not None:
+        time = float(fields[2].split(':')[0])
+        func_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7] 
+        cycles = float(fields[3])
+        event = np.log(1.0 * int("0x01" + fields[5], 16))
+        # add column to cpu_traces
+        feature_types = fields[3].split(':')[0]
+    else:
+        time = float(fields[1].split(':')[0])
+        func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6] 
+        cycles = float(fields[2])
+        event = np.log(1.0 * int("0x01" + fields[4], 16))
+        # add column to cpu_traces
+        feature_types = fields[3].split(':')[0]        
+
+    t_begin = time + t_offset
+    t_end = time + t_offset
+
+    trace = [t_begin,                          # 0
+             event,  # % 1000000               # 1
+             cycles/1e9,                       # 2
+             -1,                               # 3
+             -1,                               # 4 
+             0,                                # 5
+             0,                                # 6
+             -1,                               # 7
+             -1,                               # 8
+             int(fields[0].split('/')[0]),     # 9
+             int(fields[0].split('/')[1]),     # 10
+             func_name,                        # 11
+             0,                                # 12
+             feature_types]                    # 13
+    return trace
 
 def cpu_trace_read(sample, t_offset):
     fields = sample.split()
@@ -64,19 +100,19 @@ def cpu_trace_read(sample, t_offset):
 
     t_begin = time + t_offset
     t_end = time + t_offset
-    trace = [t_begin,
-             event,  # % 1000000
-             1.0*counts/1e9,
-             -1,
-             -1,
-             0,
-             0,
-             -1,
-             -1,
-             int(fields[0].split('/')[0]),
-             int(fields[0].split('/')[1]),
-             func_name,
-             0]
+    trace = [t_begin,                          # 0
+             event,  # % 1000000               # 1
+             1.0*counts/1e9,                   # 2
+             -1,                               # 3
+             -1,                               # 4 
+             0,                                # 5
+             0,                                # 6
+             -1,                               # 7
+             -1,                               # 8
+             int(fields[0].split('/')[0]),     # 9
+             int(fields[0].split('/')[1]),     # 10
+             func_name,                        # 11
+             0]                                # 12
     return trace
 
 
@@ -422,7 +458,7 @@ def kmeans_cluster(num_of_cluster, X):
     return y_pred
 
 sofa_fieldnames = [
-    'timestamp',  # 0
+    "timestamp",  # 0
     "event",  # 1
     "duration",  # 2
     "deviceId",  # 3
@@ -434,7 +470,7 @@ sofa_fieldnames = [
     "pid",  # 9
     "tid",  # 10
     "name",  # 11
-    "category"]  # 12
+    "category"] # 12
 
 
 def sofa_preprocess(logdir, cfg):
@@ -1109,7 +1145,6 @@ def sofa_preprocess(logdir, cfg):
             perf_timebase_uptime = float(lines[-2].split()[2].split(':')[0])
             perf_timebase_unix = float(lines[-1].split()[0])
     
-    
     with open(logdir + 'perf.script') as f:
         samples = f.readlines()
         print_info("Length of cpu_traces = %d" % len(samples))
@@ -1120,8 +1155,7 @@ def sofa_preprocess(logdir, cfg):
                         cpu_trace_read,
                         t_offset = perf_timebase_unix - perf_timebase_uptime),
                     samples)
-            cpu_traces = pd.DataFrame(res)
-            cpu_traces.columns = sofa_fieldnames
+            cpu_traces = pd.DataFrame(res)                      
             cpu_traces.to_csv(
                 logdir + 'cputrace.csv',
                 mode='w',
@@ -1129,7 +1163,7 @@ def sofa_preprocess(logdir, cfg):
                 index=False,
                 float_format='%.6f')
             res_viz = list_downsample(res, cfg.plot_ratio)
-            cpu_traces_viz = pd.DataFrame(res_viz)
+            cpu_traces_viz = pd.DataFrame(res_viz)                
             cpu_traces_viz.columns = sofa_fieldnames
             char1 = ']'
             char2 = '+'
@@ -1157,11 +1191,12 @@ def sofa_preprocess(logdir, cfg):
                 with mp.Pool(processes=cpu_count) as pool:
                     res = pool.map(
                         partial(
-                            cpu_trace_read,
+                            cpu_trace_read_hsg,
                             t_offset = perf_timebase_unix - perf_timebase_uptime),
-                        samples)
-                cpu_traces = pd.DataFrame(res)
-                cpu_traces.columns = sofa_fieldnames
+                        samples)                
+                cpu_traces = pd.DataFrame(res)      
+                sofa_fieldnames_ext = sofa_fieldnames + ["feature_types"]
+                cpu_traces.columns = sofa_fieldnames_ext          
                 cpu_traces.to_csv(
                     logdir + 'cputrace.csv',
                     mode='w',
@@ -1170,7 +1205,7 @@ def sofa_preprocess(logdir, cfg):
                     float_format='%.6f')
                 res_viz = list_downsample(res, cfg.plot_ratio)
                 swarm_cpu_traces_viz = pd.DataFrame(res_viz)
-                swarm_cpu_traces_viz.columns = sofa_fieldnames        
+                swarm_cpu_traces_viz.columns = sofa_fieldnames_ext        
                
                 char1 = ']'
                 char2 = '+'      
@@ -1179,10 +1214,26 @@ def sofa_preprocess(logdir, cfg):
                     lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
                 )
 
+                ### N features ###
+                ## give unique id of each data within 10 msec by time quotient
+                swarm_cpu_traces_viz['quotient'] = swarm_cpu_traces_viz['timestamp'].apply(lambda x: int( x * 1000 // 10)) # //: quotient
+
+                # count feature_types in each 10 msec groups, and create a dictionary for mapping
+                df2s = {}
+                for quotient, dataframe in swarm_cpu_traces_viz.groupby(['quotient','event']):
+                    # api value_counts(): return pandas series
+                    df2s[quotient] = dataframe.feature_types.value_counts()
+                df2 = pd.DataFrame.from_dict(df2s, orient='index').fillna(0).astype(np.int64)
+
+                df = swarm_cpu_traces_viz.copy()
+                swarm_cpu_traces_viz = pd.merge(df, df2, left_on=['quotient','event'], right_index=True).copy()                
+
             ### swarm seperation by memory location 
             swarm_groups = []        
+            feature_list = ['event', 'instructions', 'cycles', 'branch-misses', 'cache-misses']
             idx = 0
             showing_idx = 0
+
             if len(cpu_traces) > 0:            
                 # get memory index by cheange float to integer
                 swarm_cpu_traces_viz['event_int'] = swarm_cpu_traces_viz.event.apply(lambda x: int(x)) # add new column 'event_int'            
@@ -1192,7 +1243,7 @@ def sofa_preprocess(logdir, cfg):
                 # add different swarm groups                        
                 for mem_index, group in event_groups:                                
                     # kmeans 
-                    X = pd.DataFrame(group["event"])                                
+                    X = pd.DataFrame(group[feature_list])                                
                     num_of_cluster = 2
                     y_pred = kmeans_cluster(num_of_cluster, X)
 
@@ -1242,10 +1293,9 @@ def sofa_preprocess(logdir, cfg):
                                 swarm_groups.append({'group': cluster_in_pid_cluster.drop(columns = ['event_int', 'cluster', 'cluster_in_pid']), # data of each group
                                                     'color':  random_generate_color(),
                                                     'keyword': 'SWARM_' + str(idx) +  ('_' * showing_idx), 
-                                                    'total_duration': total_duration})
+                                                    'total_duration': total_duration})                                                    
                                 idx += 1
-                            
-                
+                                            
                 swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
                 print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms)) 
                 swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True) # reverse = True: descending
