@@ -115,7 +115,7 @@ function install_packages()
 function install_utility_from_source()
 {
     echo -e "${C_GREEN}Installing utilities from source...${C_NONE}"
-    make -C sofa-pcm -j 
+    make -C sofa-pcm -j4 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     nvcc tools/cuhello.cu -o ./bin/cuhello
     [[ $? != 0 ]] && echo -e "${C_YELLOW}No nvcc found; nvcc is required to improve perf timestamp accuracy.${C_NONE}" 
