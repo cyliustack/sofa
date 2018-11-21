@@ -6,6 +6,7 @@ import json
 import argparse
 import multiprocessing as mp
 import glob
+from pathlib import Path
 import os
 from functools import partial
 from sofa_config import *
@@ -104,7 +105,11 @@ if __name__ == "__main__":
         help='Declare which perf events are going to be recorded')
     
     cfg = SOFA_Config()
-    cfg.script_path = os.path.dirname(os.path.abspath( __file__ )) 
+    sofa_exec_path = os.path.abspath( __file__ )
+    if Path(sofa_exec_path).is_symlink():
+        cfg.script_path = os.path.dirname(os.readlink(sofa_exec_path))
+    else:
+        cfg.script_path = os.path.dirname(sofa_exec_path) 
 
     args = parser.parse_args()
     if args.logdir is not None:
