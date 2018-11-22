@@ -48,9 +48,9 @@ function install_python_packages()
     
 
     if [[ $(which yum) ]]  ; then
-        $WITH_SUDO yum install epel-release
-        $WITH_SUDO yum install https://centos7.iuscommunity.org/ius-release.rpm
-        $WITH_SUDO yum install python36u python36u-pip python36u-devel
+        $WITH_SUDO yum install -y epel-release
+        $WITH_SUDO yum install -y https://centos7.iuscommunity.org/ius-release.rpm
+        $WITH_SUDO yum install -y python36u python36u-pip python36u-devel
     elif [[ "${OS}" == "Ubuntu" ]] && ( [[ "${VERSION}" == "14.04"* ]] || [[ "${VERSION}" == "16.04"* ]] ) ; then	
         $WITH_SUDO apt-get install software-properties-common -y
         $WITH_SUDO add-apt-repository ppa:deadsnakes/ppa -y
