@@ -75,6 +75,8 @@ if __name__ == "__main__":
     parser.set_defaults(enable_aisi=False)
     parser.add_argument('--enable_hsg', dest='enable_hsg', action='store_true')
     parser.set_defaults(enable_hsg=False)
+    parser.add_argument('--hsg_multifeatures', dest='hsg_multifeatures', action='store_true')
+    parser.set_defaults(hsg_multifeatures=False)
     parser.add_argument('--enable_vmstat', dest='enable_vmstat', action='store_true')
     parser.set_defaults(enable_aisi=False)
     parser.add_argument(
@@ -128,6 +130,9 @@ if __name__ == "__main__":
 
     if args.enable_hsg is not None:
         cfg.enable_hsg = args.enable_hsg
+
+    if args.hsg_multifeatures is not None:
+        cfg.hsg_multifeatures = args.hsg_multifeatures
 
     if args.enable_vmstat is not None:
         cfg.enable_vmstat = args.enable_vmstat

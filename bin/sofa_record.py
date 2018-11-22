@@ -13,6 +13,17 @@ import subprocess
 from pwd import getpwuid
 import time
 
+def get_cpuinfo():
+    with open('/proc/cpuinfo','r') as f:
+        lines = f.readlines()
+        print(lines[7])
+        mhz = float(lines[7].split()[3])
+        print(mhz)
+        with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
+            unix_time = time.time()
+            logfile.write(str('%.9lf %lf'%(unix_time,mhz)+'\n'))
+
+
 def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa): 
     if p_pcm_pcie != None:
         p_pcm_pcie.terminate()
@@ -34,6 +45,7 @@ def sofa_record(command, logdir, cfg):
     p_tcpdump = None
     p_mpstat  = None
     p_vmstat  = None
+    p_cpuinfo  = None
     p_nvprof  = None
     p_nvsmi   = None
     p_nvtopo  = None 
@@ -152,6 +164,12 @@ def sofa_record(command, logdir, cfg):
 
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
             p_vmstat = subprocess.Popen(['vmstat', '-w', '1'], stdout=logfile)
+        #TODO:
+        #with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
+            #p_cpuinfo = subprocess.Popen(['watch', '-n1', 'cat', '/proc/cpuinfo'], stdout=logfile)
+            #p = Process(target=f, args=('bob',))
+            #p.start()
+            #p.join()
 
         with open(os.devnull, 'w') as FNULL:
            p_tcpdump =  subprocess.Popen(["tcpdump",
@@ -175,6 +193,8 @@ def sofa_record(command, logdir, cfg):
             profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -- %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command)
             print_info( profile_command)            
             subprocess.call(profile_command, shell=True)
+            with open(logdir+'perf_events_used.txt','w') as f:
+               f.write(cfg.perf_events) 
         
         print_info("Epilog of Recording...")
         if p_tcpdump != None:
@@ -183,6 +203,9 @@ def sofa_record(command, logdir, cfg):
         if p_vmstat != None:
             p_vmstat.terminate()
             print_info("tried terminating vmstat")
+        if p_cpuinfo != None:
+            p_cpuinfo.terminate()
+            print_info("tried terminating cpuinfo")
         if p_mpstat != None:
             p_mpstat.terminate()
             print_info("tried terminating mpstat")
@@ -205,6 +228,9 @@ def sofa_record(command, logdir, cfg):
         if p_vmstat != None:
             p_vmstat.kill()
             print_info("tried killing vmstat")
+        if p_cpuinfo != None:
+            p_cpuinfo.kill()
+            print_info("tried killing cpuinfo")
         if p_mpstat != None:
             p_mpstat.kill()
             print_info("tried killing mpstat")

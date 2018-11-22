@@ -15,7 +15,7 @@ class SOFA_Config:
     perf_events = 'cycles,instructions' 
     verbose = False
     num_iterations = 20
-    num_swarms = 20
+    num_swarms = 10
     cpu_top_k = 20
     plot_ratio = 1
     viz_port = 8000
@@ -23,6 +23,7 @@ class SOFA_Config:
     profile_all_cpus = False
     enable_aisi = False
     enable_hsg = False
+    hsg_multifeatures = False
     enable_vmstat = False
     enable_pcm = False
     cuda_api_tracing = False

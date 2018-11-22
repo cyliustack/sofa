@@ -1230,7 +1230,19 @@ def sofa_preprocess(logdir, cfg):
 
             ### swarm seperation by memory location 
             swarm_groups = []        
-            feature_list = ['event', 'instructions', 'cycles', 'branch-misses', 'cache-misses']
+            feature_list = ['event']
+            if cfg.hsg_multifeatures:
+                with open(logdir+'perf_events_used.txt','r') as f:
+                    lines = f.readlines()
+                    feature_list.extend(lines[0].split(',')) 
+                try:
+                    feature_list.remove('cycles')
+                    feature_list.remove('event')
+                except:
+                    pass
+           
+            print_info('HSG features: '+','.join(feature_list))
+            
             idx = 0
             showing_idx = 0
 
@@ -1241,39 +1253,39 @@ def sofa_preprocess(logdir, cfg):
                 event_groups = swarm_cpu_traces_viz.groupby('event_int')
                 swarm_stats = []
                 # add different swarm groups                        
-                for mem_index, group in event_groups:                                
+                for mem_index, l1_group in event_groups:                                
                     # kmeans 
-                    X = pd.DataFrame(group[feature_list])                                
+                    X = pd.DataFrame(l1_group['event'])                                
                     num_of_cluster = 2
                     y_pred = kmeans_cluster(num_of_cluster, X)
 
                     # add new column
                     # TODO: Eliminate warning of SettingWithCopyWarning 
-                    group['cluster'] = y_pred
+                    l1_group['cluster'] = y_pred
                     #for i in range(len(y_pred)):
                     #    group.loc[i, 'cluster'] = y_pred[i]
                     
                     # group by new column
-                    clusters = group.groupby('cluster')
+                    clusters = l1_group.groupby('cluster')
                                     
-                    for subgroup_idx, subgroup in clusters:                       
+                    for l2_group_idx, l2_group in clusters:                       
                         # group by process id
                         #pid_clusters = cluster.groupby('pid')
-                        X = pd.DataFrame(subgroup["event"])                                
+                        X = pd.DataFrame(l2_group['event'])                                
                         num_of_cluster = 4
                         y_pred = kmeans_cluster(num_of_cluster, X)
 
                         # add new column 
-                        subgroup['cluster'] = y_pred                 
+                        l2_group['cluster'] = y_pred                 
                         #for i in range(len(y_pred)):
-                        #    subgroup.loc[i, 'cluster'] = y_pred[i]       
+                        #    l2_group.loc[i, 'cluster'] = y_pred[i]       
                         
                         # group by new column
-                        last_clusters = subgroup.groupby('cluster')
+                        last_clusters = l2_group.groupby('cluster')
  
                         for last_cluster_idx, last_cluster in last_clusters:                              
                             # kmeans
-                            X = pd.DataFrame(last_cluster["event"])
+                            X = pd.DataFrame(last_cluster[feature_list])
                             num_of_cluster = 4
                             y_pred_pid_cluster = kmeans_cluster(num_of_cluster, X)
 
