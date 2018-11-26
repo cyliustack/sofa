@@ -12,7 +12,7 @@ class SOFA_Config:
     cpu_filters = []
     gpu_filters = []
     net_filters = []
-    perf_events = 'cycles,instructions' 
+    perf_events = 'cycles' 
     verbose = False
     num_iterations = 20
     num_swarms = 10
