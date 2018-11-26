@@ -59,8 +59,10 @@ function install_python_packages()
 	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
 	    $WITH_SUDO python3.6 get-pip.py
         $WITH_SUDO rm get-pip.py
-    elif [[ $(which apt) ]] ; then	
-        $WITH_SUDO apt install python3.6 python3-pip python3-dev -y
+    elif [[ $(which apt) ]] ; then
+	$WITH_SUDO add-apt-repository universe
+        $WITH_SUDO apt update -y
+        $WITH_SUDO apt install -y python3.6 python3-pip python3-dev 
     else
 	    file_pytar="Python-3.6.0.tar.xz"
 	    wget https://www.python.org/ftp/python/3.6.0/$file_pytar

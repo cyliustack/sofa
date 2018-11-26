@@ -83,7 +83,7 @@ if __name__ == "__main__":
         'command',
         type=str,
         nargs=1,
-        metavar='<stat|record|report|preprocess|analyze|viz>')
+        metavar='<stat|record|report|preprocess|analyze|viz|clean>')
     parser.add_argument(
         'usr_command',
         type=str,
@@ -215,6 +215,8 @@ if __name__ == "__main__":
         sofa_analyze(logdir, cfg)
     elif command == 'viz':
         sofa_viz(logdir, cfg)
+    elif command == 'clean':
+        sofa_clean(logdir, cfg)
     elif command == 'report':
         sofa_preprocess(logdir, cfg)
         sofa_analyze(logdir, cfg)
