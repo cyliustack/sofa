@@ -39,6 +39,14 @@ def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa):
         print_info("tried killing pcm-numa.x")
 
 
+def sofa_clean(logdir, cfg):
+    print_info('Clean previous logged files')
+    subprocess.call('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/*.html > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/*.js > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/*.script > /dev/null 2> /dev/null' % logdir, shell=True)
+ 
 
 def sofa_record(command, logdir, cfg):
 
@@ -189,12 +197,17 @@ def sofa_record(command, logdir, cfg):
 
 
        
-        if int(os.system('command -v perf')) == 0: 
-            profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -- %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command)
-            print_info( profile_command)            
+        if int(os.system('command -v perf')) == 0:
+            ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
+            if ret.find('not supported') >=0:
+                profile_command = 'perf record -o %s/perf.data -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
+                cfg.perf_events = ""
+            else:
+                profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -- %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command)
+            print_info(profile_command)            
             subprocess.call(profile_command, shell=True)
             with open(logdir+'perf_events_used.txt','w') as f:
-               f.write(cfg.perf_events) 
+                f.write(cfg.perf_events)
         
         print_info("Epilog of Recording...")
         if p_tcpdump != None:
