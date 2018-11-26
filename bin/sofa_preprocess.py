@@ -1156,6 +1156,7 @@ def sofa_preprocess(logdir, cfg):
                         t_offset = perf_timebase_unix - perf_timebase_uptime),
                     samples)
             cpu_traces = pd.DataFrame(res)                      
+            cpu_traces.columns = sofa_fieldnames
             cpu_traces.to_csv(
                 logdir + 'cputrace.csv',
                 mode='w',
