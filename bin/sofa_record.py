@@ -12,17 +12,27 @@ from sofa_print import *
 import subprocess
 from pwd import getpwuid
 import time
+import datetime, threading, time
 
-def get_cpuinfo():
+def service_get_cpuinfo(logdir):
+    next_call = time.time()
+    while True:
+        #print(datetime.datetime.now())
+        next_call = next_call+1;
+        get_cpuinfo(logdir)
+        time.sleep(next_call - time.time())
+
+def get_cpuinfo(logdir):
     with open('/proc/cpuinfo','r') as f:
         lines = f.readlines()
-        print(lines[7])
-        mhz = float(lines[7].split()[3])
-        print(mhz)
-        with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
+        mhz = 1000
+        for line in lines:
+            if line.find('cpu MHz') != -1:
+                mhz = float(line.split()[3])
+                break
+        with open('%s/cpuinfo.txt' % logdir, 'a') as logfile:
             unix_time = time.time()
             logfile.write(str('%.9lf %lf'%(unix_time,mhz)+'\n'))
-
 
 def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa): 
     if p_pcm_pcie != None:
@@ -173,11 +183,11 @@ def sofa_record(command, logdir, cfg):
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
             p_vmstat = subprocess.Popen(['vmstat', '-w', '1'], stdout=logfile)
         #TODO:
-        #with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
-            #p_cpuinfo = subprocess.Popen(['watch', '-n1', 'cat', '/proc/cpuinfo'], stdout=logfile)
-            #p = Process(target=f, args=('bob',))
-            #p.start()
-            #p.join()
+        with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
+            logfile.write('')
+            timerThread = threading.Thread(target=service_get_cpuinfo, args=[logdir])
+            timerThread.daemon = True
+            timerThread.start()
 
         with open(os.devnull, 'w') as FNULL:
            p_tcpdump =  subprocess.Popen(["tcpdump",

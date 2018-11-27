@@ -47,30 +47,40 @@ def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
 # 359342/359342 2493492.850128:          1 cycles:  ffffffff8106450a
 # native_write_msr_safe
 
-def cpu_trace_read_hsg(sample, t_offset):
+def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz):
     fields = sample.split()
+    event = event_raw = 0
+    counts = 0
 
     if re.match('\[\d+\]', fields[1]) is not None:
         time = float(fields[2].split(':')[0])
         func_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7] 
-        cycles = float(fields[3])
-        event = np.log(1.0 * int("0x01" + fields[5], 16))
+        counts = float(fields[3])
+        event_raw = 1.0 * int("0x01" + fields[5], 16)
         # add column to cpu_traces
         feature_types = fields[3].split(':')[0]
     else:
         time = float(fields[1].split(':')[0])
         func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6] 
-        cycles = float(fields[2])
-        event = np.log(1.0 * int("0x01" + fields[4], 16))
+        counts = float(fields[2])
+        event_raw = 1.0 * int("0x01" + fields[4], 16)
         # add column to cpu_traces
         feature_types = fields[3].split(':')[0]        
 
     t_begin = time + t_offset
     t_end = time + t_offset
+    if len(cpu_mhz) > 1:
+        duration = counts/(cpu_mhz[str(int(t_begin))]*1e6)
+    else:
+        duration = counts/(cpu_mhz['default']*1e6)
+    event  = np.log10(event_raw)
+
+    if cfg.perf_events.find('cycles') == -1:
+        duration = np.log2(event_raw/1e14)
 
     trace = [t_begin,                          # 0
              event,  # % 1000000               # 1
-             cycles/1e9,                       # 2
+             duration,                       # 2
              -1,                               # 3
              -1,                               # 4 
              0,                                # 5
@@ -84,25 +94,36 @@ def cpu_trace_read_hsg(sample, t_offset):
              feature_types]                    # 13
     return trace
 
-def cpu_trace_read(sample, t_offset):
+def cpu_trace_read(sample, t_offset, cfg, cpu_mhz):
     fields = sample.split()
-
+    event = event_raw = 0
+    counts = 0
     if re.match('\[\d+\]', fields[1]) is not None:
         time = float(fields[2].split(':')[0])
         func_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7] 
         counts = float(fields[3])
-        event = np.log(1.0 * int("0x01" + fields[5], 16))
+        event_raw = 1.0 * int("0x01" + fields[5], 16)
     else:
         time = float(fields[1].split(':')[0])
         func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6] 
         counts = float(fields[2])
-        event = np.log(1.0 * int("0x01" + fields[4], 16))
+        event_raw = 1.0 * int("0x01" + fields[4], 16)
 
     t_begin = time + t_offset
     t_end = time + t_offset
+
+    if len(cpu_mhz) > 1:
+        duration = counts/(cpu_mhz[str(int(t_begin))]*1e6)
+    else:
+        duration = counts/(cpu_mhz['default']*1e6)
+    event  = np.log10(event_raw)
+
+    if cfg.perf_events.find('cycles') == -1:
+        duration = np.log2(event_raw/1e14)
+
     trace = [t_begin,                          # 0
              event,  # % 1000000               # 1
-             1.0*counts/1e9,                   # 2
+             duration,                         # 2
              -1,                               # 3
              -1,                               # 4 
              0,                                # 5
@@ -493,6 +514,19 @@ def sofa_preprocess(logdir, cfg):
         t_glb_base = float(lines[0]) + cfg.cpu_time_offset
         print_info('Time offset applied to timestamp (s):' + str(cfg.cpu_time_offset))
         print_info('SOFA global time base (s):' + str(t_glb_base))
+    
+    cpu_mhz = {'default':3000}
+    try:
+        with open(logdir + 'cpuinfo.txt') as f:
+            lines = f.readlines() 
+            for line in lines:
+                fields = line.split()
+                timestamp = int(float(fields[0]))
+                mhz = float(fields[1])
+                cpu_mhz[str(timestamp)] = mhz
+    except:
+        print_warning('no cpuinfo file is found, default cpu MHz = %lf'%(cpu_mhz['default']))
+    print('cpu_mhz length: ',len(cpu_mhz))
     
     net_traces = []
     cpu_traces = []
@@ -1077,7 +1111,13 @@ def sofa_preprocess(logdir, cfg):
                         float_format='%.6f')
     
     # ============ Preprocessing CPU Trace ==========================
-    
+    with open(logdir+'perf_events_used.txt','r') as f:
+        lines = f.readlines()
+        if lines: 
+            cfg.perf_events = lines[0]
+        else:
+            cfg.perf_events = ''
+        print_info('perf_events_used: %s' % (cfg.perf_events))
     # Determine time base for perf traces
     perf_timebase_uptime = 0
     perf_timebase_unix = 0
@@ -1153,7 +1193,9 @@ def sofa_preprocess(logdir, cfg):
                 res = pool.map(
                     partial(
                         cpu_trace_read,
-                        t_offset = perf_timebase_unix - perf_timebase_uptime),
+                        t_offset = perf_timebase_unix - perf_timebase_uptime,
+                        cfg = cfg,
+                        cpu_mhz = cpu_mhz),
                     samples)
             cpu_traces = pd.DataFrame(res)                      
             cpu_traces.columns = sofa_fieldnames
@@ -1193,7 +1235,10 @@ def sofa_preprocess(logdir, cfg):
                     res = pool.map(
                         partial(
                             cpu_trace_read_hsg,
-                            t_offset = perf_timebase_unix - perf_timebase_uptime),
+                            t_offset = perf_timebase_unix - perf_timebase_uptime,
+                            cfg = cfg,
+                            cpu_mhz = cpu_mhz
+                            ),
                         samples)                
                 cpu_traces = pd.DataFrame(res)      
                 sofa_fieldnames_ext = sofa_fieldnames + ["feature_types"]
@@ -1228,6 +1273,7 @@ def sofa_preprocess(logdir, cfg):
 
                 df = swarm_cpu_traces_viz.copy()
                 swarm_cpu_traces_viz = pd.merge(df, df2, left_on=['quotient','event'], right_index=True).copy()                
+            
 
             ### swarm seperation by memory location 
             swarm_groups = []        
@@ -1235,7 +1281,7 @@ def sofa_preprocess(logdir, cfg):
             if cfg.hsg_multifeatures:
                 with open(logdir+'perf_events_used.txt','r') as f:
                     lines = f.readlines()
-                    feature_list.extend(lines[0].split(',')) 
+                    feature_list.extend(lines[0].split(','))
                 try:
                     feature_list.remove('cycles')
                     feature_list.remove('event')
