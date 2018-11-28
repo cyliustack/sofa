@@ -105,7 +105,13 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help='Declare which perf events are going to be recorded')
-    
+    parser.add_argument(
+        '--potato_server',
+        metavar='"ip:port"',
+        type=str,
+        required=False,
+        help='IP address of POTATO server')
+   
     cfg = SOFA_Config()
     sofa_exec_path = os.path.abspath( __file__ )
     if Path(sofa_exec_path).is_symlink():
@@ -170,6 +176,9 @@ if __name__ == "__main__":
                 Filter(str(pair.split(':')[0]), str(pair.split(':')[1])))
     else:
         cfg.cpu_filters.append(Filter('idle', 'black'))
+
+    if args.potato_server is not None:
+        cfg.potato_server = args.potato_server
 
     cfg.gpu_filters.append(Filter('copyKind_1_', 'Red'))
     cfg.gpu_filters.append(Filter('copyKind_2_', 'Peru'))

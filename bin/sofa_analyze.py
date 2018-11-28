@@ -16,7 +16,7 @@ from sofa_common import *
 from sofa_aisi import *
 import networkx as nx
 import re 
-
+import requests
 
 def payload_sum(df):
     print((len(df)))
@@ -286,7 +286,15 @@ def sofa_analyze(logdir, cfg):
         #df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         gpu_profile(logdir, cfg, df_gpu)
         if cfg.enable_aisi:
-            sofa_aisi(logdir, cfg, df_cpu, df_gpu)  
+            sofa_aisi(logdir, cfg, df_cpu, df_gpu)        
     except IOError:
-        print_warning(
-            "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
+        print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
+
+    if cfg.potato_server:
+        print_title('POTATO Feedback')
+        r = requests.get(cfg.potato_server+'/image/best')
+        image_tag = r.json()
+        print(image_tag)
+    #print_warning('Something wrong with POTATO client')
+
+    print('\n\n')
