@@ -69,10 +69,15 @@ def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz):
 
     t_begin = time + t_offset
     t_end = time + t_offset
-    if len(cpu_mhz) > 1:
-        duration = counts/(cpu_mhz[str(int(t_begin))]*1e6)
+    
+    if cpu_mhz['first_timestamp'] > 0:
+        if t_begin > cpu_mhz['first_timestamp']:
+            duration = counts/(cpu_mhz[str(int(t_begin))]*1e6)
+        else:
+            duration = counts/(cpu_mhz['first_mhz']*1e6)
     else:
         duration = counts/(cpu_mhz['default']*1e6)
+    
     event  = np.log10(event_raw)
 
     if cfg.perf_events.find('cycles') == -1:
@@ -111,11 +116,15 @@ def cpu_trace_read(sample, t_offset, cfg, cpu_mhz):
 
     t_begin = time + t_offset
     t_end = time + t_offset
-
-    if len(cpu_mhz) > 1:
-        duration = counts/(cpu_mhz[str(int(t_begin))]*1e6)
+    
+    if cpu_mhz['first_timestamp'] > 0:
+        if t_begin > cpu_mhz['first_timestamp']:
+            duration = counts/(cpu_mhz[str(int(t_begin))]*1e6)
+        else:
+            duration = counts/(cpu_mhz['first_mhz']*1e6)
     else:
         duration = counts/(cpu_mhz['default']*1e6)
+    
     event  = np.log10(event_raw)
 
     if cfg.perf_events.find('cycles') == -1:
@@ -515,10 +524,13 @@ def sofa_preprocess(logdir, cfg):
         print_info('Time offset applied to timestamp (s):' + str(cfg.cpu_time_offset))
         print_info('SOFA global time base (s):' + str(t_glb_base))
     
-    cpu_mhz = {'default':3000}
+    cpu_mhz = {'default':3000, 'first_timestamp':0, 'first_mhz':3000}
     try:
         with open(logdir + 'cpuinfo.txt') as f:
-            lines = f.readlines() 
+            lines = f.readlines()
+            if lines:
+                cpu_mhz['first_timestamp'] = int(float(lines[0].split()[0]))
+                cpu_mhz['first_mhz'] = float(lines[0].split()[1])
             for line in lines:
                 fields = line.split()
                 timestamp = int(float(fields[0]))
@@ -795,8 +807,14 @@ def sofa_preprocess(logdir, cfg):
     if os.path.isfile('%s/nvsmi.txt' % logdir):
         with open('%s/nvsmi.txt' % logdir) as f:
             lines = f.readlines()
-            print_info("Length of nvsmi_traces = %d" % len(lines))
-            if len(lines) > 0 and lines[0].find('failed')==-1:
+            nvsmi_has_data = True 
+            for line in lines:
+                if line.find('failed') != -1 or line.find('Failed') != -1: 
+                    nvsmi_has_data = False
+                    print_warning('No nvsmi data.')
+                    break
+            if nvsmi_has_data: 
+                print_info("Length of nvsmi_traces = %d" % len(lines))
                 nvsmi_sm_list = []
                 nvsmi_mem_list = []
                 nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
