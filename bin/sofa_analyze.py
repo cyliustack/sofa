@@ -16,7 +16,7 @@ from sofa_common import *
 from sofa_aisi import *
 import networkx as nx
 import re 
-
+import requests
 
 def payload_sum(df):
     print((len(df)))
@@ -100,7 +100,13 @@ def cpu_profile(logdir, cfg, df):
     n_devices = len(grouped_df)
     avg_exec_time = total_exec_time / n_devices
     print(("total execution time = %.3lf" % total_exec_time))
-    print(("average execution time across devices = %.3lf" % avg_exec_time))
+    print(("average execution time across devices = %.3lf\n" % avg_exec_time))
+    if cfg.potato_server:
+        print_title('Upload performance data to POTATO server')
+        r = requests.get(cfg.potato_server+'/metric/cpu_time')
+        print('cpu_time: %.3lf ' % (r.json()['value']))
+        #print('cpu_time: %.3lf (%s)' % (r.json()['value'], r.json()['unit']))
+
 
 def vmstat_profile(logdir, cfg, df):
     print_title("VMSTAT Profiling:")
@@ -286,7 +292,17 @@ def sofa_analyze(logdir, cfg):
         #df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         gpu_profile(logdir, cfg, df_gpu)
         if cfg.enable_aisi:
-            sofa_aisi(logdir, cfg, df_cpu, df_gpu)  
+            sofa_aisi(logdir, cfg, df_cpu, df_gpu)        
     except IOError:
-        print_warning(
-            "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
+        print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
+
+    if cfg.potato_server:
+        print_title('POTATO Feedback')
+        r = requests.get(cfg.potato_server+'/image/best')
+        print('Tag of optimal image recommended from POTATO: '+ highlight(r.json()['tag']))
+        print('Estimated speedup: %.2lfx' % r.json()['score'] )
+        print('[Debug] Optimization approach: '+r.json()['description'])
+        print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
+    #print_warning('Something wrong with POTATO client')
+
+    print('\n\n')

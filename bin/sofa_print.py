@@ -35,6 +35,8 @@ def print_info(content):
 def print_progress(content):
     print(bcolors.OKBLUE + "[INFO] " + content + bcolors.ENDC)
 
+def highlight(content):
+    return bcolors.OKGREEN + content + bcolors.ENDC
 
 def print_data(content):
     print(bcolors.DATA)

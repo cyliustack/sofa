@@ -28,3 +28,4 @@ class SOFA_Config:
     enable_pcm = False
     cuda_api_tracing = False
     script_path = ''
+    potato_server = None 
