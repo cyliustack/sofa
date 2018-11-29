@@ -1389,6 +1389,73 @@ def sofa_preprocess(logdir, cfg):
                 print_warning('No pcm-pcie counter values are recorded.')
                 print_warning('If necessary, run /usr/local/intelpcm/bin/pcm-pcie.x ONCE to reset MSR so as to enable correct pcm recording')
    
+    ### time, skt, iMC_Read, iMC_Write [, partial_write] [, EDC_Read, EDC_Write] , sysRead, sysWrite, sysTotal
+    if cfg.enable_pcm and os.path.isfile('%s/pcm_memory.csv' % logdir):
+        with open( logdir + '/pcm_memory.csv' ) as f:
+            lines = f.readlines()
+            print_info("Length of pcm_memory_traces = %d" % len(lines))
+            if len(lines) > 0:
+                pcm_memory_list = []
+                pcm_memory_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                for line in lines:
+                    if line.find('Skt') == -1:
+                        fields = line.split(',')
+                        #for f in range(len(fields)):
+                        #    print("field[%d] %s" % (f, fields[f]))
+                       
+                        skt = int(fields[1])
+                        t_begin = float(fields[0]) 
+                        deviceId = skt
+                        event = -1
+                        copyKind = -1
+                        payload = -1
+                        pcm_memory_wt_count = int(float(fields[3]))
+                        pcm_memory_rd_count = int(float(fields[2]))
+                        pkt_src = pkt_dst = -1
+                        pid = tid = -1
+                        pcm_memory_info = "PCM=memory | skt=%d | RD=%d (KB)" % (
+                            skt, pcm_memory_rd_count)
+
+                        bandwidth = pcm_memory_rd_count
+                        trace = [
+                            t_begin,
+                            event,
+                            bandwidth,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            pcm_memory_info,
+                            cpuid]
+                        pcm_memory_list.append(trace)
+ 
+                        pcm_memory_info = "PCM=memory | skt=%d | WT=%d (KB)" % (
+                            skt, pcm_memory_wt_count)
+                        bandwidth = pcm_memory_wt_count
+                        trace = [
+                            t_begin,
+                            event,
+                            bandwidth,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            pcm_memory_info,
+                            cpuid]
+                        pcm_memory_list.append(trace)                 
+                pcm_memory_traces = list_to_csv_and_traces(logdir, pcm_memory_list, 'pcm_memory_trace.csv', 'w')
+
+            else:
+                print_warning('No pcm-memory counter values are recorded.')
+                print_warning('If necessary, run /usr/local/intelpcm/bin/pcm-memory.x ONCE to reset MSR so as to enable correct pcm recording')
     
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
