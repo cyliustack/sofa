@@ -1,1 +1,1 @@
-Linux 4.15.0-29-generic (paslab-Titan5) 	09/09/2018 	_x86_64_	(20 CPU)
+Linux 3.10.0-862.11.6.el7.x86_64 (gtx1080ti) 	11/29/2018 	_x86_64_	(8 CPU)

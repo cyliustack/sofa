@@ -1,6 +1,5 @@
-	[4mGPU0	GPU1	CPU Affinity[0m
-GPU0	 X 	SYS	0-19
-GPU1	SYS	 X 	0-19
+	[4mGPU0	CPU Affinity[0m
+GPU0	 X 	0-7
 
 Legend:
 
