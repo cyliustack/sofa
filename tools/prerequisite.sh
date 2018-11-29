@@ -77,7 +77,7 @@ function install_python_packages()
     fi
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip"
-    PIP_PACKAGES="numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein"
+    PIP_PACKAGES="numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein requests"
     python3.6 -m pip install --user --upgrade pip
     python3.6 -m pip install --user --no-cache-dir ${PIP_PACKAGES}
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
