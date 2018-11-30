@@ -21,7 +21,6 @@ import requests
 def payload_sum(df):
     print((len(df)))
 
-
 class Event:
 
     def __init__(self, name, ttype, timestamp, duration):
@@ -103,9 +102,17 @@ def cpu_profile(logdir, cfg, df):
     print(("average execution time across devices = %.3lf\n" % avg_exec_time))
     if cfg.potato_server:
         print_title('Upload performance data to POTATO server')
-        r = requests.get(cfg.potato_server+'/metric/cpu_time')
-        print('cpu_time: %.3lf ' % (r.json()['value']))
-        #print('cpu_time: %.3lf (%s)' % (r.json()['value'], r.json()['unit']))
+        url = cfg.potato_server+'/metric/cpu_time'
+        data = {'name' : 'cpu_time', 'unit':'s', 'value': total_exec_time }
+        data_json = json.dumps(data)
+        headers = {'Content-type': 'application/json'}
+        response = requests.delete(url, data=data_json, headers=headers)
+        response = requests.post(url, data=data_json, headers=headers)
+       
+        print_info('Performance metrics on the server:') 
+        response = requests.get(url, data=data_json, headers=headers)
+        print('cpu_time: %.3lf ' % (float(response.json()['value'])))
+    #print('cpu_time: %.3lf (%s)' % (r.json()['value'], r.json()['unit']))
 
 
 def vmstat_profile(logdir, cfg, df):
