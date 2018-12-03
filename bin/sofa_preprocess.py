@@ -1583,6 +1583,15 @@ def sofa_preprocess(logdir, cfg):
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()
+    sofatrace.name = 'pcm_memory'
+    sofatrace.title = 'PCM_MEMORY'
+    sofatrace.color = 'pink'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'bandwidth'
+    sofatrace.data = pcm_memory_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
     sofatrace.name = 'net_trace'
     sofatrace.title = 'NET'
     sofatrace.color = 'blue'
