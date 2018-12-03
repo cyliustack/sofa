@@ -1413,7 +1413,7 @@ def sofa_preprocess(logdir, cfg):
                         pcm_memory_rd_count = int(float(fields[2]))
                         pkt_src = pkt_dst = -1
                         pid = tid = -1
-                        pcm_memory_info = "PCM=memory | skt=%d | RD=%d (KB)" % (
+                        pcm_memory_info = "PCM=memory | skt=%d | RD=%d (MB/s)" % (
                             skt, pcm_memory_rd_count)
 
                         bandwidth = pcm_memory_rd_count
@@ -1433,7 +1433,7 @@ def sofa_preprocess(logdir, cfg):
                             cpuid]
                         pcm_memory_list.append(trace)
  
-                        pcm_memory_info = "PCM=memory | skt=%d | WT=%d (KB)" % (
+                        pcm_memory_info = "PCM=memory | skt=%d | WT=%d (MB/s)" % (
                             skt, pcm_memory_wt_count)
                         bandwidth = pcm_memory_wt_count
                         trace = [
