@@ -1360,22 +1360,33 @@ def sofa_preprocess(logdir, cfg):
                             cluster_in_pid_clusters = last_cluster.groupby('cluster_in_pid')
 
                             for mini_cluster_id, cluster_in_pid_cluster in cluster_in_pid_clusters:                                  
+                                # duration time
                                 total_duration = cluster_in_pid_cluster.duration.sum()                            
-                                mean_duration = cluster_in_pid_cluster.duration.mean()                            
-                                swarm_stats.append({'keyword':'SWARM_' + str(idx) +  ('_' * showing_idx),
+                                mean_duration = cluster_in_pid_cluster.duration.mean()      
+
+                                # swarm diff
+                                # caption: assign mode of function name              
+                                mode = str(cluster_in_pid_cluster['name'].mode()[0]) # api pd.Series.mode() returns a pandas series                                
+                                mode = mode.replace('::', '@') # str.replace(old, new[, max])
+                                print('mode of this cluster: {}'.format(str(mode[:35])))
+
+                                swarm_stats.append({#'keyword':'SWARM_' + str(idx) +  ('_' * showing_idx),
+                                                    'keyword': 'SWARM_' + '["' + str(mode[:35]) + ']' +  ('_' * showing_idx),
                                                     'duration_sum': total_duration,
                                                     'duration_mean': mean_duration,
-                                                    'example':cluster_in_pid_cluster.head(1)['name'].to_string().split('  ')[2] 
-                                                    }) 
+                                                    'example':cluster_in_pid_cluster.head(1)['name'].to_string().split('  ')[2]}) 
+
                                 swarm_groups.append({'group': cluster_in_pid_cluster.drop(columns = ['event_int', 'cluster', 'cluster_in_pid']), # data of each group
-                                                    'color':  random_generate_color(),
-                                                    'keyword': 'SWARM_' + str(idx) +  ('_' * showing_idx), 
-                                                    'total_duration': total_duration})                                                    
+                                                     'color':  random_generate_color(),
+                                                     #'keyword': 'SWARM_' + str(idx) +  ('_' * showing_idx), 
+                                                     'keyword': 'SWARM_' + '[' + str(mode[:35]) + ']' +  ('_' * showing_idx),
+                                                     'total_duration': total_duration})                                                    
                                 idx += 1
                                             
-                swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
-                print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms)) 
-                swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True) # reverse = True: descending
+                swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending                
+                swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True)
+                print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms))
+
                 for i in range(len(swarm_stats)):
                     if i >= cfg.num_swarms:
                         break
@@ -1550,18 +1561,20 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.data = filtered_group['group'].copy()
         traces.append(sofatrace)
 
+    dummy_i = 0
     if cfg.enable_hsg:
         # top 10 cumulative time of a swarm
         number_of_swarm = cfg.num_swarms                           
         for swarm in swarm_groups[:number_of_swarm]: 
-            sofatrace = SOFATrace()
-            sofatrace.name = swarm['keyword']
+            sofatrace = SOFATrace()            
+            sofatrace.name = 'swarm' + str(dummy_i) # no meaning, can be random unique ID
             sofatrace.title = swarm['keyword'] # add number of swarm
             sofatrace.color = swarm['color']        
             sofatrace.x_field = 'timestamp'
             sofatrace.y_field = 'duration'        
             sofatrace.data = swarm['group'].copy()               
             traces.append(sofatrace)
+            dummy_i += 1
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_bi'
