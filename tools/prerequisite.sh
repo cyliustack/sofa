@@ -129,14 +129,15 @@ function install_utility_from_source()
     #cd pcm && make -j && cd - 
     #$WITH_SUDO mkdir -p /usr/local/intelpcm/bin 
     #$WITH_SUDO cp pcm/pcm-*.x /usr/local/intelpcm/bin 
-    rm -r papi
-    if [[ ! -f papi-5.6.0.tar.gz ]]; then  
-        wget http://icl.utk.edu/projects/papi/downloads/papi-5.6.0.tar.gz
+    PAPI_VERSION=papi-5.6.0
+    rm -rf ${PAPI_VERSION}
+    if [[ ! -f ${PAPI_VERSION}.tar.gz ]]; then  
+        wget http://icl.utk.edu/projects/papi/downloads/${PAPI_VERSION}.tar.gz
     fi
-    tar xvf papi-5.6.0.tar.gz
-    mv papi-5.6.0 papi
-    cd papi/src && ./configure --prefix=$(pwd)/build && make -j4 && make install && cd - 
-    rm papi-5.6.0.tar.gz
+    tar xvf ${PAPI_VERSION}.tar.gz
+    cd ${PAPI_VERSION}/src && ./configure --prefix=$(pwd)/build && make -j4 && make install && cd - 
+    cp -arT ${PAPI_VERSION} papi
+    rm ${PAPI_VERSION}.tar.gz
 }
 
 # main

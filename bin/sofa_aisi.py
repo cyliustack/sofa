@@ -363,7 +363,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
             mean_payload = iter_summary['payload'].mean()
             mean_streams = iter_summary['streams'].mean()
             print("Elapsed time of initial iteration (s): ", iter_summary.loc[0,'elapsed_time'])
-            if cfg.iterations > 1:
+            if cfg.num_iterations > 1:
                 print("Averaged elapsed time of iterations excluding initial one (s): ", iter_summary.loc[1:,'elapsed_time'].mean())
             print("Averaged CUDA GPU time (s): ", mean_gpu_time)
             print("Averaged CUDA FW time (s): ", mean_fw_time)
