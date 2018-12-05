@@ -48,7 +48,8 @@ function install_python_packages()
     
 
     if [[ $(which yum) ]]  ; then
-        $WITH_SUDO yum install -y epel-release
+        echo "yum detected"
+	$WITH_SUDO yum install -y epel-release
         $WITH_SUDO yum install -y https://centos7.iuscommunity.org/ius-release.rpm
         $WITH_SUDO yum install -y python36u python36u-pip python36u-devel
     elif [[ "${OS}" == "Ubuntu" ]] && ( [[ "${VERSION}" == "14.04"* ]] || [[ "${VERSION}" == "16.04"* ]] ) ; then	
@@ -57,7 +58,7 @@ function install_python_packages()
         $WITH_SUDO apt-get update -y
         $WITH_SUDO apt-get install python3.6 python3.6-dev -y
 	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
-	    $WITH_SUDO python3.6 get-pip.py
+	$WITH_SUDO python3.6 get-pip.py
         $WITH_SUDO rm get-pip.py
     elif [[ $(which apt) ]] ; then
 	$WITH_SUDO add-apt-repository universe
@@ -107,7 +108,7 @@ function install_packages()
         $WITH_SUDO yum install -y epel-release 
         $WITH_SUDO yum install -y curl wget make gcc gcc-c++ cmake \
             perf tcpdump sysstat \
-            centos-release-scl devtoolset-4-gcc* 
+            centos-release-scl devtoolset-5-gcc* 
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"
