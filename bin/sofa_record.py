@@ -18,7 +18,7 @@ def service_get_cpuinfo(logdir):
     next_call = time.time()
     while True:
         #print(datetime.datetime.now())
-        next_call = next_call+1;
+        next_call = next_call + 0.1;
         get_cpuinfo(logdir)
         time.sleep(next_call - time.time())
 
