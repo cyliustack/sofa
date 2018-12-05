@@ -47,7 +47,7 @@ def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
 # 359342/359342 2493492.850128:          1 cycles:  ffffffff8106450a
 # native_write_msr_safe
 
-def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz):
+def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz_xp, cpu_mhz_fp):
     fields = sample.split()
     event = event_raw = 0
     counts = 0
@@ -69,14 +69,11 @@ def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz):
 
     t_begin = time + t_offset
     t_end = time + t_offset
-    
-    if cpu_mhz['first_timestamp'] > 0:
-        if t_begin > cpu_mhz['first_timestamp']:
-            duration = counts/(cpu_mhz[str(int(t_begin))]*1e6)
-        else:
-            duration = counts/(cpu_mhz['first_mhz']*1e6)
+ 
+    if len(cpu_mhz_xp) > 1:
+        duration = counts/(np.interp(t_begin, cpu_mhz_xp, cpu_mhz_fp)*1e6)
     else:
-        duration = counts/(cpu_mhz['default']*1e6)
+        duration = counts/(3000.0*1e6)
     
     event  = np.log10(event_raw)
 
@@ -99,7 +96,7 @@ def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz):
              feature_types]                    # 13
     return trace
 
-def cpu_trace_read(sample, t_offset, cfg, cpu_mhz):
+def cpu_trace_read(sample, t_offset, cfg, cpu_mhz_xp, cpu_mhz_fp):
     fields = sample.split()
     event = event_raw = 0
     counts = 0
@@ -116,14 +113,11 @@ def cpu_trace_read(sample, t_offset, cfg, cpu_mhz):
 
     t_begin = time + t_offset
     t_end = time + t_offset
-    
-    if cpu_mhz['first_timestamp'] > 0:
-        if t_begin > cpu_mhz['first_timestamp']:
-            duration = counts/(cpu_mhz[str(int(t_begin))]*1e6)
-        else:
-            duration = counts/(cpu_mhz['first_mhz']*1e6)
+
+    if len(cpu_mhz_xp) > 1:
+        duration = counts/(np.interp(t_begin, cpu_mhz_xp, cpu_mhz_fp)*1e6)
     else:
-        duration = counts/(cpu_mhz['default']*1e6)
+        duration = counts/(3000.0*1e6)
     
     event  = np.log10(event_raw)
 
@@ -524,21 +518,21 @@ def sofa_preprocess(logdir, cfg):
         print_info('Time offset applied to timestamp (s):' + str(cfg.cpu_time_offset))
         print_info('SOFA global time base (s):' + str(t_glb_base))
     
-    cpu_mhz = {'default':3000, 'first_timestamp':0, 'first_mhz':3000}
+    cpu_mhz_xp = [0.0]
+    cpu_mhz_fp = [3000.0]
+    #np.interp(2.5, xp, fp)
     try:
         with open(logdir + 'cpuinfo.txt') as f:
             lines = f.readlines()
-            if lines:
-                cpu_mhz['first_timestamp'] = int(float(lines[0].split()[0]))
-                cpu_mhz['first_mhz'] = float(lines[0].split()[1])
             for line in lines:
                 fields = line.split()
-                timestamp = int(float(fields[0]))
+                timestamp = float(fields[0])
                 mhz = float(fields[1])
-                cpu_mhz[str(timestamp)] = mhz
+                cpu_mhz_xp.append(timestamp)
+                cpu_mhz_fp.append(mhz)
     except:
-        print_warning('no cpuinfo file is found, default cpu MHz = %lf'%(cpu_mhz['default']))
-    print('cpu_mhz length: ',len(cpu_mhz))
+        print_warning('no cpuinfo file is found, default cpu MHz = %lf'%(fp[0]))
+    print('cpu_mhz length: ',len(cpu_mhz_xp))
     
     net_traces = []
     cpu_traces = []
@@ -1213,7 +1207,8 @@ def sofa_preprocess(logdir, cfg):
                         cpu_trace_read,
                         t_offset = perf_timebase_unix - perf_timebase_uptime,
                         cfg = cfg,
-                        cpu_mhz = cpu_mhz),
+                        cpu_mhz_xp = cpu_mhz_xp,
+			cpu_mhz_fp = cpu_mhz_fp),
                     samples)
             cpu_traces = pd.DataFrame(res)                      
             cpu_traces.columns = sofa_fieldnames
@@ -1255,7 +1250,8 @@ def sofa_preprocess(logdir, cfg):
                             cpu_trace_read_hsg,
                             t_offset = perf_timebase_unix - perf_timebase_uptime,
                             cfg = cfg,
-                            cpu_mhz = cpu_mhz
+                            cpu_mhz_xp = cpu_mhz_xp,
+                            cpu_mhz_fp = cpu_mhz_fp
                             ),
                         samples)                
                 cpu_traces = pd.DataFrame(res)      
