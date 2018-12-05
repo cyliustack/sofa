@@ -180,9 +180,9 @@ if __name__ == "__main__":
     if args.potato_server is not None:
         cfg.potato_server = args.potato_server
 
-    cfg.gpu_filters.append(Filter('CUDA_H2D', 'Red'))
-    cfg.gpu_filters.append(Filter('CUDA_D2H', 'Peru'))
-    cfg.gpu_filters.append(Filter('CUDA_P2P', 'Purple'))
+    cfg.gpu_filters.append(Filter('CUDA_COPY_H2D', 'Red'))
+    cfg.gpu_filters.append(Filter('CUDA_COPY_D2H', 'Peru'))
+    cfg.gpu_filters.append(Filter('CUDA_COPY_P2P', 'Purple'))
     if cfg.cuda_api_tracing:
         cfg.gpu_filters.append(Filter('CUDA_API', 'DarkSlateGray'))
     if args.gpu_filters is not None:

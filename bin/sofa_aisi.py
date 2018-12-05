@@ -21,7 +21,7 @@ def iter_profile(cfg, fields, df_gpu):
     fw_time = df_gpu[df_gpu['name'].str.contains("_fw")].loc[:,'duration'].sum()
     bw_time = df_gpu[df_gpu['name'].str.contains("_bw")].loc[:,'duration'].sum()
     gemm_time = df_gpu[df_gpu['name'].str.contains("gemm")].loc[:,'duration'].sum()
-    copy_time = df_gpu[df_gpu['name'].str.contains("copyKind")].loc[:,'duration'].sum()
+    copy_time = df_gpu[df_gpu['name'].str.contains("CUDA_COPY")].loc[:,'duration'].sum()
     allreduce_time = df_gpu[df_gpu['name'].str.contains("AllReduceKernel")].loc[:,'duration'].sum()
     streams = len(df_gpu['tid'].value_counts())
     #print("streams: ",streams)
