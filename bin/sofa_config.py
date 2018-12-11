@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 class Filter:
     keyword = None
     color = None
