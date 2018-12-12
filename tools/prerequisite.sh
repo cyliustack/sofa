@@ -79,18 +79,9 @@ function install_python_packages()
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip"
     PIP_PACKAGES="numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein requests"
-    python3.6 -m pip install --user --upgrade pip
-    python3.6 -m pip install --user --no-cache-dir ${PIP_PACKAGES}
+    $WITH_SUDO python3.6 -m pip install --upgrade pip
+    $WITH_SUDO python3.6 -m pip install --no-cache-dir ${PIP_PACKAGES}
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-
-    if [[ $(which /opt/conda/bin/python3) ]] ; then
-        conda create --name py36 python=3.6
-        echo -e "${C_GREEN}Installing conda packages...${C_NONE}"
-        /opt/conda/bin/python3.6 -m pip install --user --upgrade pip
-        /opt/conda/bin/python3.6 -m pip install --user --no-cache-dir  ${PIP_PACKAGES}
-        [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-    fi
-
 }
 
 function install_packages()
