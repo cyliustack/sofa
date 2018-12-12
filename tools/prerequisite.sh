@@ -83,7 +83,8 @@ function install_python_packages()
     python3.6 -m pip install --user --no-cache-dir ${PIP_PACKAGES}
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 
-    if [[ $(which /opt/conda/bin/python3.6) ]] ; then
+    if [[ $(which /opt/conda/bin/python3) ]] ; then
+        conda create --name py36 python=3.6
         echo -e "${C_GREEN}Installing conda packages...${C_NONE}"
         /opt/conda/bin/python3.6 -m pip install --user --upgrade pip
         /opt/conda/bin/python3.6 -m pip install --user --no-cache-dir  ${PIP_PACKAGES}
