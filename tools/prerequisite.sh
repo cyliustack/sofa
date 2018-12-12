@@ -82,6 +82,15 @@ function install_python_packages()
     $WITH_SUDO python3.6 -m pip install --upgrade pip
     $WITH_SUDO python3.6 -m pip install --no-cache-dir ${PIP_PACKAGES}
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+     
+    if [[ $(which conda) ]] ; then 
+    	echo "Install via conda python"
+    	CONDA_PY3=$(dirname $(which conda))/python3
+    	PIP_PACKAGES="numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein requests"
+    	$WITH_SUDO ${CONDA_PY3} -m pip install --upgrade pip
+    	$WITH_SUDO ${CONDA_PY3} -m pip install --no-cache-dir ${PIP_PACKAGES}
+    	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+    fi
 }
 
 function install_packages()
