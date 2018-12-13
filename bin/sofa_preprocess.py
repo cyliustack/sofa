@@ -1363,7 +1363,7 @@ def sofa_preprocess(logdir, cfg):
                                 # caption: assign mode of function name              
                                 mode = str(cluster_in_pid_cluster['name'].mode()[0]) # api pd.Series.mode() returns a pandas series                                
                                 mode = mode.replace('::', '@') # str.replace(old, new[, max])
-                                print('mode of this cluster: {}'.format(str(mode[:35])))
+                                #print('mode of this cluster: {}'.format(str(mode[:35])))
 
                                 swarm_stats.append({#'keyword':'SWARM_' + str(idx) +  ('_' * showing_idx),
                                                     'keyword': 'SWARM_' + '["' + str(mode[:35]) + ']' +  ('_' * showing_idx),
