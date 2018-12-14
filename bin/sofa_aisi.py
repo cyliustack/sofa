@@ -195,7 +195,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
         #print('B: ',pattern)
         pp_ratio = fuzz.ratio(pattern,pattern_pre)
         if pp_ratio > 80:
-            print("pattern too similar: ",pp_ratio) 
+            #print("pattern too similar: ",pp_ratio) 
             continue
         else:
             pattern_pre = pattern 
@@ -213,7 +213,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
         step = 1
         iteration_count = 0
         b_overlap = False
-        fw_threshold = 100
+        fw_threshold = 80
         ind = []
         while block_begin <= (total_length - block_size):
             blockString = ",".join(wid_seq[block_begin:block_end])
@@ -226,7 +226,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
                 block_begin = block_begin + step
                 block_end = block_begin + block_size
 
-        print('Non-overlapped %d-times pattern: %s'%(len(ind),pattern))
+        #print('Non-overlapped %d-times pattern: %s'%(len(ind),pattern))
         if len(ind) == cfg.num_iterations:    
             for i in ind:
                 iteration_table.append((df_gpu.iloc[i]['timestamp'],df_gpu.iloc[i+block_size-1]['timestamp']))
@@ -353,7 +353,8 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
 
         print_title('Per-iteration Performance Summary')
         if len(iter_summary) > 0:
-            mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'])
+            print('gmean: ', scipy.stats.gmean(iter_summary['elapsed_time']))
+            print('mean: ', iter_summary['elapsed_time'].mean())
             mean_fw_time = iter_summary['fw_time'].mean()
             mean_bw_time = iter_summary['bw_time'].mean()
             mean_copy_time = iter_summary['copy_time'].mean()
