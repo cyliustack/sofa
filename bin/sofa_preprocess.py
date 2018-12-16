@@ -261,17 +261,17 @@ def gpu_trace_read(
         copyKind = 1
         pkt_src = 0
         pkt_dst = deviceId
-        kernel_name = "[CUDA_COPY_H2D]%dB" % (payload)
+        kernel_name = "CUDA_COPY_H2D_%dB" % (payload)
     elif kernel_name.find('DtoH') != -1:
         copyKind = 2
         pkt_src = deviceId
         pkt_dst = 0
-        kernel_name = "[CUDA_COPY_D2H]%dB" % (payload)
+        kernel_name = "CUDA_COPY_D2H_%dB" % (payload)
     elif kernel_name.find('DtoD') != -1:
         copyKind = 8
         pkt_src = deviceId
         pkt_dst = deviceId
-        kernel_name = "[CUDA_COPY_D2D]%dB" % (payload)
+        kernel_name = "CUDA_COPY_D2D_%dB" % (payload)
     elif kernel_name.find('PtoP') != -1:
         copyKind = 10
         try:

@@ -89,6 +89,7 @@ def main_string_generate_v1(df_gpu):
     for i in range(len(df_gpu)):
         trace  = df_gpu.iloc[i]
         name = trace['name'] 
+        #TODO: only parsing one GPU with another better method.
         name = re.sub(r'\[.+\]', '', name.rstrip());
         value = name_table.get(name)
         if value == None:
@@ -182,7 +183,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
     (main_string,name_table) = main_string_generate_v1(df_gpu)
     #main_string = "0,1,1,1,1,1,0,2,3,2,3,2,3"
     #main_string = "49,49,49,49,49,49,1,1,2,2,1,2,1,2"
-    #print('main_string: '+main_string)
+    print('main_string: '+main_string)
     st = STree(main_string)
     st.find_repeat_pattern(candidate_patterns, iteration_times)
     candidate_patterns.sort(key = lambda s: len(s), reverse=True)
@@ -213,7 +214,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
         step = 1
         iteration_count = 0
         b_overlap = False
-        fw_threshold = 80
+        fw_threshold = 90
         ind = []
         while block_begin <= (total_length - block_size):
             blockString = ",".join(wid_seq[block_begin:block_end])
