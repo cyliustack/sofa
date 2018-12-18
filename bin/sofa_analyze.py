@@ -125,23 +125,22 @@ def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
     #return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams}
     if iter_summary:
        print('mean: ', iter_summary['elapsed_time'].mean())
-       mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'])
+       step_time = scipy.stats.gmean(iter_summary['elapsed_time'])
        if cfg.num_iterations > 1:
-           mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'].iloc[1:])
-
-       mean_fw_time = iter_summary['fw_time'].mean()
-       mean_bw_time = iter_summary['bw_time'].mean()
-       mean_copy_time = iter_summary['copy_time'].mean()
-       mean_gpu_time = iter_summary['gpu_time'].mean()
-       mean_gemm_time = iter_summary['gemm_time'].mean()
-       mean_kernel_time = mean_gpu_time - mean_copy_time 
-       mean_payload = iter_summary['payload'].mean()
-       mean_streams = iter_summary['streams'].mean()
+           step_time = scipy.stats.gmean(iter_summary['elapsed_time'].iloc[1:])
+       fw_time = iter_summary['fw_time'].mean()
+       bw_time = iter_summary['bw_time'].mean()
+       copy_time = iter_summary['copy_time'].mean()
+       gpu_time = iter_summary['gpu_time'].mean()
+       gemm_time = iter_summary['gemm_time'].mean()
+       kernel_time = mean_gpu_time - mean_copy_time 
+       payload = iter_summary['payload'].mean()
+       streams = iter_summary['streams'].mean()
 
        print_title('Upload performance data to POTATO server')
-       data = {'name' : 'step_time', 'unit':'s', 'value': mean_step_time }
+       data = {'name' : 'step_time', 'unit':'s', 'value': step_time }
        potato_submit(cfg, data)
-       data = {'name' : 'copy_time', 'unit':'s', 'value': mean_copy_time }
+       data = {'name' : 'copy_time', 'unit':'s', 'value': copy_time }
        potato_submit(cfg, data)
        #data = {'name' : 'kernel_time', 'unit':'s', 'value': total_exec_time }
        #potato_submit(cfg, data)
