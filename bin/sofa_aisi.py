@@ -183,7 +183,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
     (main_string,name_table) = main_string_generate_v1(df_gpu)
     #main_string = "0,1,1,1,1,1,0,2,3,2,3,2,3"
     #main_string = "49,49,49,49,49,49,1,1,2,2,1,2,1,2"
-    print('main_string: '+main_string)
+    #print('main_string: '+main_string)
     st = STree(main_string)
     st.find_repeat_pattern(candidate_patterns, iteration_times)
     candidate_patterns.sort(key = lambda s: len(s), reverse=True)
