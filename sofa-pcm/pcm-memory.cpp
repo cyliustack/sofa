@@ -446,15 +446,15 @@ void display_bandwidth_csv(PCM *m, memdata_t *md, uint64 elapsedTime)
 		<<setw(8) << md->iMC_Wr_socket_chan[skt][channel] << ';';
 	 }
 */
-         cout << str_time << ';'
-              << skt << ';' 
-              << md->iMC_Rd_socket[skt] <<';'
-	      << md->iMC_Wr_socket[skt] <<';';
+         cout << str_time << ','
+              << skt << ',' 
+              << md->iMC_Rd_socket[skt] <<','
+	      << md->iMC_Wr_socket[skt] <<',';
 
 	 if (m->getCPUModel() != PCM::KNL)
-             cout << md->partial_write[skt] <<';';
+             cout << md->partial_write[skt] <<',';
 
-         cout << md->iMC_Rd_socket[skt] + md->iMC_Wr_socket[skt] <<';';
+         cout << md->iMC_Rd_socket[skt] + md->iMC_Wr_socket[skt] <<',';
 
 	 sysRead += md->iMC_Rd_socket[skt];
          sysWrite += md->iMC_Wr_socket[skt];
@@ -472,8 +472,8 @@ void display_bandwidth_csv(PCM *m, memdata_t *md, uint64 elapsedTime)
 	     }
 
 */
-             cout << md->EDC_Rd_socket[skt] <<';'
-	          << md->EDC_Wr_socket[skt] <<';';
+             cout << md->EDC_Rd_socket[skt] <<','
+	          << md->EDC_Wr_socket[skt] <<',';
 //                  << md->EDC_Rd_socket[skt] + md->EDC_Wr_socket[skt] <<';';
 
              sysRead += md->EDC_Rd_socket[skt];
@@ -481,8 +481,8 @@ void display_bandwidth_csv(PCM *m, memdata_t *md, uint64 elapsedTime)
 	 }
     }
 
-    cout << sysRead <<';'
-	 << sysWrite <<';'
+    cout << sysRead <<','
+	 << sysWrite <<','
 	 << sysRead + sysWrite << endl;
 }
 
