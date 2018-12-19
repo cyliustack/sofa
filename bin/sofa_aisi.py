@@ -354,8 +354,6 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
 
         print_title('Per-iteration Performance Summary')
         if len(iter_summary) > 0:
-            print('gmean: ', scipy.stats.gmean(iter_summary['elapsed_time']))
-            print('mean: ', iter_summary['elapsed_time'].mean())
             mean_fw_time = iter_summary['fw_time'].mean()
             mean_bw_time = iter_summary['bw_time'].mean()
             mean_copy_time = iter_summary['copy_time'].mean()
@@ -365,9 +363,10 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
             mean_payload = iter_summary['payload'].mean()
             mean_streams = iter_summary['streams'].mean()
             print("Elapsed time of initial iteration (s): ", iter_summary.loc[0,'elapsed_time'])
+            mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'])
             if cfg.num_iterations > 1:
                 mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'].iloc[1:])
-                print('Averaged per-iteration elapsed time (s)', mean_step_time) 
+            print('Averaged per-iteration elapsed time (s)', mean_step_time) 
             print("Averaged CUDA GPU time (s): ", mean_gpu_time)
             print("Averaged CUDA FW time (s): ", mean_fw_time)
             print("Averaged CUDA BW time (s): ", mean_bw_time)
