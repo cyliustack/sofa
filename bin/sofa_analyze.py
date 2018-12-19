@@ -123,7 +123,7 @@ def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
     potato_submit(cfg, data)
       
     #return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams}
-    if iter_summary:
+    if len(iter_summary) > 0:
        print('mean: ', iter_summary['elapsed_time'].mean())
        step_time = scipy.stats.gmean(iter_summary['elapsed_time'])
        if cfg.num_iterations > 1:
@@ -133,7 +133,7 @@ def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
        copy_time = iter_summary['copy_time'].mean()
        gpu_time = iter_summary['gpu_time'].mean()
        gemm_time = iter_summary['gemm_time'].mean()
-       kernel_time = mean_gpu_time - mean_copy_time 
+       kernel_time = gpu_time - copy_time 
        payload = iter_summary['payload'].mean()
        streams = iter_summary['streams'].mean()
 
