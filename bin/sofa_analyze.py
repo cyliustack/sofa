@@ -107,7 +107,7 @@ def potato_submit(cfg, data_in):
     response = requests.delete(url, data=data_json, headers=headers)
     response = requests.post(url, data=data_json, headers=headers)
     response = requests.get(url, data=data_json, headers=headers)
-    print('%s: %.3lf ' % ( data_in['name'], float(response.json()['value'])))
+    print('SUBMIT %s: %.3lf ' % ( data_in['name'], float(response.json()['value'])))
 
 def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
     print_title("POTATO Client")
@@ -121,7 +121,7 @@ def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
     avg_cpu_time = cpu_time / n_devices
     data = {'name' : 'avg_cpu_time', 'unit':'s', 'value': avg_cpu_time }
     potato_submit(cfg, data)
-   
+      
     #return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams}
     if iter_summary:
        print('mean: ', iter_summary['elapsed_time'].mean())
@@ -142,6 +142,11 @@ def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
        potato_submit(cfg, data)
        data = {'name' : 'copy_time', 'unit':'s', 'value': copy_time }
        potato_submit(cfg, data)
+       #TODO: remove it
+       data = {'name' : 'payload_h2d', 'unit':'B', 'value': payload/2 }
+       data = {'name' : 'payload_d2h', 'unit':'B', 'value': payload/2 }
+       potato_submit(cfg, data)
+
        #data = {'name' : 'kernel_time', 'unit':'s', 'value': total_exec_time }
        #potato_submit(cfg, data)
        #data = {'name' : 'h2d_time', 'unit':'s', 'value': total_exec_time }
