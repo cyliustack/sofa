@@ -99,20 +99,73 @@ def cpu_profile(logdir, cfg, df):
     avg_exec_time = total_exec_time / n_devices
     print(("total execution time = %.3lf" % total_exec_time))
     print(("average execution time across devices = %.3lf\n" % avg_exec_time))
-    if cfg.potato_server:
-        print_title('Upload performance data to POTATO server')
-        url = cfg.potato_server+'/metric/cpu_time'
-        data = {'name' : 'cpu_time', 'unit':'s', 'value': total_exec_time }
-        data_json = json.dumps(data)
-        headers = {'Content-type': 'application/json'}
-        response = requests.delete(url, data=data_json, headers=headers)
-        response = requests.post(url, data=data_json, headers=headers)
-       
-        print_info('Performance metrics on the server:') 
-        response = requests.get(url, data=data_json, headers=headers)
-        print('cpu_time: %.3lf ' % (float(response.json()['value'])))
-    #print('cpu_time: %.3lf (%s)' % (r.json()['value'], r.json()['unit']))
 
+def potato_submit(cfg, data_in):
+    headers = {'Content-type': 'application/json'}
+    url = cfg.potato_server+'/metric/' + data_in['name']
+    data_json = json.dumps(data_in)
+    response = requests.delete(url, data=data_json, headers=headers)
+    response = requests.post(url, data=data_json, headers=headers)
+    response = requests.get(url, data=data_json, headers=headers)
+    print('%s: %.3lf ' % ( data_in['name'], float(response.json()['value'])))
+
+def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
+    print_title("POTATO Client")
+    grouped_df = df_cpu.groupby("deviceId")["duration"]
+    cpu_time = 0.0
+    for key, item in grouped_df:
+        if cfg.verbose:
+            print(("[%d]: %lf" % (key, grouped_df.get_group(key).sum())))
+        cpu_time = cpu_time + grouped_df.get_group(key).sum()
+    n_devices = len(grouped_df)
+    avg_cpu_time = cpu_time / n_devices
+    data = {'name' : 'avg_cpu_time', 'unit':'s', 'value': avg_cpu_time }
+    potato_submit(cfg, data)
+   
+    #return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams}
+    if iter_summary:
+       print('mean: ', iter_summary['elapsed_time'].mean())
+       step_time = scipy.stats.gmean(iter_summary['elapsed_time'])
+       if cfg.num_iterations > 1:
+           step_time = scipy.stats.gmean(iter_summary['elapsed_time'].iloc[1:])
+       fw_time = iter_summary['fw_time'].mean()
+       bw_time = iter_summary['bw_time'].mean()
+       copy_time = iter_summary['copy_time'].mean()
+       gpu_time = iter_summary['gpu_time'].mean()
+       gemm_time = iter_summary['gemm_time'].mean()
+       kernel_time = mean_gpu_time - mean_copy_time 
+       payload = iter_summary['payload'].mean()
+       streams = iter_summary['streams'].mean()
+
+       print_title('Upload performance data to POTATO server')
+       data = {'name' : 'step_time', 'unit':'s', 'value': step_time }
+       potato_submit(cfg, data)
+       data = {'name' : 'copy_time', 'unit':'s', 'value': copy_time }
+       potato_submit(cfg, data)
+       #data = {'name' : 'kernel_time', 'unit':'s', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data = {'name' : 'h2d_time', 'unit':'s', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data = {'name' : 'd2h_time', 'unit':'s', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data = {'name' : 'p2p_time', 'unit':'s', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data = {'name' : 'h2d_payload', 'unit':'B', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data = {'name' : 'd2h_payload', 'unit':'B', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data = {'name' : 'p2p_payload', 'unit':'B', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data = {'name' : 'h2d_bw', 'unit':'GBps', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data = {'name' : 'd2h_bw', 'unit':'GBps', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data = {'name' : 'd2d_bw', 'unit':'GBps', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data = {'name' : 'p2p_bw', 'unit':'GBps', 'value': total_exec_time }
+       #potato_submit(cfg, data)
+       #data_json = json.dumps(data)
+    #print('cpu_time: %.3lf (%s)' % (r.json()['value'], r.json()['unit']))
 
 def vmstat_profile(logdir, cfg, df):
     print_title("VMSTAT Profiling:")
@@ -234,6 +287,7 @@ def sofa_analyze(logdir, cfg):
     df_gpu = []
     df_cpu = []
     df_vmstat = []
+    iter_summary = None
 
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
@@ -298,11 +352,12 @@ def sofa_analyze(logdir, cfg):
         #df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         gpu_profile(logdir, cfg, df_gpu)
         if cfg.enable_aisi:
-            sofa_aisi(logdir, cfg, df_cpu, df_gpu)        
+            iter_summary = sofa_aisi(logdir, cfg, df_cpu, df_gpu)        
     except IOError:
         print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
 
     if cfg.potato_server:
+        potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary)
         print_title('POTATO Feedback')
         r = requests.get(cfg.potato_server+'/image/best')
         print('Tag of optimal image recommended from POTATO: '+ highlight(r.json()['tag']))

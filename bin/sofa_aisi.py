@@ -381,7 +381,8 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
             else: 
                 print("The profiled program is a communication-bound workload, %d bytes are monitored on PCIe bus"%mean_payload)
                 print("Try using RP Mode parameter synchronization method instead of PS Mode.")
-            print('\n\n')
+            print('\n\n') 
+            return iteration_summary
         else:
             print_warning('No iteration detected after scanning runtime string!')
     except IOError:
