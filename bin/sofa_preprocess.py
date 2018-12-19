@@ -1471,8 +1471,8 @@ def sofa_preprocess(logdir, cfg):
                 for line in lines:
                     if line.find('Skt') == -1:
                         fields = line.split(',')
-                        for f in range(len(fields)):
-                            print("field[%d] %s" % (f, fields[f]))
+                        #for f in range(len(fields)):
+                        #    print("field[%d] %s" % (f, fields[f]))
                        
                         skt = int(fields[1])
                         t_begin = float(fields[0]) 
