@@ -1480,8 +1480,13 @@ def sofa_preprocess(logdir, cfg):
                         event = -1
                         copyKind = -1
                         payload = -1
-                        pcm_memory_wt_count = int(float(fields[3]))
-                        pcm_memory_rd_count = int(float(fields[2]))
+                        try: 
+                            pcm_memory_wt_count = int(float(fields[3]))
+                            pcm_memory_rd_count = int(float(fields[2]))
+                        except:
+                            pcm_memory_wt_count=0
+                            pcm_memory_rd_count=0
+
                         pkt_src = pkt_dst = -1
                         pid = tid = -1
                         pcm_memory_info = "PCM=memory | skt=%d | RD=%d (MB/s)" % (
