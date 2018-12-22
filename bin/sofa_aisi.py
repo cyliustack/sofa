@@ -353,7 +353,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
         iter_summary = pd.DataFrame( iter_list, columns=iter_summary_fields )
 
         print_title('Per-iteration Performance Summary')
-        if len(iter_summary) > 0:
+        if iter_summary != None:
             mean_fw_time = iter_summary['fw_time'].mean()
             mean_bw_time = iter_summary['bw_time'].mean()
             mean_copy_time = iter_summary['copy_time'].mean()
