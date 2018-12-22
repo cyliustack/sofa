@@ -318,6 +318,8 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
     a = 0
     times = []
     times2 = []
+
+    print_title('AISI: Per-iteration Performance Summary')
     try: 
         iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations) 
         traces_to_json(logdir + 'report.js')
@@ -352,7 +354,6 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
                 iter_list.append(iter_profile(cfg, iter_summary_fields, df_gpu_iteration))
         iter_summary = pd.DataFrame( iter_list, columns=iter_summary_fields )
 
-        print_title('Per-iteration Performance Summary')
         if not iter_summary.empty:
             mean_fw_time = iter_summary['fw_time'].mean()
             mean_bw_time = iter_summary['bw_time'].mean()
