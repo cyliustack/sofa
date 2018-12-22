@@ -367,7 +367,7 @@ def sofa_analyze(logdir, cfg):
         r = requests.get(cfg.potato_server+'/image/best')
         print('Tag of optimal image recommended from POTATO: '+ highlight(r.json()['tag']))
         print('Estimated speedup: %.2lfx' % r.json()['score'] )
-        print('[Debug] Optimization approach: '+r.json()['description'])
+        print('Optimization action: '+r.json()['description'])
         print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
     #print_warning('Something wrong with POTATO client')
 
