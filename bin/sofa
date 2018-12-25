@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/python3.6
 import sys
 import numpy as np
 import csv
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     sys.stdout.flush()
     
     print_info("Your Python version is %s.%s.%s" % sys.version_info[:3])
-    if sys.version_info < (3,6) :
+    if sys.version_info < (3,5) :
         print_error("But SOFA requires minimum version of Python 3.5.")
         quit()
 
@@ -180,9 +180,9 @@ if __name__ == "__main__":
     if args.potato_server is not None:
         cfg.potato_server = args.potato_server
 
-    cfg.gpu_filters.append(Filter('copyKind_1_', 'Red'))
-    cfg.gpu_filters.append(Filter('copyKind_2_', 'Peru'))
-    cfg.gpu_filters.append(Filter('copyKind_10_', 'Purple'))
+    cfg.gpu_filters.append(Filter('CUDA_COPY_H2D', 'Red'))
+    cfg.gpu_filters.append(Filter('CUDA_COPY_D2H', 'Peru'))
+    cfg.gpu_filters.append(Filter('CUDA_COPY_P2P', 'Purple'))
     if cfg.cuda_api_tracing:
         cfg.gpu_filters.append(Filter('CUDA_API', 'DarkSlateGray'))
     if args.gpu_filters is not None:

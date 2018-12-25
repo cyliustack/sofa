@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import numpy as np
 import csv
 import json
@@ -18,7 +17,7 @@ def service_get_cpuinfo(logdir):
     next_call = time.time()
     while True:
         #print(datetime.datetime.now())
-        next_call = next_call+1;
+        next_call = next_call + 0.1;
         get_cpuinfo(logdir)
         time.sleep(next_call - time.time())
 
@@ -86,24 +85,24 @@ def sofa_record(command, logdir, cfg):
 
     if cfg.enable_pcm:
         print_info('Test Capability of PCM programs ...')    
-        ret = str(subprocess.check_output(['getcap `which pcm-pcie.x`'], shell=True))
-        if ret.find('cap_sys_rawio+ep') == -1:
-            print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
-            print_error('sudo modprobe msr')
-            print_error('sudo setcap cap_sys_rawio=ep `which pcm-pcie.x`')
-            quit()
+        #ret = str(subprocess.check_output(['getcap `which pcm-pcie.x`'], shell=True))
+        #if ret.find('cap_sys_rawio+ep') == -1:
+        #    print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
+        #    print_error('sudo modprobe msr')
+        #    print_error('sudo setcap cap_sys_rawio=ep `which pcm-pcie.x`')
+        #    quit()
         ret = str(subprocess.check_output(['getcap `which pcm-memory.x`'], shell=True))
         if ret.find('cap_sys_rawio+ep') == -1:
             print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
             print_error('sudo modprobe msr')
             print_error('sudo setcap cap_sys_rawio=ep `which pcm-memory.x`')
             quit()
-        ret = str(subprocess.check_output(['getcap `which pcm-numa.x`'], shell=True))
-        if ret.find('cap_sys_rawio+ep') == -1:
-            print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
-            print_error('sudo modprobe msr')
-            print_error('sudo setcap cap_sys_rawio=ep `which pcm-numa.x`')
-            quit()
+        #ret = str(subprocess.check_output(['getcap `which pcm-numa.x`'], shell=True))
+        #if ret.find('cap_sys_rawio+ep') == -1:
+        #    print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
+        #    print_error('sudo modprobe msr')
+        #    print_error('sudo setcap cap_sys_rawio=ep `which pcm-numa.x`')
+        #    quit()
 
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
         print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
@@ -152,9 +151,9 @@ def sofa_record(command, logdir, cfg):
         if cfg.enable_pcm:
             with open(os.devnull, 'w') as FNULL:
                 delay_pcie = 0.02
-                p_pcm_pcie = subprocess.Popen(['yes|pcm-pcie.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_pcie.csv -B '], shell=True)
+                #p_pcm_pcie = subprocess.Popen(['yes|pcm-pcie.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_pcie.csv -B '], shell=True)
                 p_pcm_memory = subprocess.Popen(['yes|pcm-memory.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_memory.csv '], shell=True)
-                p_pcm_numa = subprocess.Popen(['yes|pcm-numa.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_numa.csv '], shell=True)
+                #p_pcm_numa = subprocess.Popen(['yes|pcm-numa.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_numa.csv '], shell=True)
         
         print_info("Recording...")    
         if cfg.profile_all_cpus == True:

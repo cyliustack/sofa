@@ -32,6 +32,7 @@
 #include <iomanip>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/time.h>
 #include <string.h>
 #include <string>
 #include <assert.h>
@@ -54,6 +55,8 @@
 
 using namespace std;
 
+
+
 const uint32 max_sockets = 256;
 const uint32 max_imc_channels = 8;
 const uint32 max_edc_channels = 8;
@@ -69,6 +72,13 @@ typedef struct memdata {
     float EDC_Wr_socket[max_sockets];
     uint64 partial_write[max_sockets];
 } memdata_t;
+
+double gettime(){
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    double t = tp.tv_sec + tp.tv_usec / 1000000.0; //get current timestamp in milliseconds
+    return t;
+}
 
 void print_help(const string prog_name)
 {
@@ -409,19 +419,25 @@ void display_bandwidth_csv_header(PCM *m, memdata_t *md)
 void display_bandwidth_csv(PCM *m, memdata_t *md, uint64 elapsedTime)
 {
     uint32 numSockets = m->getNumSockets();
+/* 
     tm tt = pcm_localtime();
     cout.precision(3);
     cout << 1900+tt.tm_year << '-' << 1+tt.tm_mon << '-' << tt.tm_mday << ';'
          << tt.tm_hour << ':' << tt.tm_min << ':' << tt.tm_sec << ';';
-
-
+*/
+    char str_time[100]="";
+    sprintf(str_time, "%.6lf", gettime());
+    
     float sysRead = 0.0, sysWrite = 0.0;
 
     cout.setf(ios::fixed);
     cout.precision(2);
 
+// time, skt, iMC_Read, iMC_Write [, partial_write] [, EDC_Read, EDC_Write] , sysRead, sysWrite, sysTotal
+
     for (uint32 skt=0; skt < numSockets; ++skt)
     {
+/*
         for(uint64 channel = 0; channel < max_imc_channels; ++channel)
         {
 	   if(md->iMC_Rd_socket_chan[skt][channel] < 0.0 && md->iMC_Wr_socket_chan[skt][channel] < 0.0) //If the channel read neg. value, the channel is not working; skip it.
@@ -429,16 +445,23 @@ void display_bandwidth_csv(PCM *m, memdata_t *md, uint64 elapsedTime)
 	   cout <<setw(8) << md->iMC_Rd_socket_chan[skt][channel] << ';'
 		<<setw(8) << md->iMC_Wr_socket_chan[skt][channel] << ';';
 	 }
-         cout <<setw(8) << md->iMC_Rd_socket[skt] <<';'
-	      <<setw(8) << md->iMC_Wr_socket[skt] <<';';
+*/
+         cout << str_time << ','
+              << skt << ',' 
+              << md->iMC_Rd_socket[skt] <<','
+	      << md->iMC_Wr_socket[skt] <<',';
+
 	 if (m->getCPUModel() != PCM::KNL)
-             cout <<setw(10) << dec << md->partial_write[skt] <<';';
-         cout << setw(8) << md->iMC_Rd_socket[skt]+md->iMC_Wr_socket[skt] <<';';
+             cout << md->partial_write[skt] <<',';
+
+         cout << md->iMC_Rd_socket[skt] + md->iMC_Wr_socket[skt] <<',';
 
 	 sysRead += md->iMC_Rd_socket[skt];
          sysWrite += md->iMC_Wr_socket[skt];
 
 	 if (m->MCDRAMmemoryTrafficMetricsAvailable()) {
+
+/*
              for(uint64 channel = 0; channel < max_edc_channels; ++channel)
 	     {
                  if(md->EDC_Rd_socket_chan[skt][channel] < 0.0 && md->EDC_Wr_socket_chan[skt][channel] < 0.0) //If the channel read neg. value, the channel is not working; skip it.
@@ -447,18 +470,20 @@ void display_bandwidth_csv(PCM *m, memdata_t *md, uint64 elapsedTime)
 	              <<setw(8) << md->EDC_Wr_socket_chan[skt][channel] << ';';
 	
 	     }
-             cout <<setw(8) << md->EDC_Rd_socket[skt] <<';'
-	          <<setw(8) << md->EDC_Wr_socket[skt] <<';'
-                  <<setw(8) << md->EDC_Rd_socket[skt]+md->EDC_Wr_socket[skt] <<';';
+
+*/
+             cout << md->EDC_Rd_socket[skt] <<','
+	          << md->EDC_Wr_socket[skt] <<',';
+//                  << md->EDC_Rd_socket[skt] + md->EDC_Wr_socket[skt] <<';';
 
              sysRead += md->EDC_Rd_socket[skt];
              sysWrite += md->EDC_Wr_socket[skt];
 	 }
     }
 
-    cout <<setw(10) <<sysRead <<';'
-	 <<setw(10) <<sysWrite <<';'
-	 <<setw(10) <<sysRead+sysWrite << endl;
+    cout << sysRead <<','
+	 << sysWrite <<','
+	 << sysRead + sysWrite << endl;
 }
 
 void calculate_bandwidth(PCM *m, const ServerUncorePowerState uncState1[], const ServerUncorePowerState uncState2[], uint64 elapsedTime, bool csv, bool & csvheader, uint32 no_columns)
@@ -514,10 +539,10 @@ void calculate_bandwidth(PCM *m, const ServerUncorePowerState uncState1[], const
     }
 
     if (csv) {
-      if (csvheader) {
-	display_bandwidth_csv_header(m, &md);
-	csvheader = false;
-      }
+//      if (csvheader) {
+//	display_bandwidth_csv_header(m, &md);
+//	csvheader = false;
+//      }
       display_bandwidth_csv(m, &md, elapsedTime);
     } else {
       display_bandwidth(m, &md, no_columns);
@@ -587,6 +612,45 @@ void calculate_bandwidth(PCM *m, const ServerUncorePowerState uncState1[], const
     }
 }
 
+void calculate_bandwidth_reduced(PCM *m, const ServerUncorePowerState uncState1[], const ServerUncorePowerState uncState2[], uint64 elapsedTime, int rankA, int rankB)
+{
+    uint32 skt = 0;
+    cout.setf(ios::fixed);
+    cout.precision(2);
+    uint32 numSockets = m->getNumSockets();
+ 
+   cout << " DIMM Rank Monitoring\n";
+    
+    while(skt < numSockets)
+    {
+         // skt, ch#, RankA, Read, Write[, RankB, Read, Write]
+            cout << "Socket "<< skt;
+            for(uint32 channel = 0; channel < max_imc_channels; ++channel)
+            {
+		
+                if(rankA >=0)
+                  cout << "Ch " << channel
+                      << " R " << rankA
+                      <<"| Reads (MB/s):"
+                      <<(float) (getMCCounter(channel,READ_RANK_A,uncState1[skt],uncState2[skt]) * 64 / 1000000.0 / (elapsedTime/1000.0))
+                      <<" Writes(MB/s):"
+                      <<(float) (getMCCounter(channel,WRITE_RANK_A,uncState1[skt],uncState2[skt]) * 64 / 1000000.0 / (elapsedTime/1000.0))
+                      ;
+                if(rankB >=0)
+                  cout << " R " << rankB
+                      <<"| Reads (MB/s):"
+                      <<(float) (getMCCounter(channel,READ_RANK_B,uncState1[skt],uncState2[skt]) * 64 / 1000000.0 / (elapsedTime/1000.0))
+                      <<" Writes(MB/s):"                      
+                      <<(float) (getMCCounter(channel,WRITE_RANK_B,uncState1[skt],uncState2[skt]) * 64 / 1000000.0 / (elapsedTime/1000.0))
+                      ;
+		  cout << "\n";
+            }
+            
+            skt += 1; 
+    }
+}
+
+
 int main(int argc, char * argv[])
 {
     set_signal_handlers();
@@ -609,7 +673,7 @@ int main(int argc, char * argv[])
     
     cerr << " This utility measures memory bandwidth per channel or per DIMM rank in real-time" << endl;
     cerr << endl;
-
+    long timeStamp = 0;
     double delay = -1.0;
     bool csv = false, csvheader=false;
     uint32 no_columns = DEFAULT_DISPLAY_COLUMNS; // Default number of columns is 2
@@ -617,6 +681,7 @@ int main(int argc, char * argv[])
     char ** sysArgv = NULL;
 #ifndef _MSC_VER
     long diff_usec = 0; // deviation of clock is useconds between measurements
+    long stop_usec = 0;
     int calibrated = PCM_CALIBRATION_INTERVAL - 2; // keeps track is the clock calibration needed
 #endif
     int rankA = -1, rankB = -1;
@@ -663,6 +728,25 @@ int main(int argc, char * argv[])
                 string tmp = cmd.substr(found + 1);
                 if (!tmp.empty()) {
                     numberOfIterations = (unsigned int)atoi(tmp.c_str());
+                }
+            }
+            continue;
+        }
+        if (strncmp(*argv, "-ts", 3) == 0 ||
+            strncmp(*argv, "/ts", 3) == 0)
+        {
+            string cmd = string(*argv);
+            size_t found = cmd.find('=', 3);
+            if (found != string::npos) {
+                string tmp = cmd.substr(found + 1);
+                if (!tmp.empty()) {
+                    timeStamp = (long)atoi(tmp.c_str());
+
+                    struct timeval check_ts;
+                    gettimeofday(&check_ts, NULL);
+                    if ((timeStamp + 10 * 1000000) < (check_ts.tv_sec * 1000000.0))
+                        timeStamp = check_ts.tv_sec * 1000000 + check_ts.tv_usec;
+                    timeStamp += 2000000;
                 }
             }
             continue;
@@ -754,6 +838,7 @@ int main(int argc, char * argv[])
         }
     } while(argc > 1); // end of command line partsing loop
 
+
     m->disableJKTWorkaround();
     PCM::ErrorCode status = m->programServerUncoreMemoryMetrics(rankA, rankB);
     switch (status)
@@ -827,7 +912,6 @@ int main(int argc, char * argv[])
     }
 
     unsigned int i = 1;
-
     while ((i <= numberOfIterations) || (numberOfIterations == 0))
     {
         if(!csv) cout << std::flush;
@@ -848,7 +932,24 @@ int main(int argc, char * argv[])
         }
 #endif
 
-        MySleepMs(calibrated_delay_ms);
+        if (!timeStamp){
+
+            MySleepMs(calibrated_delay_ms);
+
+        } else {
+//            printf("timestamp is %ld\n",timeStamp);
+
+            struct timeval wait_ts;
+
+            stop_usec = timeStamp + delay_ms*1000/1000000;
+
+            while (timeStamp < stop_usec) {
+                gettimeofday(&wait_ts, NULL);
+                timeStamp = wait_ts.tv_sec*1000000.0 + wait_ts.tv_usec;
+            }
+            timeStamp = stop_usec;
+            
+        }
 
 #ifndef _MSC_VER
         calibrated = (calibrated + 1) % PCM_CALIBRATION_INTERVAL;
@@ -865,12 +966,13 @@ int main(int argc, char * argv[])
 	  //cout << "Time elapsed: "<<dec<<fixed<<AfterTime-BeforeTime<<" ms\n";
 	  //cout << "Called sleep function for "<<dec<<fixed<<delay_ms<<" ms\n";
 	}
-
         if(rankA >= 0 || rankB >= 0)
-          calculate_bandwidth(m,BeforeState,AfterState,AfterTime-BeforeTime,csv,csvheader, no_columns, rankA, rankB);
+//          calculate_bandwidth(m,BeforeState,AfterState,AfterTime-BeforeTime,csv,csvheader, no_columns, rankA, rankB);
+          calculate_bandwidth_reduced(m,BeforeState,AfterState,AfterTime-BeforeTime, rankA, rankB);
         else
           calculate_bandwidth(m,BeforeState,AfterState,AfterTime-BeforeTime,csv,csvheader, no_columns);
 
+//          calculate_bandwidth_reduced(m,BeforeState,AfterState,AfterTime-BeforeTime,csv,csvheader, no_columns);
         swap(BeforeTime, AfterTime);
         swap(BeforeState, AfterState);
 

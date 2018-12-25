@@ -48,7 +48,8 @@ function install_python_packages()
     
 
     if [[ $(which yum) ]]  ; then
-        $WITH_SUDO yum install -y epel-release
+        echo "yum detected"
+	$WITH_SUDO yum install -y epel-release
         $WITH_SUDO yum install -y https://centos7.iuscommunity.org/ius-release.rpm
         $WITH_SUDO yum install -y python36u python36u-pip python36u-devel
     elif [[ "${OS}" == "Ubuntu" ]] && ( [[ "${VERSION}" == "14.04"* ]] || [[ "${VERSION}" == "16.04"* ]] ) ; then	
@@ -57,7 +58,7 @@ function install_python_packages()
         $WITH_SUDO apt-get update -y
         $WITH_SUDO apt-get install python3.6 python3.6-dev -y
 	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
-	    $WITH_SUDO python3.6 get-pip.py
+	$WITH_SUDO python3.6 get-pip.py
         $WITH_SUDO rm get-pip.py
     elif [[ $(which apt) ]] ; then
 	$WITH_SUDO add-apt-repository universe
@@ -78,17 +79,18 @@ function install_python_packages()
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip"
     PIP_PACKAGES="numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein requests"
-    python3.6 -m pip install --user --upgrade pip
-    python3.6 -m pip install --user --no-cache-dir ${PIP_PACKAGES}
+    $WITH_SUDO python3.6 -m pip install --upgrade pip
+    $WITH_SUDO python3.6 -m pip install --no-cache-dir ${PIP_PACKAGES}
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-
-    if [[ $(which /opt/conda/bin/python3.6) ]] ; then
-        echo -e "${C_GREEN}Installing conda packages...${C_NONE}"
-        /opt/conda/bin/python3.6 -m pip install --user --upgrade pip
-        /opt/conda/bin/python3.6 -m pip install --user --no-cache-dir  ${PIP_PACKAGES}
-        [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+     
+    if [[ $(which conda) ]] ; then 
+    	echo "Install via conda python"
+    	CONDA_PY3=$(dirname $(which conda))/python3
+    	PIP_PACKAGES="numpy pandas scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein requests"
+    	$WITH_SUDO ${CONDA_PY3} -m pip install --upgrade pip
+    	$WITH_SUDO ${CONDA_PY3} -m pip install --no-cache-dir ${PIP_PACKAGES}
+    	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     fi
-
 }
 
 function install_packages()
@@ -107,7 +109,7 @@ function install_packages()
         $WITH_SUDO yum install -y epel-release 
         $WITH_SUDO yum install -y curl wget make gcc gcc-c++ cmake \
             perf tcpdump sysstat \
-            centos-release-scl devtoolset-4-gcc* 
+            centos-release-scl devtoolset-5-gcc* 
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"
@@ -129,14 +131,15 @@ function install_utility_from_source()
     #cd pcm && make -j && cd - 
     #$WITH_SUDO mkdir -p /usr/local/intelpcm/bin 
     #$WITH_SUDO cp pcm/pcm-*.x /usr/local/intelpcm/bin 
-    rm -r papi
-    if [[ ! -f papi-5.6.0.tar.gz ]]; then  
-        wget http://icl.utk.edu/projects/papi/downloads/papi-5.6.0.tar.gz
+    PAPI_VERSION=papi-5.6.0
+    rm -rf ${PAPI_VERSION}
+    if [[ ! -f ${PAPI_VERSION}.tar.gz ]]; then  
+        wget http://icl.utk.edu/projects/papi/downloads/${PAPI_VERSION}.tar.gz
     fi
-    tar xvf papi-5.6.0.tar.gz
-    mv papi-5.6.0 papi
-    cd papi/src && ./configure --prefix=$(pwd)/build && make -j4 && make install && cd - 
-    rm papi-5.6.0.tar.gz
+    tar xvf ${PAPI_VERSION}.tar.gz
+    cd ${PAPI_VERSION}/src && ./configure --prefix=$(pwd)/build && make -j4 && make install && cd - 
+    cp -arT ${PAPI_VERSION} papi
+    rm ${PAPI_VERSION}.tar.gz
 }
 
 # main

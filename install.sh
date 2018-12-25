@@ -70,7 +70,7 @@ function install_sofa()
     cp -rf ${SCRIPT_PATH}/bin       ${PREFIX}
     cp -rf ${SCRIPT_PATH}/plugins   ${PREFIX}
     cp -rf ${SCRIPT_PATH}/sofaboard ${PREFIX}
-    cp -rf ${SCRIPT_PATH}/papi/src/build ${PREFIX}
+    cp -arTf ${SCRIPT_PATH}/papi/src/build ${PREFIX}/papi
 
     # Create a new file for SOFA environment
 ################## heredoc style

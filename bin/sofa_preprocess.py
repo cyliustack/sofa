@@ -1,4 +1,3 @@
-#!/usr/bin/env python3.6
 import pandas as pd
 import numpy as np
 import csv
@@ -47,7 +46,7 @@ def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
 # 359342/359342 2493492.850128:          1 cycles:  ffffffff8106450a
 # native_write_msr_safe
 
-def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz):
+def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz_xp, cpu_mhz_fp):
     fields = sample.split()
     event = event_raw = 0
     counts = 0
@@ -71,14 +70,11 @@ def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz):
 
     t_begin = time + t_offset
     t_end = time + t_offset
-    
-    if cpu_mhz['first_timestamp'] > 0:
-        if t_begin > cpu_mhz['first_timestamp']:
-            duration = counts/(cpu_mhz[str(int(t_begin))]*1e6)
-        else:
-            duration = counts/(cpu_mhz['first_mhz']*1e6)
+ 
+    if len(cpu_mhz_xp) > 1:
+        duration = counts/(np.interp(t_begin, cpu_mhz_xp, cpu_mhz_fp)*1e6)
     else:
-        duration = counts/(cpu_mhz['default']*1e6)
+        duration = counts/(3000.0*1e6)
     
     event  = np.log10(event_raw)
 
@@ -102,7 +98,7 @@ def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz):
              mem_addr]                         # 14
     return trace
 
-def cpu_trace_read(sample, t_offset, cfg, cpu_mhz):
+def cpu_trace_read(sample, t_offset, cfg, cpu_mhz_xp, cpu_mhz_fp):
     fields = sample.split()
     event = event_raw = 0
     counts = 0
@@ -119,15 +115,11 @@ def cpu_trace_read(sample, t_offset, cfg, cpu_mhz):
 
     t_begin = time + t_offset
     t_end = time + t_offset
-    
-    if cpu_mhz['first_timestamp'] > 0:
-        if t_begin > cpu_mhz['first_timestamp']:
-            if cpu_mhz[str(int(t_begin))]: # fix bug KeyError: '1545291789', check existance
-                duration = counts/(cpu_mhz[str(int(t_begin))]*1e6)
-        else:
-            duration = counts/(cpu_mhz['first_mhz']*1e6)
+
+    if len(cpu_mhz_xp) > 1:
+        duration = counts/(np.interp(t_begin, cpu_mhz_xp, cpu_mhz_fp)*1e6)
     else:
-        duration = counts/(cpu_mhz['default']*1e6)
+        duration = counts/(3000.0*1e6)
     
     event  = np.log10(event_raw)
 
@@ -272,17 +264,17 @@ def gpu_trace_read(
         copyKind = 1
         pkt_src = 0
         pkt_dst = deviceId
-        kernel_name = "copyKind_%d_%dB" % (copyKind, payload)
+        kernel_name = "CUDA_COPY_H2D_%dB" % (payload)
     elif kernel_name.find('DtoH') != -1:
         copyKind = 2
         pkt_src = deviceId
         pkt_dst = 0
-        kernel_name = "copyKind_%d_%dB" % (copyKind, payload)
+        kernel_name = "CUDA_COPY_D2H_%dB" % (payload)
     elif kernel_name.find('DtoD') != -1:
         copyKind = 8
         pkt_src = deviceId
         pkt_dst = deviceId
-        kernel_name = "copyKind_%d_%dB" % (copyKind, payload)
+        kernel_name = "CUDA_COPY_D2D_%dB" % (payload)
     elif kernel_name.find('PtoP') != -1:
         copyKind = 10
         try:
@@ -295,7 +287,7 @@ def gpu_trace_read(
         except BaseException:
             pkt_dst = 0
 
-        kernel_name = "copyKind_%d_from_gpu%d_to_gpu%d_%dB" % (copyKind, pkt_src, pkt_dst, payload)
+        kernel_name = "[CUDA_COPY_P2P]from_gpu%d_to_gpu%d_%dB" % (pkt_src, pkt_dst, payload)
     else:
         copyKind = 0
 
@@ -528,21 +520,21 @@ def sofa_preprocess(logdir, cfg):
         print_info('Time offset applied to timestamp (s):' + str(cfg.cpu_time_offset))
         print_info('SOFA global time base (s):' + str(t_glb_base))
     
-    cpu_mhz = {'default':3000, 'first_timestamp':0, 'first_mhz':3000}
+    cpu_mhz_xp = [0.0]
+    cpu_mhz_fp = [3000.0]
+    #np.interp(2.5, xp, fp)
     try:
         with open(logdir + 'cpuinfo.txt') as f:
             lines = f.readlines()
-            if lines:
-                cpu_mhz['first_timestamp'] = int(float(lines[0].split()[0]))
-                cpu_mhz['first_mhz'] = float(lines[0].split()[1])
             for line in lines:
                 fields = line.split()
-                timestamp = int(float(fields[0]))
+                timestamp = float(fields[0])
                 mhz = float(fields[1])
-                cpu_mhz[str(timestamp)] = mhz
+                cpu_mhz_xp.append(timestamp)
+                cpu_mhz_fp.append(mhz)
     except:
-        print_warning('no cpuinfo file is found, default cpu MHz = %lf'%(cpu_mhz['default']))
-    print('cpu_mhz length: ',len(cpu_mhz))
+        print_warning('no cpuinfo file is found, default cpu MHz = %lf'%(fp[0]))
+    print('cpu_mhz length: ',len(cpu_mhz_xp))
     
     net_traces = []
     cpu_traces = []
@@ -1217,7 +1209,8 @@ def sofa_preprocess(logdir, cfg):
                         cpu_trace_read,
                         t_offset = perf_timebase_unix - perf_timebase_uptime,
                         cfg = cfg,
-                        cpu_mhz = cpu_mhz),
+                        cpu_mhz_xp = cpu_mhz_xp,
+			cpu_mhz_fp = cpu_mhz_fp),
                     samples)
             cpu_traces = pd.DataFrame(res)                      
             cpu_traces.columns = sofa_fieldnames
@@ -1259,7 +1252,8 @@ def sofa_preprocess(logdir, cfg):
                             cpu_trace_read_hsg,
                             t_offset = perf_timebase_unix - perf_timebase_uptime,
                             cfg = cfg,
-                            cpu_mhz = cpu_mhz
+                            cpu_mhz_xp = cpu_mhz_xp,
+                            cpu_mhz_fp = cpu_mhz_fp
                             ),
                         samples)                
                 cpu_traces = pd.DataFrame(res)      
@@ -1372,7 +1366,7 @@ def sofa_preprocess(logdir, cfg):
                                 # caption: assign mode of function name              
                                 mode = str(cluster_in_pid_cluster['name'].mode()[0]) # api pd.Series.mode() returns a pandas series                                
                                 mode = mode.replace('::', '@') # str.replace(old, new[, max])
-                                print('mode of this cluster: {}'.format(str(mode[:35])))
+                                #print('mode of this cluster: {}'.format(str(mode[:35])))
 
                                 swarm_stats.append({'keyword': 'SWARM_' + '["' + str(mode[:35]) + ']' +  ('_' * showing_idx),
                                                     'duration_sum': total_duration,
@@ -1467,6 +1461,78 @@ def sofa_preprocess(logdir, cfg):
                 print_warning('No pcm-pcie counter values are recorded.')
                 print_warning('If necessary, run /usr/local/intelpcm/bin/pcm-pcie.x ONCE to reset MSR so as to enable correct pcm recording')
    
+    ### time, skt, iMC_Read, iMC_Write [, partial_write] [, EDC_Read, EDC_Write] , sysRead, sysWrite, sysTotal
+    if cfg.enable_pcm and os.path.isfile('%s/pcm_memory.csv' % logdir):
+        with open( logdir + '/pcm_memory.csv' ) as f:
+            lines = f.readlines()
+            print_info("Length of pcm_memory_traces = %d" % len(lines))
+            if len(lines) > 0:
+                pcm_memory_list = []
+                pcm_memory_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                for line in lines:
+                    if line.find('Skt') == -1:
+                        fields = line.split(',')
+                        #for f in range(len(fields)):
+                        #    print("field[%d] %s" % (f, fields[f]))
+                       
+                        skt = int(fields[1])
+                        t_begin = float(fields[0]) 
+                        deviceId = skt
+                        event = -1
+                        copyKind = -1
+                        payload = -1
+                        try: 
+                            pcm_memory_wt_count = int(float(fields[3]))
+                            pcm_memory_rd_count = int(float(fields[2]))
+                        except:
+                            pcm_memory_wt_count=0
+                            pcm_memory_rd_count=0
+
+                        pkt_src = pkt_dst = -1
+                        pid = tid = -1
+                        pcm_memory_info = "PCM=memory | skt=%d | RD=%d (MB/s)" % (
+                            skt, pcm_memory_rd_count)
+
+                        bandwidth = pcm_memory_rd_count
+                        trace = [
+                            t_begin,
+                            event,
+                            bandwidth,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            pcm_memory_info,
+                            cpuid]
+                        pcm_memory_list.append(trace)
+ 
+                        pcm_memory_info = "PCM=memory | skt=%d | WT=%d (MB/s)" % (
+                            skt, pcm_memory_wt_count)
+                        bandwidth = pcm_memory_wt_count
+                        trace = [
+                            t_begin,
+                            event,
+                            bandwidth,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            pcm_memory_info,
+                            cpuid]
+                        pcm_memory_list.append(trace)                 
+                pcm_memory_traces = list_to_csv_and_traces(logdir, pcm_memory_list, 'pcm_memory_trace.csv', 'w')
+
+            else:
+                print_warning('No pcm-memory counter values are recorded.')
+                print_warning('If necessary, run /usr/local/intelpcm/bin/pcm-memory.x ONCE to reset MSR so as to enable correct pcm recording')
     
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
@@ -1614,6 +1680,15 @@ def sofa_preprocess(logdir, cfg):
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'bandwidth'
     sofatrace.data = pcm_pcie_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'pcm_memory'
+    sofatrace.title = 'PCM_MEMORY'
+    sofatrace.color = 'pink'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'bandwidth'
+    sofatrace.data = pcm_memory_traces
     traces.append(sofatrace)
 
     sofatrace = SOFATrace()

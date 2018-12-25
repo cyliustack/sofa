@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import pandas as pd
 import numpy as np
 from fuzzywuzzy import fuzz
@@ -10,6 +9,7 @@ from sofa_config import *
 from sofa_common import *
 from STree import *
 from sklearn.cluster import KMeans
+from scipy import stats
 import re 
 
 table_size = 0
@@ -21,7 +21,7 @@ def iter_profile(cfg, fields, df_gpu):
     fw_time = df_gpu[df_gpu['name'].str.contains("_fw")].loc[:,'duration'].sum()
     bw_time = df_gpu[df_gpu['name'].str.contains("_bw")].loc[:,'duration'].sum()
     gemm_time = df_gpu[df_gpu['name'].str.contains("gemm")].loc[:,'duration'].sum()
-    copy_time = df_gpu[df_gpu['name'].str.contains("copyKind")].loc[:,'duration'].sum()
+    copy_time = df_gpu[df_gpu['name'].str.contains("CUDA_COPY")].loc[:,'duration'].sum()
     allreduce_time = df_gpu[df_gpu['name'].str.contains("AllReduceKernel")].loc[:,'duration'].sum()
     streams = len(df_gpu['tid'].value_counts())
     #print("streams: ",streams)
@@ -89,6 +89,7 @@ def main_string_generate_v1(df_gpu):
     for i in range(len(df_gpu)):
         trace  = df_gpu.iloc[i]
         name = trace['name'] 
+        #TODO: only parsing one GPU with another better method.
         name = re.sub(r'\[.+\]', '', name.rstrip());
         value = name_table.get(name)
         if value == None:
@@ -195,7 +196,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
         #print('B: ',pattern)
         pp_ratio = fuzz.ratio(pattern,pattern_pre)
         if pp_ratio > 80:
-            print("pattern too similar: ",pp_ratio) 
+            #print("pattern too similar: ",pp_ratio) 
             continue
         else:
             pattern_pre = pattern 
@@ -213,7 +214,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
         step = 1
         iteration_count = 0
         b_overlap = False
-        fw_threshold = 100
+        fw_threshold = 85
         ind = []
         while block_begin <= (total_length - block_size):
             blockString = ",".join(wid_seq[block_begin:block_end])
@@ -226,7 +227,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
                 block_begin = block_begin + step
                 block_end = block_begin + block_size
 
-        print('Non-overlapped %d-times pattern: %s'%(len(ind),pattern))
+        #print('Non-overlapped %d-times pattern: %s'%(len(ind),pattern))
         if len(ind) == cfg.num_iterations:    
             for i in ind:
                 iteration_table.append((df_gpu.iloc[i]['timestamp'],df_gpu.iloc[i+block_size-1]['timestamp']))
@@ -317,6 +318,8 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
     a = 0
     times = []
     times2 = []
+
+    print_title('AISI: Per-iteration Performance Summary')
     try: 
         iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations) 
         traces_to_json(logdir + 'report.js')
@@ -351,9 +354,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
                 iter_list.append(iter_profile(cfg, iter_summary_fields, df_gpu_iteration))
         iter_summary = pd.DataFrame( iter_list, columns=iter_summary_fields )
 
-        print_title('Per-iteration Performance Summary')
-        if len(iter_summary) > 0:
-            mean_step_time = iter_summary['elapsed_time'].mean()
+        if not iter_summary.empty:
             mean_fw_time = iter_summary['fw_time'].mean()
             mean_bw_time = iter_summary['bw_time'].mean()
             mean_copy_time = iter_summary['copy_time'].mean()
@@ -363,8 +364,10 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
             mean_payload = iter_summary['payload'].mean()
             mean_streams = iter_summary['streams'].mean()
             print("Elapsed time of initial iteration (s): ", iter_summary.loc[0,'elapsed_time'])
-            if cfg.iterations > 1:
-                print("Averaged elapsed time of iterations excluding initial one (s): ", iter_summary.loc[1:,'elapsed_time'].mean())
+            mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'])
+            if cfg.num_iterations > 1:
+                mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'].iloc[1:])
+            print('Averaged per-iteration elapsed time (s)', mean_step_time) 
             print("Averaged CUDA GPU time (s): ", mean_gpu_time)
             print("Averaged CUDA FW time (s): ", mean_fw_time)
             print("Averaged CUDA BW time (s): ", mean_bw_time)
@@ -378,7 +381,8 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
             else: 
                 print("The profiled program is a communication-bound workload, %d bytes are monitored on PCIe bus"%mean_payload)
                 print("Try using RP Mode parameter synchronization method instead of PS Mode.")
-            print('\n\n')
+            print('\n\n') 
+            return iter_summary
         else:
             print_warning('No iteration detected after scanning runtime string!')
     except IOError:
