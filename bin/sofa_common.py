@@ -1,11 +1,14 @@
 #!/usr/bin/python3.6
-import pandas as pd
-import numpy as np
-import scipy
 import multiprocessing as mp
 from functools import partial
-from sofa_print import *
+
+import numpy as np
+import pandas as pd
+import scipy
+
 from sofa_config import *
+from sofa_print import *
+
 
 def overlap(pa, pb, pc, pd):
     if pb - pc >= 0 and pd - pa >= 0:
@@ -80,7 +83,7 @@ def comm_profile(logdir, cfg, df_gpu):
 
     for i in range(len(bw)):
         key = list(bw.keys())[i]
-        if cktable[key] == 'H2D' or cktable[key] == 'D2H' or cktable[key] == 'D2D' or cktable[key] == 'P2P': 
+        if cktable[key] == 'H2D' or cktable[key] == 'D2H' or cktable[key] == 'D2D' or cktable[key] == 'P2P':
             print(("Averaged Achieved %s Unidirectional Bandwidth: %.1f (GB/s)" % (cktable[key], bw.iloc[i])))
         else:
             continue
@@ -133,7 +136,7 @@ def comm_profile(logdir, cfg, df_gpu):
             row_str = "HOST\t"
         else:
             row_str = "GPU%d\t" % i
-        
+
         for j in range(accum.shape[1]):
             row_str = row_str + "%d" % (accum[i][j] / (1024 * 1024)) + "\t"
         print(row_str)
@@ -149,7 +152,7 @@ def comm_profile(logdir, cfg, df_gpu):
             row_str = "HOST\t"
         else:
             row_str = "GPU%d\t" % i
-        
+
         for j in range(accum_bw.shape[1]):
             if  accum_bw_count[i][j] > 0:
                 row_str = row_str + "%.2lf" % (accum_bw[i][j]/accum_bw_count[i][j]) + "\t"
@@ -165,4 +168,4 @@ def comm_profile(logdir, cfg, df_gpu):
             "pkt_src",
             "pkt_dst",
             "payload",
-            "bandwidth"]) 
+            "bandwidth"])

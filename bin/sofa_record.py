@@ -1,17 +1,21 @@
-import numpy as np
-import csv
-import json
-import sys
 import argparse
-import multiprocessing as mp
+import csv
+import datetime
 import glob
+import json
+import multiprocessing as mp
 import os
-from functools import partial
-from sofa_print import *
 import subprocess
-from pwd import getpwuid
+import sys
+import threading
 import time
-import datetime, threading, time
+from functools import partial
+from pwd import getpwuid
+
+import numpy as np
+
+from sofa_print import *
+
 
 def service_get_cpuinfo(logdir):
     next_call = time.time()
@@ -33,18 +37,18 @@ def get_cpuinfo(logdir):
             unix_time = time.time()
             logfile.write(str('%.9lf %lf'%(unix_time,mhz)+'\n'))
 
-def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa): 
+def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa):
     if p_pcm_pcie != None:
         p_pcm_pcie.terminate()
-        os.system('yes|pkill pcm-pcie.x') 
+        os.system('yes|pkill pcm-pcie.x')
         print_info("tried killing pcm-pcie.x")
     if p_pcm_memory != None:
         p_pcm_memory.terminate()
-        os.system('yes|pkill pcm-memory.x') 
+        os.system('yes|pkill pcm-memory.x')
         print_info("tried killing pcm-memory.x")
     if p_pcm_numa != None:
         p_pcm_numa.terminate()
-        os.system('yes|pkill pcm-numa.x') 
+        os.system('yes|pkill pcm-numa.x')
         print_info("tried killing pcm-numa.x")
 
 
@@ -55,7 +59,7 @@ def sofa_clean(logdir, cfg):
     subprocess.call('rm %s/*.html > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.js > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.script > /dev/null 2> /dev/null' % logdir, shell=True)
- 
+
 
 def sofa_record(command, logdir, cfg):
 
@@ -65,10 +69,10 @@ def sofa_record(command, logdir, cfg):
     p_cpuinfo  = None
     p_nvprof  = None
     p_nvsmi   = None
-    p_nvtopo  = None 
-    p_pcm_pcie = None 
-    p_pcm_memory = None 
-    p_pcm_numa = None 
+    p_nvtopo  = None
+    p_pcm_pcie = None
+    p_pcm_memory = None
+    p_pcm_numa = None
 
     print_info('SOFA_COMMAND: %s' % command)
     sample_freq = 99
@@ -84,7 +88,7 @@ def sofa_record(command, logdir, cfg):
         quit()
 
     if cfg.enable_pcm:
-        print_info('Test Capability of PCM programs ...')    
+        print_info('Test Capability of PCM programs ...')
         #ret = str(subprocess.check_output(['getcap `which pcm-pcie.x`'], shell=True))
         #if ret.find('cap_sys_rawio+ep') == -1:
         #    print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
@@ -107,7 +111,7 @@ def sofa_record(command, logdir, cfg):
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
         print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
         quit()
-        
+
         print_info('Read NMI watchlog status ...')
         nmi_output = ""
         try:
@@ -116,7 +120,7 @@ def sofa_record(command, logdir, cfg):
                 if p_pcm_pcie != None:
                     p_pcm_pcie.kill()
                     print_info("tried killing pcm-pcie.x")
-                os.system('pkill pcm-pcie.x') 
+                os.system('pkill pcm-pcie.x')
             with open(logdir+"nmi_status.txt", 'r') as f:
                 lines = f.readlines()
                 if len(lines) > 0:
@@ -124,10 +128,10 @@ def sofa_record(command, logdir, cfg):
                         print_error('NMI watchdog is enabled., please try the command below:')
                         print_error('sudo sysctl -w kernel.nmi_watchdog=0')
 #            output = subprocess.check_output('yes | timeout 3 pcm-pcie.x 2>&1', shell=True)
-        except subprocess.CalledProcessError as e: 
-            print_warning("There was error while reading NMI status.")  
-          
-    
+        except subprocess.CalledProcessError as e:
+            print_warning("There was error while reading NMI status.")
+
+
     print_info('Clean previous logged files')
     subprocess.call('rm %s/perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
     subprocess.call('rm %s/sofa.pcap > /dev/null 2> /dev/null' % logdir, shell=True)
@@ -135,17 +139,17 @@ def sofa_record(command, logdir, cfg):
     subprocess.call('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.txt > /dev/null 2> /dev/null' % logdir, shell=True)
-    
+
 
     try:
         print_info("Prolog of Recording...")
- 
+
         if int(os.system('command -v nvprof')) == 0:
             p_nvprof = subprocess.Popen(['nvprof', '--profile-all-processes', '-o', logdir+'/gputrace%p.nvvp'])
             print_info('Launching nvprof')
             time.sleep(3)
             print_info('nvprof is launched')
-        else:    
+        else:
             print_warning('Profile without NVPROF')
 
         if cfg.enable_pcm:
@@ -154,8 +158,8 @@ def sofa_record(command, logdir, cfg):
                 #p_pcm_pcie = subprocess.Popen(['yes|pcm-pcie.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_pcie.csv -B '], shell=True)
                 p_pcm_memory = subprocess.Popen(['yes|pcm-memory.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_memory.csv '], shell=True)
                 #p_pcm_numa = subprocess.Popen(['yes|pcm-numa.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_numa.csv '], shell=True)
-        
-        print_info("Recording...")    
+
+        print_info("Recording...")
         if cfg.profile_all_cpus == True:
             perf_options = '-a'
         else:
@@ -170,11 +174,11 @@ def sofa_record(command, logdir, cfg):
         subprocess.call('rm %s/*.nvvp' % (logdir), shell=True)
         subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -o %s/cuhello.perf.data %s/cuhello' % (logdir,logdir,cfg.script_path), shell=True)
 
-        # sofa_time is time base for mpstat, vmstat, nvidia-smi 
+        # sofa_time is time base for mpstat, vmstat, nvidia-smi
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
             unix_time = time.time()
             logfile.write(str('%.9lf'%unix_time)+'\n')
-        
+
         with open('%s/mpstat.txt' % logdir, 'w') as logfile:
             p_mpstat = subprocess.Popen(
                     ['mpstat', '-P', 'ALL', '1'], stdout=logfile)
@@ -205,7 +209,7 @@ def sofa_record(command, logdir, cfg):
                 p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)
 
 
-       
+
         if int(os.system('command -v perf')) == 0:
             ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
             if ret.find('not supported') >=0:
@@ -213,11 +217,11 @@ def sofa_record(command, logdir, cfg):
                 cfg.perf_events = ""
             else:
                 profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -- %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command)
-            print_info(profile_command)            
+            print_info(profile_command)
             subprocess.call(profile_command, shell=True)
             with open(logdir+'perf_events_used.txt','w') as f:
                 f.write(cfg.perf_events)
-        
+
         print_info("Epilog of Recording...")
         if p_tcpdump != None:
             p_tcpdump.terminate()
