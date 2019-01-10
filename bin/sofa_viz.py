@@ -1,9 +1,10 @@
 import os
+import subprocess
 import sys
 from functools import partial
-from sofa_print import *
+
 from sofa_config import *
-import subprocess
+from sofa_print import *
 
 
 def sofa_viz(logdir, cfg):

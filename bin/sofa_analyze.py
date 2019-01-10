@@ -1,22 +1,25 @@
-import os
-import sys
-import pandas as pd
-import numpy as np
+import argparse
 import csv
 import json
-import random
-from operator import itemgetter, attrgetter
-import argparse
 import multiprocessing as mp
+import os
+import random
+import re
+import sys
 from functools import partial
-from sofa_print import *
-from sofa_config import *
-from sofa_common import *
-from sofa_aisi import *
-from sofa_hsg import *
+from operator import attrgetter, itemgetter
+
 import networkx as nx
-import re 
+import numpy as np
+import pandas as pd
 import requests
+
+from sofa_aisi import *
+from sofa_common import *
+from sofa_config import *
+from sofa_hsg import *
+from sofa_print import *
+
 
 def payload_sum(df):
     print((len(df)))
@@ -122,7 +125,7 @@ def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
     avg_cpu_time = cpu_time / n_devices
     data = {'name' : 'avg_cpu_time', 'unit':'s', 'value': avg_cpu_time }
     potato_submit(cfg, data)
-      
+
     #return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams}
     if len(iter_summary) > 0:
        print('mean: ', iter_summary['elapsed_time'].mean())
@@ -134,7 +137,7 @@ def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
        copy_time = iter_summary['copy_time'].mean()
        gpu_time = iter_summary['gpu_time'].mean()
        gemm_time = iter_summary['gemm_time'].mean()
-       kernel_time = gpu_time - copy_time 
+       kernel_time = gpu_time - copy_time
        payload = iter_summary['payload'].mean()
        streams = iter_summary['streams'].mean()
 
@@ -176,12 +179,12 @@ def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
 def vmstat_profile(logdir, cfg, df):
     print_title("VMSTAT Profiling:")
     df_name = df['name']
-    
+
     vmstat_fieldnames = []
     fields = df_name.iloc[0].split('|')
     for field in fields:
-       vmstat_fieldnames.append(field.split('=')[0]) 
-    
+       vmstat_fieldnames.append(field.split('=')[0])
+
     records = []
     for name in df_name:
         fields = name.split('|')
@@ -298,17 +301,17 @@ def sofa_analyze(logdir, cfg):
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
     filein_vmstat = logdir + "vmstat_trace.csv"
-    
+
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
-        
+
         with open(logdir + 'nvlink_topo.txt') as f:
             lines = f.readlines()
             if len(lines) > 0:
                 title = lines[0]
-                num_gpus = 1 
+                num_gpus = 1
                 for word in title.split():
                     if re.match(r'GPU', word) != None :
-                       num_gpus = num_gpus + 1 
+                       num_gpus = num_gpus + 1
                 print_info('# of GPUs: ' + str(num_gpus) )
                 edges = []
                 if len(lines) >= num_gpus+1:
@@ -318,9 +321,9 @@ def sofa_analyze(logdir, cfg):
                             if connections[j] == 'NV1' or connections[j] == 'NV2':
                                 edges.append((i,j-1))
                                 #print('%d connects to %d' % (i, j-1))
-                    
+
                     ring_found = False
-                    G = nx.DiGraph(edges)           
+                    G = nx.DiGraph(edges)
                     # Try to find ring with its length of num_gpus
                     for cycle in nx.simple_cycles(G):
                         if len(cycle) == num_gpus:
@@ -331,8 +334,8 @@ def sofa_analyze(logdir, cfg):
                             with open("sofalog/sofa_hints/xring_order.txt", "w") as f:
                                 f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
                             break
-                    
-                    # Try to find ring with its length of num_gpus/2 
+
+                    # Try to find ring with its length of num_gpus/2
                     if not ring_found:
                         for cycle in nx.simple_cycles(G):
                             if len(cycle) == num_gpus/2:
@@ -342,7 +345,7 @@ def sofa_analyze(logdir, cfg):
                                 xring_order = ','.join(map(str, cycle))
                                 with open("sofalog/sofa_hints/xring_order.txt", "w") as f:
                                     f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
-                                break   
+                                break
     try:
         df_cpu = pd.read_csv(filein_cpu)
         df_vmstat = pd.read_csv(filein_vmstat)
@@ -358,7 +361,7 @@ def sofa_analyze(logdir, cfg):
         #df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         gpu_profile(logdir, cfg, df_gpu)
         if cfg.enable_aisi:
-            iter_summary = sofa_aisi(logdir, cfg, df_cpu, df_gpu)        
+            iter_summary = sofa_aisi(logdir, cfg, df_cpu, df_gpu)
     except IOError:
         print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
 

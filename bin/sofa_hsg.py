@@ -1,24 +1,24 @@
 import json
-import os
-import sys
-import re
-import warnings
-import subprocess
 import multiprocessing as mp
+import os
+import re
+import subprocess
+import sys
+import warnings
 from functools import partial
 from operator import itemgetter
 from random import randint
-# 3rd party lib
-import pandas as pd
-import numpy as np
-from sklearn.cluster import KMeans
-from fuzzywuzzy import fuzz
+
 import cxxfilt
-# sofa
-from sofa_print import *
-from sofa_config import *
+import numpy as np
+import pandas as pd
+from fuzzywuzzy import fuzz
+from sklearn.cluster import KMeans
+
 from sofa_common import *
+from sofa_config import *
 from sofa_models import SOFATrace
+from sofa_print import *
 
 sofa_fieldnames = [
     "timestamp",  # 0

@@ -192,18 +192,18 @@ class STree():
             edge = self._edgeLabel(node, node.parent)
             if edge.startswith(y):
                 return node.idx
-            
+
             i = 0
             while(i < len(edge) and edge[i] == y[0]):
                 y = y[1:]
                 i += 1
-            
+
             if i != 0:
                 if i == len(edge) and y != '':
                     pass
                 else:
                     return -1
-            
+
             node = node._get_transition_link(y[0])
             if not node:
                 return -1
@@ -220,7 +220,7 @@ class STree():
             while(i < len(edge) and edge[i] == y[0]):
                 y = y[1:]
                 i += 1
-            
+
             if i != 0:
                 if i == len(edge) and y != '':
                     pass
@@ -342,7 +342,7 @@ class _SNode():
         for (node,_) in self.transition_links:
             node._traverse(f)
         f(self)
-    
+
     def _travel_nodes(self, f, table, repeat_limit):
         for (node,_) in self.transition_links:
             node._travel_nodes(f, table, repeat_limit)
