@@ -158,7 +158,7 @@ if __name__ == "__main__":
     if args.enable_record_for_swarm_diff is not None:
         cfg.enable_record_for_swarm_diff = args.enable_record_for_swarm_diff
 
-    # swarm-diff related flag
+    # swarm_diff related flag
     if command == 'swarm_diff': # reject '' and None
         if args.base_logdir and args.match_logdir and os.path.isfile( os.path.join(args.base_logdir, 'auto_caption.csv')) and \
         os.path.isfile( os.path.join(args.match_logdir, 'auto_caption.csv')):
