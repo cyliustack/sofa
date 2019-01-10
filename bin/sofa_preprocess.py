@@ -18,6 +18,11 @@ from sklearn.cluster import KMeans
 import cxxfilt 
 from operator import itemgetter
 import warnings
+# project
+from sofa_config import *
+from sofa_hsg import sofa_hsg, sofa_hsg_to_sofatrace
+from sofa_print import *
+from sofa_models import SOFATrace
 
 def list_downsample(list_in, plot_ratio):
     new_list = []
@@ -45,58 +50,6 @@ def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
 # 359342/359342 2493492.850125:          1 bus-cycles:  ffffffff8106450a native_write_msr_safe
 # 359342/359342 2493492.850128:          1 cycles:  ffffffff8106450a
 # native_write_msr_safe
-
-def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz_xp, cpu_mhz_fp):
-    fields = sample.split()
-    event = event_raw = 0
-    counts = 0
-
-    if re.match('\[\d+\]', fields[1]) is not None:
-        time = float(fields[2].split(':')[0])
-        func_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7] 
-        counts = float(fields[3])
-        event_raw = 1.0 * int("0x01" + fields[5], 16)
-        # add new column to cpu_traces        
-        feature_types = fields[3].split(':')[0]
-        mem_addr = fields[5]
-    else:
-        time = float(fields[1].split(':')[0])
-        func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6] 
-        counts = float(fields[2])
-        event_raw = 1.0 * int("0x01" + fields[4], 16)        
-        # add new column to cpu_traces        
-        feature_types = fields[3].split(':')[0]        
-        mem_addr = fields[4]
-
-    t_begin = time + t_offset
-    t_end = time + t_offset
- 
-    if len(cpu_mhz_xp) > 1:
-        duration = counts/(np.interp(t_begin, cpu_mhz_xp, cpu_mhz_fp)*1e6)
-    else:
-        duration = counts/(3000.0*1e6)
-    
-    event  = np.log10(event_raw)
-
-    if cfg.perf_events.find('cycles') == -1:
-        duration = np.log2(event_raw/1e14)
-
-    trace = [t_begin,                          # 0
-             event,  # % 1000000               # 1
-             duration,                         # 2
-             -1,                               # 3
-             -1,                               # 4 
-             0,                                # 5
-             0,                                # 6
-             -1,                               # 7
-             -1,                               # 8
-             int(fields[0].split('/')[0]),     # 9
-             int(fields[0].split('/')[1]),     # 10
-             func_name,                        # 11
-             0,                                # 12
-             feature_types,                    # 13
-             mem_addr]                         # 14
-    return trace
 
 def cpu_trace_read(sample, t_offset, cfg, cpu_mhz_xp, cpu_mhz_fp):
     fields = sample.split()
@@ -407,15 +360,6 @@ def print_info(content):
 def print_progress(content):
     print((bcolors.OKBLUE + "[PROGRESS] " + content + bcolors.ENDC))
 
-
-class SOFATrace:
-    data = []
-    name = []
-    title = []
-    color = []
-    x_field = []
-    y_field = []
-
 # traces_to_json()
 #    Please set "turboThreshold:0" in PlotOptions of ScatterChart to unlimit number of points
 #    series: [{
@@ -463,25 +407,6 @@ def traces_to_json(traces, path, cfg):
             if len(trace.data) > 0:
                 f.write(trace.name + ",")
         f.write(" ]")
-
-def random_generate_color():
-        rand = lambda: randint(0, 255)
-        return '#%02X%02X%02X' % (rand(), rand(), rand())
-
-def kmeans_cluster(num_of_cluster, X):
-    '''
-    num_of_cluster: how many groups of data you prefer
-    X: input taining data    
-    '''
-    random_state = 170
-    try:
-        num_of_cluster = 5
-        y_pred = KMeans(n_clusters=num_of_cluster, random_state=random_state).fit_predict(X)                
-    except :
-        num_of_cluster = len(X) # minimum number of data
-        y_pred = KMeans(n_clusters=num_of_cluster, random_state=random_state).fit_predict(X)  
-    
-    return y_pred
 
 sofa_fieldnames = [
     "timestamp",  # 0
@@ -1239,156 +1164,11 @@ def sofa_preprocess(logdir, cfg):
                 filtered_groups.append({'group': group,
                                         'color': filter.color,
                                         'keyword': filter.keyword})
-    ### hierarchical swarm generation
+    # ### hierarchical swarm generation
     if cfg.enable_hsg:
-        with open(logdir + 'perf.script') as f, warnings.catch_warnings():
-            warnings.filterwarnings("ignore")
-            samples = f.readlines()
-            print_info("Length of cpu_traces = %d" % len(samples))
-            if len(samples) > 0:
-                with mp.Pool(processes=cpu_count) as pool:
-                    res = pool.map(
-                        partial(
-                            cpu_trace_read_hsg,
-                            t_offset = perf_timebase_unix - perf_timebase_uptime,
-                            cfg = cfg,
-                            cpu_mhz_xp = cpu_mhz_xp,
-                            cpu_mhz_fp = cpu_mhz_fp
-                            ),
-                        samples)                
-                cpu_traces = pd.DataFrame(res)      
-                sofa_fieldnames_ext = sofa_fieldnames + ['feature_types', 'mem_addr'] # if you want to add customized column, add to the latter
-                cpu_traces.columns = sofa_fieldnames_ext          
-                cpu_traces.to_csv(
-                    logdir + 'cputrace.csv',
-                    mode='w',
-                    header=True,
-                    index=False,
-                    float_format='%.6f')
-                res_viz = list_downsample(res, cfg.plot_ratio)
-                swarm_cpu_traces_viz = pd.DataFrame(res_viz)
-                swarm_cpu_traces_viz.columns = sofa_fieldnames_ext        
-               
-                char1 = ']'
-                char2 = '+'      
-                # demangle c++ symbol, little dirty work here...
-                swarm_cpu_traces_viz['name'] = swarm_cpu_traces_viz['name'].apply(
-                    lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
-                )
-
-                ### N features ###
-                ## give unique id of each data within 10 msec by time quotient
-                swarm_cpu_traces_viz['quotient'] = swarm_cpu_traces_viz['timestamp'].apply(lambda x: int( x * 1000 // 10)) # //: quotient
-
-                # count feature_types in each 10 msec groups, and create a dictionary for mapping
-                df2s = {}
-                for quotient, dataframe in swarm_cpu_traces_viz.groupby(['quotient','event']):
-                    # api value_counts(): return pandas series
-                    df2s[quotient] = dataframe.feature_types.value_counts()
-                df2 = pd.DataFrame.from_dict(df2s, orient='index').fillna(0).astype(np.int64)
-
-                df = swarm_cpu_traces_viz.copy()
-                swarm_cpu_traces_viz = pd.merge(df, df2, left_on=['quotient','event'], right_index=True).copy()                
-            
-
-            ### swarm seperation by memory location 
-            swarm_groups = []        
-            feature_list = ['event']
-            if cfg.hsg_multifeatures:
-                with open(logdir+'perf_events_used.txt','r') as f:
-                    lines = f.readlines()
-                    feature_list.extend(lines[0].split(','))
-                try:
-                    feature_list.remove('cycles')
-                    feature_list.remove('event')
-                except:
-                    pass
-           
-            print_info('HSG features: '+','.join(feature_list))
-            
-            idx = 0
-            showing_idx = 0
-
-            if len(cpu_traces) > 0:            
-                # get memory index by cheange float to integer
-                swarm_cpu_traces_viz['event_int'] = swarm_cpu_traces_viz.event.apply(lambda x: int(x)) # add new column 'event_int'            
-                # swarm seperate
-                event_groups = swarm_cpu_traces_viz.groupby('event_int')
-                swarm_stats = []
-                # add different swarm groups                        
-                for mem_index, l1_group in event_groups:                                
-                    # kmeans 
-                    X = pd.DataFrame(l1_group['event'])                                
-                    num_of_cluster = 2
-                    y_pred = kmeans_cluster(num_of_cluster, X)
-
-                    # add new column
-                    # TODO: Eliminate warning of SettingWithCopyWarning 
-                    l1_group['cluster'] = y_pred
-                    #for i in range(len(y_pred)):
-                    #    group.loc[i, 'cluster'] = y_pred[i]
-                    
-                    # group by new column
-                    clusters = l1_group.groupby('cluster')
-                                    
-                    for l2_group_idx, l2_group in clusters:                       
-                        # group by process id
-                        #pid_clusters = cluster.groupby('pid')
-                        X = pd.DataFrame(l2_group['event'])                                
-                        num_of_cluster = 4
-                        y_pred = kmeans_cluster(num_of_cluster, X)
-
-                        # add new column 
-                        l2_group['cluster'] = y_pred                 
-                        #for i in range(len(y_pred)):
-                        #    l2_group.loc[i, 'cluster'] = y_pred[i]       
-                        
-                        # group by new column
-                        last_clusters = l2_group.groupby('cluster')
- 
-                        for last_cluster_idx, last_cluster in last_clusters:                              
-                            # kmeans
-                            X = pd.DataFrame(last_cluster[feature_list])
-                            num_of_cluster = 4
-                            y_pred_pid_cluster = kmeans_cluster(num_of_cluster, X)
-
-                            # add new column
-                            last_cluster['cluster_in_pid'] = y_pred_pid_cluster
-                            # group by new column
-                            cluster_in_pid_clusters = last_cluster.groupby('cluster_in_pid')
-
-                            for mini_cluster_id, cluster_in_pid_cluster in cluster_in_pid_clusters:                                  
-                                # duration time
-                                total_duration = cluster_in_pid_cluster.duration.sum()                            
-                                mean_duration = cluster_in_pid_cluster.duration.mean()      
-
-                                # swarm diff
-                                # caption: assign mode of function name              
-                                mode = str(cluster_in_pid_cluster['name'].mode()[0]) # api pd.Series.mode() returns a pandas series                                
-                                mode = mode.replace('::', '@') # str.replace(old, new[, max])
-                                #print('mode of this cluster: {}'.format(str(mode[:35])))
-
-                                swarm_stats.append({'keyword': 'SWARM_' + '["' + str(mode[:35]) + ']' +  ('_' * showing_idx),
-                                                    'duration_sum': total_duration,
-                                                    'duration_mean': mean_duration,
-                                                    'example':cluster_in_pid_cluster.head(1)['name'].to_string().split('  ')[2]}) 
-
-                                swarm_groups.append({'group': cluster_in_pid_cluster.drop(columns = ['event_int', 'cluster', 'cluster_in_pid']), # data of each group
-                                                     'color':  random_generate_color(),                                                     
-                                                     'keyword': 'SWARM_' + '[' + str(mode[:35]) + ']' +  ('_' * showing_idx),
-                                                     'total_duration': total_duration})                                                    
-                                idx += 1
-                                            
-                swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending                
-                swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True)
-                print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms))
-
-                for i in range(len(swarm_stats)):
-                    if i >= cfg.num_swarms:
-                        break
-                    else:
-                        swarm = swarm_stats[i]
-                        print('%s: execution_time(sum,mean): %.6lf(s),%.6lf(s)  caption: %s'%(swarm['keyword'],swarm['duration_sum']/4.0,swarm['duration_mean']/4.0,swarm['example']))
+        swarm_groups = []
+        swarm_stats = []
+        swarm_groups, swarm_stats = sofa_hsg(logdir, cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
 
     #=== Intel PCM Trace =======#
     ### Skt,PCIeRdCur,RFO,CRd,DRd,ItoM,PRd,WiL,PCIe Rd (B),PCIe Wr (B)
@@ -1561,42 +1341,10 @@ def sofa_preprocess(logdir, cfg):
         sofatrace.y_field = 'duration'
         sofatrace.data = filtered_group['group'].copy()
         traces.append(sofatrace)
-    
 
     if cfg.enable_hsg:
-        dummy_i = 0
-        record_for_auto_caption = True # temperarily: for auto-caption
-
-        # top 10 cumulative time of a swarm
-        number_of_swarm = cfg.num_swarms
-        ##### temperarily: for auto-caption #####
-        if record_for_auto_caption == True:
-            number_of_swarm += 5 # record 15 swarms            
-            # write empty csv file
-            auto_caption_filename_with_path = logdir + 'auto_caption.csv'
-            with open(auto_caption_filename_with_path, 'w') as f: # write to csv file
-                pass # keep it emtpy        
-        ##### temperarily: for auto-caption #####
-
-        for swarm in swarm_groups[:number_of_swarm]: 
-            sofatrace = SOFATrace()            
-            sofatrace.name = 'swarm' + str(dummy_i) # Avoid errors casued by JavaScript. No special meaning, can be random unique ID.
-            sofatrace.title = swarm['keyword'] # add number of swarm
-            sofatrace.color = swarm['color']        
-            sofatrace.x_field = 'timestamp'
-            sofatrace.y_field = 'duration'        
-            sofatrace.data = swarm['group'].copy()                               
-            traces.append(sofatrace)            
-
-            ##### temperarily: for auto-caption #####
-            if record_for_auto_caption == True:                                
-                # append to csv file every time using pandas funciton
-                swarm['group']['cluster_ID'] = dummy_i # add new column cluster ID to dataframe swarm['group']
-                copy = swarm['group'].copy()
-                copy.to_csv(auto_caption_filename_with_path, mode='a', header=False, index=False)                                                        
-                print( copy.head(2) )
-            ##### temperarily: for auto-caption #####
-            dummy_i += 1
+        sofatrace = SOFATrace()
+        traces = sofa_hsg_to_sofatrace(logdir, cfg, swarm_groups, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_bi'

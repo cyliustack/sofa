@@ -13,6 +13,7 @@ from sofa_print import *
 from sofa_config import *
 from sofa_common import *
 from sofa_aisi import *
+from sofa_hsg import *
 import networkx as nx
 import re 
 import requests
