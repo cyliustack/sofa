@@ -11,7 +11,7 @@ class SOFA_Config:
     cpu_filters = []
     gpu_filters = []
     net_filters = []
-    perf_events = 'cycles' 
+    perf_events = 'cycles'
     verbose = False
     num_iterations = 20
     num_swarms = 10
@@ -23,8 +23,12 @@ class SOFA_Config:
     enable_aisi = False
     enable_hsg = False
     hsg_multifeatures = False
+    enable_record_for_swarm_diff = False # output csv file for sofa swarm-diff
+    swarm_diff = False
+    base_logdir = ''
+    match_logdir = ''
     enable_vmstat = False
     enable_pcm = False
     cuda_api_tracing = False
     script_path = ''
-    potato_server = None 
+    potato_server = None

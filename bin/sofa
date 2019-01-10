@@ -1,19 +1,22 @@
 #!/usr/bin/python3.6
-import sys
-import numpy as np
-import csv
-import json
 import argparse
-import multiprocessing as mp
+import csv
 import glob
-from pathlib import Path
+import json
+import multiprocessing as mp
 import os
+import sys
 from functools import partial
+from pathlib import Path
+
+import numpy as np
+
+from sofa_analyze import *
 from sofa_config import *
+from sofa_hsg import sofa_swarm_diff
+from sofa_preprocess import *
 from sofa_print import *
 from sofa_record import *
-from sofa_preprocess import *
-from sofa_analyze import *
 from sofa_viz import *
 
 if __name__ == "__main__":
@@ -21,8 +24,10 @@ if __name__ == "__main__":
     logdir = './sofalog/'
     command = None
     usr_command = None
+    # swarm_diff needs multiple input argument, deal with it independently
+    swarm_diff_command = None
     sys.stdout.flush()
-    
+
     print_info("Your Python version is %s.%s.%s" % sys.version_info[:3])
     if sys.version_info < (3,5) :
         print_error("But SOFA requires minimum version of Python 3.5.")
@@ -75,6 +80,10 @@ if __name__ == "__main__":
     parser.set_defaults(enable_aisi=False)
     parser.add_argument('--enable_hsg', dest='enable_hsg', action='store_true')
     parser.set_defaults(enable_hsg=False)
+    parser.add_argument('--base_logdir', dest='base_logdir', default='')
+    parser.add_argument('--match_logdir', dest='match_logdir', default='')
+    parser.add_argument('--enable_record_for_swarm_diff', dest='enable_record_for_swarm_diff', action='store_true') # record and output csv file
+    parser.set_defaults(enable_record_for_swarm_diff=False)
     parser.add_argument('--hsg_multifeatures', dest='hsg_multifeatures', action='store_true')
     parser.set_defaults(hsg_multifeatures=False)
     parser.add_argument('--enable_vmstat', dest='enable_vmstat', action='store_true')
@@ -83,12 +92,18 @@ if __name__ == "__main__":
         'command',
         type=str,
         nargs=1,
-        metavar='<stat|record|report|preprocess|analyze|viz|clean>')
+        metavar='<stat|record|report|preprocess|analyze|swarm_diff|viz|clean>')
+    # flag of swarm_diff, swarm_diff needs multiple input argument, deal with it independently
+    # parser.add_argument(
+    #     'swarm_diff',
+    #     type=str, # what type of arg it accept
+    #     nargs=2, # 2 following input argument, XXX_logdir first, then type in the path of logdir
+    #     help='You need to specify two sofalog directory path in the following format, e.g $ sofa swarm_diff base_logdir=/path1 match_logdir=/path1')
     parser.add_argument(
         'usr_command',
         type=str,
         nargs='?',
-        metavar='<PROFILED_COMMAND>')    
+        metavar='<PROFILED_COMMAND>')
     parser.add_argument(
         '--network_filters',
         metavar='"ip1,ip2,ip3"',
@@ -111,13 +126,13 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help='IP address of POTATO server')
-   
+
     cfg = SOFA_Config()
     sofa_exec_path = os.path.abspath( __file__ )
     if Path(sofa_exec_path).is_symlink():
         cfg.script_path = os.path.dirname(os.readlink(sofa_exec_path))
     else:
-        cfg.script_path = os.path.dirname(sofa_exec_path) 
+        cfg.script_path = os.path.dirname(sofa_exec_path)
 
     args = parser.parse_args()
     if args.logdir is not None:
@@ -139,6 +154,32 @@ if __name__ == "__main__":
 
     if args.hsg_multifeatures is not None:
         cfg.hsg_multifeatures = args.hsg_multifeatures
+
+    if args.enable_record_for_swarm_diff is not None:
+        cfg.enable_record_for_swarm_diff = args.enable_record_for_swarm_diff
+
+    # swarm-diff related flag
+    if command == 'swarm_diff': # reject '' and None
+        if args.base_logdir and args.match_logdir and os.path.isfile( os.path.join(args.base_logdir, 'auto_caption.csv')) and \
+        os.path.isfile( os.path.join(args.match_logdir, 'auto_caption.csv')):
+            # for item in args.swarm_diff: # type of args.swarm_diff: list
+            #     if 'base_logdir' in item:
+            #         base_logdir = item
+            #     elif 'match_logdir' in item:
+            #         match_logdir = item
+            #     else:
+            #         pass # do nothing
+            # base_logdir = base_logdir.split("=")
+            # cfg.base_logdir = base_logdir[1] # path is the rear
+            cfg.base_logdir = args.base_logdir
+            print(cfg.base_logdir)
+            # match_logdir = match_logdir.split("=") # path is the rear
+            # cfg.match_logdir = match_logdir[1]
+            cfg.match_logdir = args.match_logdir
+            print(cfg.match_logdir)
+        else:
+            print_error("{base_logdir,match_logdir}/auto_caption.csv must exist!")
+            quit()
 
     if args.enable_vmstat is not None:
         cfg.enable_vmstat = args.enable_vmstat
@@ -162,7 +203,7 @@ if __name__ == "__main__":
         cfg.cpu_time_offset = 0.001*args.cpu_time_offset_ms
     else:
         cfg.cpu_time_offset = 0.0
-    
+
     if args.viz_port is not None:
         cfg.viz_port = args.viz_port
 
@@ -203,7 +244,6 @@ if __name__ == "__main__":
     if args.perf_events is not None:
         cfg.perf_events = args.perf_events
 
-
     print("Ratio of raw data points to plotting points : %d" % cfg.plot_ratio)
     for filter in cfg.cpu_filters:
         print_info("CPU filter = %s:%s" % (filter.keyword, filter.color))
@@ -222,6 +262,9 @@ if __name__ == "__main__":
         sofa_preprocess(logdir, cfg)
     elif command == 'analyze':
         sofa_analyze(logdir, cfg)
+    elif command == 'swarm_diff': # register a new command here
+        return_df = pd.DataFrame() # create an empty dataframe
+        return_df = sofa_swarm_diff(cfg)
     elif command == 'viz':
         sofa_viz(logdir, cfg)
     elif command == 'clean':
