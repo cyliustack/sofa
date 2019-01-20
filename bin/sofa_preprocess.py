@@ -1333,6 +1333,15 @@ def sofa_preprocess(logdir, cfg):
         traces = sofa_hsg_to_sofatrace(logdir, cfg, swarm_groups, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
+    sofatrace.name = 'vmstat_cs'
+    sofatrace.title = 'VMSTAT_CS'
+    sofatrace.color = 'Pink'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = vm_cs_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_bi'
     sofatrace.title = 'VMSTAT_BI'
     sofatrace.color = 'DarkOrange'
