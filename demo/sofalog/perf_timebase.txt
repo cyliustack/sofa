@@ -1,8 +1,8 @@
-            perf 15161 1143097.139168:          1 cycles:ppp:  ffffffff8ac6a3a8 native_write_msr_safe ([kernel.kallsyms])
-            perf 15161 1143097.139170:          1 cycles:ppp:  ffffffff8ac6a3a8 native_write_msr_safe ([kernel.kallsyms])
-            perf 15161 1143097.139172:         47 cycles:ppp:  ffffffff8ac6a3a8 native_write_msr_safe ([kernel.kallsyms])
-            perf 15161 1143097.139173:       4145 cycles:ppp:  ffffffff8ac0b540 intel_bts_enable_local ([kernel.kallsyms])
-              ls 15161 1143097.139175:     396242 cycles:ppp:  ffffffff8ae8622b get_acl ([kernel.kallsyms])
-              ls 15161 1143097.139271:   23215637 cycles:ppp:  ffffffff8adfa653 kfree ([kernel.kallsyms])
-              ls 15161 1143097.144991: 108395912361590 cycles:ppp:  ffffffff8b32586d sysret_check ([kernel.kallsyms])
-1543504874.552180 1543504874.552180
+            perf 11038 696760.832511:          1 cycles:ppp:  ffffffffbd86a3a8 native_write_msr_safe ([kernel.kallsyms])
+            perf 11038 696760.832514:          1 cycles:ppp:  ffffffffbd86a3a8 native_write_msr_safe ([kernel.kallsyms])
+            perf 11038 696760.832515:         44 cycles:ppp:  ffffffffbd86a3a8 native_write_msr_safe ([kernel.kallsyms])
+            perf 11038 696760.832516:       3685 cycles:ppp:  ffffffffbd80a61f intel_pmu_handle_irq ([kernel.kallsyms])
+              ls 11038 696760.832518:     345785 cycles:ppp:  ffffffffbda27f09 setup_new_exec ([kernel.kallsyms])
+              ls 11038 696760.832605:   21295474 cycles:ppp:      7effef0a7ef0 strcmp (/usr/lib64/ld-2.17.so)
+              ls 11038 696760.837877: 123881041467767 cycles:ppp:  ffffffffbdae6947 avtab_search_node ([kernel.kallsyms])
+1548088193.687665 1548088193.687665
