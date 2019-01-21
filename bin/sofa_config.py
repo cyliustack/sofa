@@ -23,7 +23,7 @@ class SOFA_Config:
     enable_aisi = False
     enable_hsg = False
     hsg_multifeatures = False
-    enable_record_for_swarm_diff = False # output csv file for sofa swarm-diff
+    use_diff = False # output csv file for sofa swarm-diff
     swarm_diff = False
     base_logdir = ''
     match_logdir = ''

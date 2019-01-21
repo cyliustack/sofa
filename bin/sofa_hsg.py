@@ -273,25 +273,20 @@ def sofa_hsg(logdir, cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_m
                 swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True)
                 print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms))
 
+                print('%45s\t%13s\t%30s'%('SwarmCaption', 'ExecutionTime(sum,mean)(s)', 'Example'))
                 for i in range(len(swarm_stats)):
                     if i >= cfg.num_swarms:
                         break
                     else:
                         swarm = swarm_stats[i]
-                        print('%s: execution_time(sum,mean): %.6lf(s),%.6lf(s)  caption: %s'%(swarm['keyword'],swarm['duration_sum']/4.0,swarm['duration_mean']/4.0,swarm['example']))
+                        print('%45s\t%.6lf,%.6lf\t%45s'%(swarm['keyword'],swarm['duration_sum']/4.0,swarm['duration_mean']/4.0,swarm['example']))
 
             return swarm_groups, swarm_stats
 
 def sofa_hsg_to_sofatrace(logdir, cfg, swarm_groups, traces): # record_for_auto_caption = True # temperarily: for auto-caption
     dummy_i = 0
-    # top 10 cumulative time of a swarm
-    number_of_swarm = cfg.num_swarms
-    # --- for auto-caption --- #
-    if cfg.enable_record_for_swarm_diff:
-        number_of_swarm += 5 # record 15 swarms
-    # --- for auto-caption --- #
 
-    for swarm in swarm_groups[:number_of_swarm]:
+    for swarm in swarm_groups[:cfg.num_swarms]:
         sofatrace = SOFATrace() # file.class
         sofatrace.name = 'swarm' + str(dummy_i) # avoid errors casued by JavaScript. No special meaning, can be random unique ID.
         sofatrace.title = swarm['keyword'] # add number of swarm
@@ -302,7 +297,7 @@ def sofa_hsg_to_sofatrace(logdir, cfg, swarm_groups, traces): # record_for_auto_
         traces.append(sofatrace)
 
         # --- for auto-caption --- #
-        if cfg.enable_record_for_swarm_diff:
+        if cfg.use_diff
             # append to csv file every time using pandas funciton
             swarm['group']['cluster_ID'] = dummy_i # add new column cluster ID to dataframe swarm['group']
             copy = swarm['group'].copy()

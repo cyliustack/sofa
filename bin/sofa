@@ -82,8 +82,6 @@ if __name__ == "__main__":
     parser.set_defaults(enable_hsg=False)
     parser.add_argument('--base_logdir', dest='base_logdir', default='')
     parser.add_argument('--match_logdir', dest='match_logdir', default='')
-    parser.add_argument('--enable_record_for_swarm_diff', dest='enable_record_for_swarm_diff', action='store_true') # record and output csv file
-    parser.set_defaults(enable_record_for_swarm_diff=False)
     parser.add_argument('--hsg_multifeatures', dest='hsg_multifeatures', action='store_true')
     parser.set_defaults(hsg_multifeatures=False)
     parser.add_argument('--enable_vmstat', dest='enable_vmstat', action='store_true')
@@ -155,11 +153,10 @@ if __name__ == "__main__":
     if args.hsg_multifeatures is not None:
         cfg.hsg_multifeatures = args.hsg_multifeatures
 
-    if args.enable_record_for_swarm_diff is not None:
-        cfg.enable_record_for_swarm_diff = args.enable_record_for_swarm_diff
 
     # swarm_diff related flag
     if command == 'swarm_diff': # reject '' and None
+        cfg.use_diff = True
         if args.base_logdir and args.match_logdir and os.path.isfile( os.path.join(args.base_logdir, 'auto_caption.csv')) and \
         os.path.isfile( os.path.join(args.match_logdir, 'auto_caption.csv')):
             # for item in args.swarm_diff: # type of args.swarm_diff: list
