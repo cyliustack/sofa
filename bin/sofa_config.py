@@ -21,10 +21,11 @@ class SOFA_Config:
     cpu_time_offset = 0
     profile_all_cpus = False
     enable_aisi = False
-    enable_hsg = False
+    display_swarms = False
     hsg_multifeatures = False
     use_diff = False # output csv file for sofa swarm-diff
     swarm_diff = False
+    logdir = './sofalog/'
     base_logdir = ''
     match_logdir = ''
     enable_vmstat = False

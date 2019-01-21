@@ -52,7 +52,8 @@ def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa):
         print_info("tried killing pcm-numa.x")
 
 
-def sofa_clean(logdir, cfg):
+def sofa_clean(cfg):
+    logdir = cfg.logdir
     print_info('Clean previous logged files')
     subprocess.call('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
@@ -61,7 +62,7 @@ def sofa_clean(logdir, cfg):
     subprocess.call('rm %s/*.script > /dev/null 2> /dev/null' % logdir, shell=True)
 
 
-def sofa_record(command, logdir, cfg):
+def sofa_record(command, cfg):
 
     p_tcpdump = None
     p_mpstat  = None
@@ -72,7 +73,8 @@ def sofa_record(command, logdir, cfg):
     p_nvtopo  = None
     p_pcm_pcie = None
     p_pcm_memory = None
-    p_pcm_numa = None
+    p_pcm_numa = None 
+    logdir = cfg.logdir
 
     print_info('SOFA_COMMAND: %s' % command)
     sample_freq = 99

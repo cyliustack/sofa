@@ -128,11 +128,11 @@ def kmeans_cluster(num_of_cluster, X):
 
     return y_pred
 
-def sofa_hsg(logdir, cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
+def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
     """
     hierarchical swarm generation
     """
-    with open(logdir + 'perf.script') as f, warnings.catch_warnings():
+    with open(cfg.logdir + 'perf.script') as f, warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         samples = f.readlines()
         print_info("Length of cpu_traces = %d" % len(samples))
@@ -151,7 +151,7 @@ def sofa_hsg(logdir, cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_m
             sofa_fieldnames_ext = sofa_fieldnames + ["feature_types", "mem_addr"] # mem_addr for swarm-diff
             cpu_traces.columns = sofa_fieldnames_ext
             cpu_traces.to_csv(
-                logdir + 'cputrace.csv',
+                cfg.logdir + 'cputrace.csv',
                 mode='w',
                 header=True,
                 index=False,
@@ -185,7 +185,7 @@ def sofa_hsg(logdir, cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_m
             #swarm_groups = []
             feature_list = ['event']
             if cfg.hsg_multifeatures:
-                with open(logdir+'perf_events_used.txt','r') as f:
+                with open(cfg.logdir+'perf_events_used.txt','r') as f:
                     lines = f.readlines()
                     feature_list.extend(lines[0].split(','))
                 try:
@@ -234,18 +234,18 @@ def sofa_hsg(logdir, cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_m
                         #    l2_group.loc[i, 'cluster'] = y_pred[i]
 
                         # group by new column
-                        last_clusters = l2_group.groupby('cluster')
+                        l3_groups = l2_group.groupby('cluster')
 
-                        for last_cluster_idx, last_cluster in last_clusters:
+                        for l3_group_idx, l3_group in l3_groups:
                             # kmeans
-                            X = pd.DataFrame(last_cluster[feature_list])
+                            X = pd.DataFrame(l3_group['event'])
                             num_of_cluster = 4
                             y_pred_pid_cluster = kmeans_cluster(num_of_cluster, X)
 
                             # add new column
-                            last_cluster['cluster_in_pid'] = y_pred_pid_cluster
+                            l3_group['cluster_in_pid'] = y_pred_pid_cluster
                             # group by new column
-                            cluster_in_pid_clusters = last_cluster.groupby('cluster_in_pid')
+                            cluster_in_pid_clusters = l3_group.groupby('cluster_in_pid')
 
                             for mini_cluster_id, cluster_in_pid_cluster in cluster_in_pid_clusters:
                                 # duration time
@@ -283,7 +283,7 @@ def sofa_hsg(logdir, cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_m
 
             return swarm_groups, swarm_stats
 
-def sofa_hsg_to_sofatrace(logdir, cfg, swarm_groups, traces): # record_for_auto_caption = True # temperarily: for auto-caption
+def sofa_hsg_to_sofatrace(cfg, swarm_groups, traces): # record_for_auto_caption = True # temperarily: for auto-caption
     dummy_i = 0
 
     for swarm in swarm_groups[:cfg.num_swarms]:
@@ -296,16 +296,14 @@ def sofa_hsg_to_sofatrace(logdir, cfg, swarm_groups, traces): # record_for_auto_
         sofatrace.data = swarm['group'].copy()
         traces.append(sofatrace)
 
-        # --- for auto-caption --- #
-        if cfg.use_diff
-            # append to csv file every time using pandas funciton
-            swarm['group']['cluster_ID'] = dummy_i # add new column cluster ID to dataframe swarm['group']
-            copy = swarm['group'].copy()
-            print('*************************')
-            auto_caption_filename_with_path = logdir + 'auto_caption.csv'
-            copy.to_csv(auto_caption_filename_with_path, mode='a', header=False, index=False)
-            print('\nRecord for auto-caption, data preview: \n{}'.format(copy.head(2)))
-            print('*************************')
+        # append to csv file every time using pandas funciton
+        swarm['group']['cluster_ID'] = dummy_i # add new column cluster ID to dataframe swarm['group']
+        copy = swarm['group'].copy()
+        #print('*************************')
+        auto_caption_filename_with_path = cfg.logdir + 'auto_caption.csv'
+        copy.to_csv(auto_caption_filename_with_path, mode='a', header=False, index=False)
+        #print('\nRecord for auto-caption, data preview: \n{}'.format(copy.head(2)))
+        #print('*************************')
         # --- for auto-caption --- #
         dummy_i += 1
 

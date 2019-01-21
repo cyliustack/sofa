@@ -21,7 +21,6 @@ from sofa_viz import *
 
 if __name__ == "__main__":
 
-    logdir = './sofalog/'
     command = None
     usr_command = None
     # swarm_diff needs multiple input argument, deal with it independently
@@ -78,8 +77,8 @@ if __name__ == "__main__":
     parser.set_defaults(verbose=False)
     parser.add_argument('--enable_aisi', dest='enable_aisi', action='store_true')
     parser.set_defaults(enable_aisi=False)
-    parser.add_argument('--enable_hsg', dest='enable_hsg', action='store_true')
-    parser.set_defaults(enable_hsg=False)
+    parser.add_argument('--display_swarms', dest='display_swarms', action='store_true')
+    parser.set_defaults(display_swarms=False)
     parser.add_argument('--base_logdir', dest='base_logdir', default='')
     parser.add_argument('--match_logdir', dest='match_logdir', default='')
     parser.add_argument('--hsg_multifeatures', dest='hsg_multifeatures', action='store_true')
@@ -134,7 +133,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if args.logdir is not None:
-        logdir = args.logdir + '/'
+        cfg.logdir = args.logdir + '/'
 
     if args.command is not None:
         command = args.command[0]
@@ -147,18 +146,17 @@ if __name__ == "__main__":
     if args.enable_aisi is not None:
         cfg.enable_aisi = args.enable_aisi
 
-    if args.enable_hsg is not None:
-        cfg.enable_hsg = args.enable_hsg
-
     if args.hsg_multifeatures is not None:
         cfg.hsg_multifeatures = args.hsg_multifeatures
-
+    
+    if args.display_swarms is not None:
+        cfg.display_swarms = args.display_swarms
 
     # swarm_diff related flag
-    if command == 'swarm_diff': # reject '' and None
-        cfg.use_diff = True
-        if args.base_logdir and args.match_logdir and os.path.isfile( os.path.join(args.base_logdir, 'auto_caption.csv')) and \
-        os.path.isfile( os.path.join(args.match_logdir, 'auto_caption.csv')):
+    if command == 'diff': # reject '' and None
+        if args.base_logdir and args.match_logdir: 
+        #if args.base_logdir and args.match_logdir and os.path.isfile( os.path.join(args.base_logdir, 'auto_caption.csv')) and \
+        #os.path.isfile( os.path.join(args.match_logdir, 'auto_caption.csv')):
             # for item in args.swarm_diff: # type of args.swarm_diff: list
             #     if 'base_logdir' in item:
             #         base_logdir = item
@@ -247,30 +245,31 @@ if __name__ == "__main__":
     for filter in cfg.gpu_filters:
         print_info("GPU filter = %s:%s" % (filter.keyword, filter.color))
 
-    print_info("logdir = %s" % logdir)
+    print_info("logdir = %s" % cfg.logdir)
 
     if command == 'stat':
-        sofa_record(usr_command, logdir, cfg)
-        sofa_preprocess(logdir, cfg)
-        sofa_analyze(logdir, cfg)
+        sofa_record(usr_command, cfg)
+        sofa_preprocess(cfg)
+        sofa_analyze(cfg)
     elif command == 'record':
-        sofa_record(usr_command, logdir, cfg)
+        sofa_record(usr_command, cfg)
     elif command == 'preprocess':
-        sofa_preprocess(logdir, cfg)
+        sofa_preprocess(cfg)
     elif command == 'analyze':
-        sofa_analyze(logdir, cfg)
+        sofa_analyze(cfg)
     elif command == 'swarm_diff': # register a new command here
         return_df = pd.DataFrame() # create an empty dataframe
+        sofa_preprocess(args.base_logdir,cfg)
+        sofa_preprocess(args.match_logdir,cfg)
         return_df = sofa_swarm_diff(cfg)
     elif command == 'viz':
-        sofa_viz(logdir, cfg)
+        sofa_viz(cfg)
     elif command == 'clean':
-        sofa_clean(logdir, cfg)
+        sofa_clean(cfg)
     elif command == 'report':
-        sofa_preprocess(logdir, cfg)
-        sofa_analyze(logdir, cfg)
-        sofa_viz(logdir, cfg)
+        sofa_preprocess(cfg)
+        sofa_analyze(cfg)
+        sofa_viz(cfg)
     else:
         print_error("Cannot recognized SOFA-command [%s]" % command)
         quit()
-    #sofa_analyze(logdir, cfg)

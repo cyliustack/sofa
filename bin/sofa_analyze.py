@@ -291,12 +291,13 @@ class ProfiledDomainDNN:
                     break
 
 
-def sofa_analyze(logdir, cfg):
+def sofa_analyze(cfg):
     filein = []
     df_gpu = []
     df_cpu = []
     df_vmstat = []
     iter_summary = None
+    logdir = cfg.logdir
 
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"

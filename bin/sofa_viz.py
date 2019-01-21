@@ -7,10 +7,10 @@ from sofa_config import *
 from sofa_print import *
 
 
-def sofa_viz(logdir, cfg):
+def sofa_viz(cfg):
     sofa_home = os.path.dirname(os.path.realpath(__file__))
     subprocess.Popen(
-        ['bash', '-c', 'cp %s/../sofaboard/* %s;' % (sofa_home, logdir)])
+        ['bash', '-c', 'cp %s/../sofaboard/* %s;' % (sofa_home, cfg.logdir)])
 
     subprocess.Popen(['sleep', '2'])
     print_warning(
@@ -23,4 +23,4 @@ def sofa_viz(logdir, cfg):
     print_info('After profiling, please enter Ctrl+C to exit.')
     os.system(
         'cd %s && python3.6 -m http.server %d 2>&1 1> /dev/null; cd -' %
-        (logdir,cfg.viz_port))
+        (cfg.logdir,cfg.viz_port))

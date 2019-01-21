@@ -409,9 +409,10 @@ sofa_fieldnames = [
     "name",  # 11
     "category"] # 12
 
-def sofa_preprocess(logdir, cfg):
+def sofa_preprocess(cfg):
     t_glb_base = 0
     t_glb_gpu_base = 0
+    logdir = cfg.logdir
 
     with open(logdir + 'perf.script', 'w') as logfile:
         subprocess.call(['perf',
@@ -1150,10 +1151,9 @@ def sofa_preprocess(logdir, cfg):
                                         'color': filter.color,
                                         'keyword': filter.keyword})
     # ### hierarchical swarm generation
-    if cfg.enable_hsg:
-        swarm_groups = []
-        swarm_stats = []
-        swarm_groups, swarm_stats = sofa_hsg(logdir, cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
+    swarm_groups = []
+    swarm_stats = []
+    swarm_groups, swarm_stats = sofa_hsg(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
 
     #=== Intel PCM Trace =======#
     ### Skt,PCIeRdCur,RFO,CRd,DRd,ItoM,PRd,WiL,PCIe Rd (B),PCIe Wr (B)
@@ -1328,9 +1328,9 @@ def sofa_preprocess(logdir, cfg):
         traces.append(sofatrace)
     
 
-    if cfg.enable_hsg:
+    if cfg.display_swarms:
         sofatrace = SOFATrace()
-        traces = sofa_hsg_to_sofatrace(logdir, cfg, swarm_groups, traces) # append data of hsg function
+        traces = sofa_hsg_to_sofatrace(cfg, swarm_groups, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_cs'
