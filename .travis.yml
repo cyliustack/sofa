@@ -12,5 +12,6 @@ before_script:
 script:
   - sudo sysctl -w kernel.kptr_restrict=0
   - sudo sysctl -w kernel.perf_event_paranoid=-1   
-  - sudo sofa preprocess --logdir demo/sofalog  
-  - sudo sofa analyze --logdir demo/sofalog  
+  - sudo chown $(whoami) -R sofalog
+  - sofa preprocess --logdir demo/sofalog  
+  - sofa analyze --logdir demo/sofalog  
