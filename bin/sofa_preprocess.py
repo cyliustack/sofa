@@ -1151,10 +1151,14 @@ def sofa_preprocess(cfg):
                                         'color': filter.color,
                                         'keyword': filter.keyword})
     # ### hierarchical swarm generation
-    swarm_groups = []
-    swarm_stats = []
-    swarm_groups, swarm_stats = sofa_hsg(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
-
+    try:
+        swarm_groups = []
+        swarm_stats = []
+        swarm_groups, swarm_stats = sofa_hsg(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
+    except TypeError:
+        print('Unexpected error:', sys.exc_info()[0])
+        print_warning('HSG returned a None object to swarm_groups, check if sofalog/perf.data can be accessed.')
+        pass 
     #=== Intel PCM Trace =======#
     ### Skt,PCIeRdCur,RFO,CRd,DRd,ItoM,PRd,WiL,PCIe Rd (B),PCIe Wr (B)
     ### 0,0,852,0,0,48,0,0,54528,57600
