@@ -1160,7 +1160,7 @@ def sofa_preprocess(cfg):
                 
                 if len(strace_list)>1:
                     strace_traces = list_to_csv_and_traces(logdir, strace_list, 'strace.csv', 'w')
-
+    print_info('Total strace duration: %.3lf' % total_strace_duration)
 
     # Time synchronization among BIOS Time (e.g. used by perf)  and NTP Time (e.g. NVPROF, tcpdump, etc.)
     if perf_timebase_unix == 0:
