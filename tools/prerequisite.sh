@@ -125,21 +125,6 @@ function install_utility_from_source()
     [[ $? != 0 ]] && echo -e "${C_YELLOW}No nvcc found; nvcc is required to improve perf timestamp accuracy.${C_NONE}" 
     g++  tools/sofa_perf_timebase.cc -o ./bin/sofa_perf_timebase
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-    #rm -rf pcm
-    #git clone https://github.com/opcm/pcm.git 
-    #sed -i -- 's/-DPCM_USE_PERF//g' pcm/Makefile
-    #cd pcm && make -j && cd - 
-    #$WITH_SUDO mkdir -p /usr/local/intelpcm/bin 
-    #$WITH_SUDO cp pcm/pcm-*.x /usr/local/intelpcm/bin 
-    PAPI_VERSION=papi-5.6.0
-    rm -rf ${PAPI_VERSION}
-    if [[ ! -f ${PAPI_VERSION}.tar.gz ]]; then  
-        wget http://icl.utk.edu/projects/papi/downloads/${PAPI_VERSION}.tar.gz
-    fi
-    tar xvf ${PAPI_VERSION}.tar.gz
-    cd ${PAPI_VERSION}/src && ./configure --prefix=$(pwd)/build && make -j4 && make install && cd - 
-    cp -arT ${PAPI_VERSION} papi
-    rm ${PAPI_VERSION}.tar.gz
 }
 
 # main

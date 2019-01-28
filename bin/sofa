@@ -30,7 +30,7 @@ if __name__ == "__main__":
     print_info("Your Python version is %s.%s.%s" % sys.version_info[:3])
     if sys.version_info < (3,5) :
         print_error("But SOFA requires minimum version of Python 3.5.")
-        quit()
+        sys.exit(1)
 
     parser = argparse.ArgumentParser(description='SOFA')
     parser.add_argument(
@@ -171,7 +171,7 @@ if __name__ == "__main__":
             print(cfg.match_logdir)
         else:
             print_error("{base_logdir,match_logdir}/auto_caption.csv must exist!")
-            quit()
+            sys.exit(1)
 
     if args.enable_vmstat is not None:
         cfg.enable_vmstat = args.enable_vmstat
@@ -272,4 +272,4 @@ if __name__ == "__main__":
         sofa_viz(cfg)
     else:
         print_error("Cannot recognized SOFA-command [%s]" % command)
-        quit()
+        sys.exit(1)
