@@ -6,12 +6,12 @@ import json
 import multiprocessing as mp
 import os
 import subprocess
+from subprocess import PIPE
 import sys
 import threading
 import time
 from functools import partial
 from pwd import getpwuid
-
 import numpy as np
 
 from sofa_print import *
@@ -64,6 +64,7 @@ def sofa_clean(cfg):
 
 def sofa_record(command, cfg):
 
+    p_command = None
     p_perf = None
     p_tcpdump = None
     p_mpstat  = None
@@ -211,32 +212,35 @@ def sofa_record(command, cfg):
             with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
                 p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)
 
+        # Primary Profiled Program
+        p_command = subprocess.Popen(command, shell=True)
+        print_info('PID of the profiled program: %d' % p_command.pid)
+        print_info('command: %s' % command)
 
+        with open('%s/strace.txt' % logdir, 'w') as logfile:
+            p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(p_command.pid)], stderr=logfile)
 
         if int(os.system('command -v perf')) == 0:
             ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
             if ret.find('not supported') >=0:
-                profile_command = 'perf record -o %s/perf.data -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
-                #profile_command = 'perf record -o %s/perf.data -F %s %s --' % (logdir, sample_freq, perf_options)
+                profile_command = 'perf record -o %s/perf.data -F %s %s -p %d' % (logdir, sample_freq, perf_options, p_command.pid)
                 cfg.perf_events = ""
             else:
-                profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -- %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command)
-                #profile_command = 'perf record -o %s/perf.data -e %s -F %s %s --' % (logdir, cfg.perf_events, sample_freq, perf_options)
-            print_info(profile_command)
-            #p_perf = subprocess.Popen(profile_command.split().append(command))
-            p_perf = subprocess.Popen(profile_command, shell=True)
+                profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -p %d' % (logdir, cfg.perf_events, sample_freq, perf_options, p_command.pid) 
             with open(logdir+'perf_events_used.txt','w') as f:
                 f.write(cfg.perf_events)
 
-        if p_perf != None:
-            print('perf pid ', p_perf.pid)
-            with open('%s/strace.txt' % logdir, 'w') as logfile:
-                p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(p_perf.pid)], stderr=logfile)
+            print_info(profile_command)
+            p_perf = subprocess.Popen(profile_command, stdin=PIPE, shell=True)
         
-        print_info("Wait for profiling process (perf record) to end...")
+        print_info("Wait for the target program and profiling process (perf record) to end...")
+        p_command.wait()
         p_perf.wait()
 
         print_info("Epilog of Recording...")
+        if p_command != None:
+            p_command.terminate()
+            print_info("tried terminating the profiled program")
         if p_tcpdump != None:
             p_tcpdump.terminate()
             print_info("tried terminating tcpdump")
@@ -265,6 +269,9 @@ def sofa_record(command, cfg):
             print_info("tried terminating strace")
     except BaseException:
         print("Unexpected error:", sys.exc_info()[0])
+        if p_command != None:
+            p_command.kill()
+            print_info("tried killing the profiled program")
         if p_tcpdump != None:
             p_tcpdump.kill()
             print_info("tried killing tcpdump")

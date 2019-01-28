@@ -458,6 +458,7 @@ def sofa_preprocess(cfg):
     vm_cs_traces = []
     vm_wa_traces = []
     vm_st_traces = []
+    strace_traces = []
     nvsmi_sm_traces = []
     nvsmi_mem_traces = []
     pcm_pcie_traces = []
@@ -1104,6 +1105,64 @@ def sofa_preprocess(cfg):
                         break
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
 
+    # STRACE Preprocessing 
+    total_strace_duration = 0
+    if os.path.isfile('%s/strace.txt' % logdir):
+        with open('%s/strace.txt' % logdir) as f:
+            lines = f.readlines()
+            print_info("Length of straces = %d" % len(lines))
+            if len(lines) > 0:
+                strace_list = []
+                strace_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())               
+                for i in range(len(lines)):
+                    if i % cfg.plot_ratio > 0 :
+                        continue
+                    if lines[i].find('clock_gettime') != -1:
+                        continue
+                    fields = lines[i].split()
+                    if fields[0].find('pid') != -1 :
+                        t_begin = float(fields[2])
+                        strace_info = ''.join(fields[3:-1])
+                    else:
+                        t_begin = float(fields[0])
+                        strace_info = ''.join(fields[1:-1])
+                    
+                    try:
+                        duration = float(fields[-1].split('<')[1].split('>')[0]) 
+                    except:
+                        duration = 0 
+                    total_strace_duration = total_strace_duration + duration
+                    if duration < 1.0e-4:
+                        continue
+
+                    deviceId = -1
+                    event = -1
+                    copyKind = -1
+                    payload = -1
+                    bandwidth = -1
+                    pkt_src = pkt_dst = -1
+                    pid = tid = -1
+                    trace = [
+                        t_begin,
+                        event,
+                        duration,
+                        deviceId,
+                        copyKind,
+                        payload,
+                        bandwidth,
+                        pkt_src,
+                        pkt_dst,
+                        pid,
+                        tid,
+                        strace_info,
+                        cpuid]
+                    strace_list.append(trace)
+                
+                if len(strace_list)>1:
+                    strace_traces = list_to_csv_and_traces(logdir, strace_list, 'strace.csv', 'w')
+
+
+    # Time synchronization among BIOS Time (e.g. used by perf)  and NTP Time (e.g. NVPROF, tcpdump, etc.)
     if perf_timebase_unix == 0:
         with open(logdir + 'perf_timebase.txt') as f:
             lines = f.readlines()
@@ -1395,6 +1454,15 @@ def sofa_preprocess(cfg):
         sofatrace.data = vm_cs_traces
         traces.append(sofatrace)
 
+    sofatrace = SOFATrace()
+    sofatrace.name = 'strace'
+    sofatrace.title = 'STRACE.'
+    sofatrace.color = 'DarkSlateGray'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = strace_traces
+    traces.append(sofatrace)
+    
     sofatrace = SOFATrace()
     sofatrace.name = 'nvsmi_mem'
     sofatrace.title = 'GPU_MEM_Util.'
