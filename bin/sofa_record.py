@@ -84,12 +84,12 @@ def sofa_record(command, cfg):
         print_error(
             "/proc/kallsyms permission is restricted, please try the command below:")
         print_error("sudo sysctl -w kernel.kptr_restrict=0")
-        quit()
+        sys.exit(1)
 
     if int(open("/proc/sys/kernel/perf_event_paranoid").read()) != -1:
         print_error('PerfEvent is not avaiable, please try the command below:')
         print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
-        quit()
+        sys.exit(1)
 
     if cfg.enable_pcm:
         print_info('Test Capability of PCM programs ...')
@@ -98,23 +98,22 @@ def sofa_record(command, cfg):
         #    print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
         #    print_error('sudo modprobe msr')
         #    print_error('sudo setcap cap_sys_rawio=ep `which pcm-pcie.x`')
-        #    quit()
         ret = str(subprocess.check_output(['getcap `which pcm-memory.x`'], shell=True))
         if ret.find('cap_sys_rawio+ep') == -1:
             print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
             print_error('sudo modprobe msr')
             print_error('sudo setcap cap_sys_rawio=ep `which pcm-memory.x`')
-            quit()
+            sys.exit(1)
         #ret = str(subprocess.check_output(['getcap `which pcm-numa.x`'], shell=True))
         #if ret.find('cap_sys_rawio+ep') == -1:
         #    print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
         #    print_error('sudo modprobe msr')
         #    print_error('sudo setcap cap_sys_rawio=ep `which pcm-numa.x`')
-        #    quit()
+        #    sys.exit(1)
 
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
         print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
-        quit()
+        sys.exit(1)
 
         print_info('Read NMI watchlog status ...')
         nmi_output = ""

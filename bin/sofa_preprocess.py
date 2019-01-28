@@ -895,7 +895,7 @@ def sofa_preprocess(cfg):
                     payload_unit = 1
                 else:
                     print_info("The payload unit in gputrace.tmp was not recognized!")
-                    quit()
+                    sys.exit(1)
 
                 ts_rescale = 1.0
                 if records[2].split(',')[0] == 'ms':
