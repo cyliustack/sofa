@@ -41,12 +41,10 @@ Move sofa_hsg from sofa_preprocess to sofa_hsg
 Goal:
 
 step 1 sofa record "the program" --logdir sofalog1
-       sofa preprocess
 
 step 2 sofa record "the program" --logdir sofalog2
-       sofa preprocess
 
-step 3 sofa swarm-diff --base_logdir=sofalog1  --match_logdir=sofalog2
+step 3 sofa diff --base_logdir=sofalog1  --match_logdir=sofalog2
 """
 
 def list_downsample(list_in, plot_ratio):
@@ -135,7 +133,7 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
     with open(cfg.logdir + 'perf.script') as f, warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         samples = f.readlines()
-        print_info("Length of cpu_traces = %d" % len(samples))
+        #print_info("Length of cpu_traces = %d" % len(samples))
         if len(samples) > 0:
             with mp.Pool() as pool:
                 res = pool.map(
@@ -285,22 +283,25 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
 
 def sofa_hsg_to_sofatrace(cfg, swarm_groups, traces): # record_for_auto_caption = True # temperarily: for auto-caption
     dummy_i = 0
-
+    auto_caption_filename_with_path = cfg.logdir + 'auto_caption.csv'
+    with open(auto_caption_filename_with_path,'w') as f:
+        f.close()
     for swarm in swarm_groups[:cfg.num_swarms]:
-        sofatrace = SOFATrace() # file.class
-        sofatrace.name = 'swarm' + str(dummy_i) # avoid errors casued by JavaScript. No special meaning, can be random unique ID.
-        sofatrace.title = swarm['keyword'] # add number of swarm
-        sofatrace.color = swarm['color']
-        sofatrace.x_field = 'timestamp'
-        sofatrace.y_field = 'duration'
-        sofatrace.data = swarm['group'].copy()
-        traces.append(sofatrace)
+        if cfg.display_swarms:
+            sofatrace = SOFATrace() # file.class
+            sofatrace.name = 'swarm' + str(dummy_i) # avoid errors casued by JavaScript. No special meaning, can be random unique ID.
+            sofatrace.title = swarm['keyword'] # add number of swarm
+            sofatrace.color = swarm['color']
+            sofatrace.x_field = 'timestamp'
+            sofatrace.y_field = 'duration'
+            sofatrace.data = swarm['group'].copy()
+            traces.append(sofatrace)
 
         # append to csv file every time using pandas funciton
         swarm['group']['cluster_ID'] = dummy_i # add new column cluster ID to dataframe swarm['group']
         copy = swarm['group'].copy()
         #print('*************************')
-        auto_caption_filename_with_path = cfg.logdir + 'auto_caption.csv'
+        
         copy.to_csv(auto_caption_filename_with_path, mode='a', header=False, index=False)
         #print('\nRecord for auto-caption, data preview: \n{}'.format(copy.head(2)))
         #print('*************************')
@@ -321,23 +322,23 @@ def matching_two_dicts_of_swarm(standard_dict, matching_dict, res_dict):
     """
     key = 0 # key: number, no string
     pop_list = [k for k,v in matching_dict.items()]
-    print(pop_list)
+    #print(pop_list)
     for i in standard_dict.keys(): # control access index of standard_dict. a more pythonic way
         threshold = 0
         for j in pop_list: # control access index of matching_dict
             f_ratio = fuzz.ratio(standard_dict[i], matching_dict[j])
             if f_ratio > threshold: # update matching result only when the fuzz ratio is greater
-                print('New matching fuzz ratio {} is higher than threshold {}'\
-                      .format(f_ratio, threshold))
+                #print('New matching fuzz ratio {} is higher than threshold {}'\
+                #      .format(f_ratio, threshold))
                 key = j # update key
                 threshold = f_ratio # update threshold value
-                print('Update new threshold {}'\
-                      .format(threshold))
+                #print('Update new threshold {}'\
+                #      .format(threshold))
                 res_dict.update({i: {j: matching_dict[i]}}) #
         # pop out matched key-value pair of matching dict
         if pop_list:
             pop_list.remove(key) # remove specific value. remove() fails when no elements remains
-        print(res_dict)
+        #print(res_dict)
 
     return res_dict # return result dict
 
@@ -349,13 +350,13 @@ def evaluation_of_matching_result(base_df, matching_df1, final_df, eval_list, tm
     total_num_t_mtchswarm: total traces number in matching swarm
     """
     base_duration_list = []
-    mtch_duration_list = []
+    match_duration_list = []
     diff_list = []
 
     # calculate num_t_stdswarm & total_num_t_mtchswarm
     for id_of_cluster in final_df.index:
         base_id = final_df['base_cluster_ID'].loc[id_of_cluster]
-        print('\n# of cluster in standard cluster: {}\n'.format(base_id))
+        #print('\n# of cluster in standard cluster: {}\n'.format(base_id))
 
         bs_df = base_df.groupby(['cluster_ID','function_name'])\
                         .agg({'function_name':['count']})\
@@ -364,34 +365,34 @@ def evaluation_of_matching_result(base_df, matching_df1, final_df, eval_list, tm
         bs_df.columns = ['base_func_name', 'count']
         # sum up duration time
         base_total_duration = base_df['duration'].loc[base_df['cluster_ID'] == id_of_cluster].sum()
-        print('base_total_duration = {} sec'.format(base_total_duration))
-        print('Function name in cluster: \n{}\n'.format(bs_df.sort_values(by=['count'], ascending=False)))
+        #print('base_total_duration = {} sec'.format(base_total_duration))
+        #print('Function name in cluster: \n{}\n'.format(bs_df.sort_values(by=['count'], ascending=False)))
 
         # total_num_t_mtchswarm
-        mtch_id = final_df['mtch_cluster_ID'].loc[id_of_cluster]
-        print('\n# of cluster in matching cluster: {}'.format(mtch_id))
+        match_id = final_df['match_cluster_ID'].loc[id_of_cluster]
+        #print('\n# of cluster in matching cluster: {}'.format(match_id))
 
-        mtch_df = matching_df1.groupby(['cluster_ID','function_name'])\
+        match_df = matching_df1.groupby(['cluster_ID','function_name'])\
                         .agg({'function_name':['count']})\
-                        .loc[mtch_id]\
+                        .loc[match_id]\
                         .reset_index()
-        mtch_df.columns = ['mtch_func_name', 'count']
+        match_df.columns = ['match_func_name', 'count']
         # sum up duration time
-        mtch_total_duration = matching_df1['duration'].loc[matching_df1['cluster_ID'] == id_of_cluster].sum()
+        match_total_duration = matching_df1['duration'].loc[matching_df1['cluster_ID'] == id_of_cluster].sum()
 
-        total_num_t_mtchswarm = mtch_df['count'].sum()
-        print('mtch_total_duration = {} sec'.format(mtch_total_duration))
-        print('Function name in cluster: \n{}\n'.format(mtch_df.sort_values(by=['count'], ascending=False)))
-        print('---------------------------------------------------------')
-        print('Total number of function name in cluster: {}'.format(total_num_t_mtchswarm))
+        total_num_t_mtchswarm = match_df['count'].sum()
+        #print('match_total_duration = {} sec'.format(match_total_duration))
+        #print('Function name in cluster: \n{}\n'.format(match_df.sort_values(by=['count'], ascending=False)))
+        #print('---------------------------------------------------------')
+        #print('Total number of function name in cluster: {}'.format(total_num_t_mtchswarm))
 
         # add total duration of each cluster
         base_duration_list.append(base_total_duration)
-        mtch_duration_list.append(mtch_total_duration)
-        diff_list.append(abs(base_total_duration - mtch_total_duration))
+        match_duration_list.append(match_total_duration)
+        diff_list.append(abs(base_total_duration - match_total_duration))
 
         # To calculate num_t_stdswarm, get intersection of two cluster first
-        intersected_df = bs_df.merge(mtch_df, left_on='base_func_name', right_on='mtch_func_name', how='outer')
+        intersected_df = bs_df.merge(match_df, left_on='base_func_name', right_on='match_func_name', how='outer')
         intersected_df.dropna(inplace=True) # drop row with NaN value and inplace
         intersected_df['min_value'] = intersected_df.min(axis=1)
         num_t_stdswarm = intersected_df['min_value'].sum()
@@ -400,21 +401,21 @@ def evaluation_of_matching_result(base_df, matching_df1, final_df, eval_list, tm
         if(intersect_percent != 0.0):
             eval_list.append(intersect_percent)
 
-        print('merge frame:\n {}\n'.format(intersected_df))
-        print('num_t_stdswarm = {}'.format(num_t_stdswarm))
-        print('intersection rate = (num_t_stdswarm / total_num_t_mtchswarm) x 100% = {}%'.format(intersect_percent))
-        print('---------------------------------------------------------')
+        #print('merge frame:\n {}\n'.format(intersected_df))
+        #print('num_t_stdswarm = {}'.format(num_t_stdswarm))
+        #print('intersection rate = (num_t_stdswarm / total_num_t_mtchswarm) x 100% = {}%'.format(intersect_percent))
+        #print('---------------------------------------------------------')
         #break; # test only one cluster
 
     # How many cluster match correctly
     intersect_percent = len(eval_list) * 100.0 / len(base_df['cluster_ID'].unique())
-    print('Number of intersection rate > 0% percent: {}%'.format(intersect_percent)) #
+    #print('Number of intersection rate > 0% percent: {}%'.format(intersect_percent)) #
 
     # deal with duration time of each cluster among two dataframes
-    tmp_dict = {'base_duration(sec)': base_duration_list, 'mtch_duration(sec)': mtch_duration_list, 'cluster_diff(sec)': diff_list}
+    tmp_dict = {'base_duration(sec)': base_duration_list, 'match_duration(sec)': match_duration_list, 'cluster_diff(sec)': diff_list}
     tmp_df = pd.DataFrame.from_dict(tmp_dict) # dummy dataframe, just for concatenation
     final_df = pd.concat([final_df, tmp_df], axis=1, sort=False)  # axis=1: horizontal direction
-    print('final_df: \n{}'.format(final_df))
+    print('Diff Report: \n{}'.format(final_df))
 
     return final_df # return final_df in case information lost
 
@@ -423,7 +424,7 @@ def sofa_swarm_diff(cfg):
     swarm diff: design for auto-caption. compare two different sofalog
     """
 
-    print('Python verison: {}'.format(sys.version)) # check python version
+    #print('Python verison: {}'.format(sys.version)) # check python version
 
     column_list = ["timestamp", "event", "duration",
                 "deviceId", "copyKind", "payload",
@@ -432,7 +433,8 @@ def sofa_swarm_diff(cfg):
                 "feature_types", "mem_addr", "quotient",
                 "cycles", "instructions", "cache-misses", "branch-misses",
                 "cluster_ID"]
-    base_df = pd.read_csv(cfg.base_logdir + '/' + 'auto_caption.csv', names=column_list)
+    base_df = pd.read_csv(cfg.base_logdir + 'auto_caption.csv', names=column_list)
+    print(base_df)
     print('There are {} clusters in standard_df\n'.format(len(base_df['cluster_ID'].unique())))
 
     base_df_groupby = base_df.groupby(['cluster_ID','function_name']).agg({'function_name':['count']})
@@ -441,6 +443,8 @@ def sofa_swarm_diff(cfg):
 
     ## Access data of multiIndex dataframe
     # get column names
+    #TODO: fix bug of 'the label [0] is not in the [index]' 
+    print(base_df_groupby)
     df = base_df_groupby.loc[0].reset_index()
     flat_column_names = []
     for level in df.columns:
@@ -448,9 +452,9 @@ def sofa_swarm_diff(cfg):
         flat_column_names.extend(list(level)) # extend(): in-place
 
     # remove duplicate and empty
-    flat_column_names = filter(None, flat_column_names) # filter empty
+    #flat_column_names = filter(None, flat_column_names) # filter empty
     flat_column_names = list(set(flat_column_names)) # deduplicate
-    # print('original order: {}'.format(flat_column_names))
+    print('original order: {}'.format(flat_column_names))
 
     # change member order of list due to set is a random order
     if flat_column_names[0] == 'count':
@@ -461,15 +465,14 @@ def sofa_swarm_diff(cfg):
     base_df_dict = {}
     # Transform multi-index to single index, and update string to dict standard_df_dict
     for id_of_cluster in base_df['cluster_ID'].unique():
-        # print('\n# of cluster: {}'.format(id_of_cluster))
+        print('\n# of cluster: {}'.format(id_of_cluster))
         df = base_df_groupby.loc[id_of_cluster].reset_index()
         df.columns = flat_column_names
-        # print(df.sort_values(by=['count'], ascending=False)) # pd.DataFrame.sort_values() return a DataFrame
-
+        print(df.sort_values(by=['count'], ascending=False)) # pd.DataFrame.sort_values() return a DataFrame
         base_df_dict.update({id_of_cluster: df.function_name.str.cat(sep='  ', na_rep='?')})
 
     ## Dataframe that i want to match
-    matching_df1 = pd.read_csv(cfg.match_logdir + '/' + 'auto_caption.csv', names=column_list)
+    matching_df1 = pd.read_csv(cfg.match_logdir + 'auto_caption.csv', names=column_list)
     matching_df1_groupby = matching_df1.groupby(['cluster_ID','function_name']).agg({'function_name':['count']})
 
     # get column names
@@ -513,10 +516,10 @@ def sofa_swarm_diff(cfg):
     res_list = [k for k,v in res_dict.items()]
     for key in res_list:
         df = pd.DataFrame.from_dict(res_dict[key], orient='index', columns=['After: funciton name']) # res_dict[key]: a dict
-        df['mtch_cluster_ID'] = df.index
+        df['match_cluster_ID'] = df.index
         res_dict_to_df = res_dict_to_df.append(df, ignore_index=True) # df.append(): not in-place
 
-    res_dict_to_df = res_dict_to_df[['mtch_cluster_ID', 'After: funciton name']]
+    res_dict_to_df = res_dict_to_df[['match_cluster_ID', 'After: funciton name']]
     final_df = pd.concat([base_dict_to_df, res_dict_to_df], axis=1)
 
     ## Evaluation: Evaluate matching result of single run, then all different runs
@@ -535,7 +538,7 @@ def sofa_swarm_diff(cfg):
     final_df.to_csv(os.path.join(output_logdir, 'swarm_diff.csv'))
 
     # check result
-    print(final_df.head(5))
+    #print(final_df.head(10))
     print('-------------------------------------')
     print('Output file: {}'.format( os.path.join(output_logdir, 'swarm_diff.csv')))
     print('-------------------------------------')

@@ -64,6 +64,7 @@ def sofa_clean(cfg):
 
 def sofa_record(command, cfg):
 
+    p_perf = None
     p_tcpdump = None
     p_mpstat  = None
     p_vmstat  = None
@@ -75,7 +76,7 @@ def sofa_record(command, cfg):
     p_pcm_memory = None
     p_pcm_numa = None 
     logdir = cfg.logdir
-
+    p_strace = None
     print_info('SOFA_COMMAND: %s' % command)
     sample_freq = 99
     if int(open("/proc/sys/kernel/kptr_restrict").read()) != 0:
@@ -170,10 +171,10 @@ def sofa_record(command, cfg):
         subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
         subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
 
-        # To improve perf timestamp accuracy
         print_info("Script path of SOFA: "+cfg.script_path)
         subprocess.call('%s/sofa_perf_timebase > %s/perf_timebase.txt' % (cfg.script_path,logdir), shell=True)
         subprocess.call('rm %s/*.nvvp' % (logdir), shell=True)
+        subprocess.call('rm %s/*.csv' % (logdir), shell=True)
         subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -o %s/cuhello.perf.data %s/cuhello' % (logdir,logdir,cfg.script_path), shell=True)
 
         # sofa_time is time base for mpstat, vmstat, nvidia-smi
@@ -187,7 +188,7 @@ def sofa_record(command, cfg):
 
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
             p_vmstat = subprocess.Popen(['vmstat', '-w', '1'], stdout=logfile)
-        #TODO:
+
         with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
             logfile.write('')
             timerThread = threading.Thread(target=service_get_cpuinfo, args=[logdir])
@@ -216,13 +217,24 @@ def sofa_record(command, cfg):
             ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
             if ret.find('not supported') >=0:
                 profile_command = 'perf record -o %s/perf.data -F %s %s -- %s' % (logdir, sample_freq, perf_options, command)
+                #profile_command = 'perf record -o %s/perf.data -F %s %s --' % (logdir, sample_freq, perf_options)
                 cfg.perf_events = ""
             else:
                 profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -- %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command)
+                #profile_command = 'perf record -o %s/perf.data -e %s -F %s %s --' % (logdir, cfg.perf_events, sample_freq, perf_options)
             print_info(profile_command)
-            subprocess.call(profile_command, shell=True)
+            #p_perf = subprocess.Popen(profile_command.split().append(command))
+            p_perf = subprocess.Popen(profile_command, shell=True)
             with open(logdir+'perf_events_used.txt','w') as f:
                 f.write(cfg.perf_events)
+
+        if p_perf != None:
+            print('perf pid ', p_perf.pid)
+            with open('%s/strace.txt' % logdir, 'w') as logfile:
+                p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(p_perf.pid)], stderr=logfile)
+        
+        print_info("Wait for profiling process (perf record) to end...")
+        p_perf.wait()
 
         print_info("Epilog of Recording...")
         if p_tcpdump != None:
@@ -248,6 +260,9 @@ def sofa_record(command, cfg):
             print_info("tried terminating nvprof")
         if cfg.enable_pcm:
             kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa)
+        if p_strace != None:
+            p_strace.terminate()
+            print_info("tried terminating strace")
     except BaseException:
         print("Unexpected error:", sys.exc_info()[0])
         if p_tcpdump != None:
@@ -273,5 +288,9 @@ def sofa_record(command, cfg):
             print_info("tried killing nvprof")
         if cfg.enable_pcm:
             kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa)
+        if p_strace != None:
+            p_strace.kill()
+            print_info("tried killing strace")
+
         raise
     print_info("End of Recording")

@@ -412,7 +412,7 @@ sofa_fieldnames = [
 def sofa_preprocess(cfg):
     t_glb_base = 0
     t_glb_gpu_base = 0
-    logdir = cfg.logdir
+    logdir = cfg.logdir 
 
     with open(logdir + 'perf.script', 'w') as logfile:
         subprocess.call(['perf',
@@ -1328,8 +1328,7 @@ def sofa_preprocess(cfg):
         traces.append(sofatrace)
     
 
-    if cfg.display_swarms:
-        sofatrace = SOFATrace()
+    if len(swarm_groups) > 0 :
         traces = sofa_hsg_to_sofatrace(cfg, swarm_groups, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
