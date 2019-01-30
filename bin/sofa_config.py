@@ -29,6 +29,7 @@ class SOFA_Config:
     base_logdir = ''
     match_logdir = ''
     enable_vmstat = False
+    enable_mpstat = True
     enable_pcm = False
     cuda_api_tracing = False
     script_path = ''

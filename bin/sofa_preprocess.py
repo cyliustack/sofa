@@ -5,6 +5,7 @@ import json
 import multiprocessing as mp
 import os
 import re
+
 import subprocess
 import sys
 import warnings
@@ -21,7 +22,6 @@ from sofa_config import *
 from sofa_hsg import sofa_hsg, sofa_hsg_to_sofatrace
 from sofa_models import SOFATrace
 from sofa_print import *
-
 
 def list_downsample(list_in, plot_ratio):
     new_list = []
@@ -458,6 +458,10 @@ def sofa_preprocess(cfg):
     vm_cs_traces = []
     vm_wa_traces = []
     vm_st_traces = []
+    mp_usr_traces = []
+    mp_sys_traces = []
+    mp_idl_traces = []
+    mp_iow_traces = []
     strace_traces = []
     nvsmi_sm_traces = []
     nvsmi_mem_traces = []
@@ -485,6 +489,51 @@ def sofa_preprocess(cfg):
     gpulog_header = 'True'
     cpu_count = mp.cpu_count()
 
+    with open('%s/mpstat.csv' % logdir) as f:
+        mpstat = np.genfromtxt(logdir+'/mpstat.csv', delimiter=',', skip_header=1)
+        mp_usr_list = []
+        mp_usr_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+        n_cores = int(mpstat[:,1].max() + 1)
+        print('# of cores:', n_cores)
+        stride = n_cores + 1
+        for i in range(len(mpstat)):
+            if i <= stride or mpstat[i,1] == -1:
+                continue
+            #time, cpu,  user，nice, system, idle, iowait, irq, softirq
+            core = mpstat[i,1]
+            d_mp = mpstat[i,:] - mpstat[i-stride,:]
+            d_mp_usr =  d_mp[2]
+            d_mp_sys =  d_mp[4]
+            d_mp_idl =  d_mp[5]
+            d_mp_iow =  d_mp[6]
+            d_mp_irq =  d_mp[7]
+            t_begin = mpstat[i,0]
+            metric = d_mp_usr
+            deviceId = core  
+            event = -1
+            copyKind = -1
+            payload = -1
+            bandwidth = -1
+            pkt_src = pkt_dst = -1
+            pid = tid = -1
+            mpstat_info = 'mpstat(core|usr|sys|idl|iow|irq): |%d|%d|%d|%d|%d|%d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
+
+            trace = [
+                t_begin,
+                event,
+                metric,
+                deviceId,
+                copyKind,
+                payload,
+                bandwidth,
+                pkt_src,
+                pkt_dst,
+                pid,
+                tid,
+                mpstat_info,
+                core]
+            mp_usr_list.append(trace)
+        mp_usr_traces = list_to_csv_and_traces(logdir, mp_usr_list, 'mpstat_user_trace.csv', 'w')
     # procs -----------------------memory---------------------- ---swap-- -
     #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
     #  2  0            0    400091552       936896    386150912    0    0     3    18    0    1   5   0  95   0   0
@@ -1420,6 +1469,17 @@ def sofa_preprocess(cfg):
     sofatrace.y_field = 'duration'
     sofatrace.data = vm_bo_traces
     traces.append(sofatrace)
+
+    if cfg.enable_mpstat:
+        sofatrace = SOFATrace()
+        sofatrace.name = 'mpstat_usr'
+        sofatrace.title = 'MPSTAT_USR'
+        sofatrace.color = 'MidnightBlue'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = mp_usr_traces
+        traces.append(sofatrace)
+
 
     if cfg.enable_vmstat:
         sofatrace = SOFATrace()

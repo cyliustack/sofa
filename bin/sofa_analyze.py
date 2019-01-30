@@ -101,8 +101,9 @@ def cpu_profile(logdir, cfg, df):
         total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
     n_devices = len(grouped_df)
     avg_exec_time = total_exec_time / n_devices
-    print(("total execution time = %.3lf" % total_exec_time))
-    print(("average execution time across devices = %.3lf\n" % avg_exec_time))
+    print("total execution time = %.3lf" % total_exec_time)
+    print("# of CPUs involved: %d" % n_devices)
+    print("average execution time across devices = %.3lf\n" % avg_exec_time)
 
 def potato_submit(cfg, data_in):
     headers = {'Content-type': 'application/json'}
@@ -203,50 +204,9 @@ def vmstat_profile(logdir, cfg, df):
     print('mean of vmstat wa (%%): %.2lf' % vmstat_traces['wa'].mean())
 
 
-#def mpstat_profile(logdir, cfg, df):
-#    print_title("VMSTAT Profiling:")
-#    df.rename(columns={'event': 'cpuid'}, inplace=True)
-#    df.rename(columns={'copyKind': 'class'}, inplace=True)
-#    df.rename(columns={'duration': 'usage'}, inplace=True)
-#    z = {0: 'USR', 1: 'SYS', 2: 'IOW'}
-#    df['class'] = df['class'].map(z)
-#
-#    gdf = df.groupby("cpuid")["usage"]
-#    print("Number of Cores: %d" % (len(gdf) - 1))
-#    gdf = df.groupby("class")["usage"]
-#    print("Class\tMax.\tAvg.\tStd.")
-#    for key, item in gdf:
-#        print("%s\t%3d\t%3d\t%3d" % (key,
-#                                     int(gdf.get_group(key).max()),
-#                                     int(gdf.get_group(key).mean()),
-#                                     int(gdf.get_group(key).std())))
-#    print("For more info. about each core, please enable verbose mode.")
-#
-#    gdf = df.groupby("cpuid")["usage"]
-#    if cfg.verbose:
-#        print("===== Max. of Usages for Each Core =====")
-#        table = df.pivot_table(
-#            index='cpuid',
-#            columns='class',
-#            values='usage',
-#            aggfunc=np.max)
-#        print(table[1:].astype(int))
-#
-#        print("===== Avg. of Usages for Each Core =====")
-#        table = df.pivot_table(
-#            index='cpuid',
-#            columns='class',
-#            values='usage',
-#            aggfunc=np.mean)
-#        print(table[1:].astype(int))
-#
-#        print("===== Std. of Usages for Each Core =====")
-#        table = df.pivot_table(
-#            index='cpuid',
-#            columns='class',
-#            values='usage',
-#            aggfunc=np.std)
-#        print(table[1:].astype(int))
+def mpstat_profile(logdir, cfg, df):
+    print_title("MPSTAT Profiling:")
+    print(df.as_matrix) 
 
 
 class ProfiledDomainDNN:
@@ -302,6 +262,7 @@ def sofa_analyze(cfg):
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
     filein_vmstat = logdir + "vmstat_trace.csv"
+    filein_mpstat = logdir + "mpstat_trace.csv"
 
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
 
@@ -350,9 +311,11 @@ def sofa_analyze(cfg):
     try:
         df_cpu = pd.read_csv(filein_cpu)
         df_vmstat = pd.read_csv(filein_vmstat)
+        df_mpstat = pd.read_csv(filein_mpstat)
         cpu_profile(logdir, cfg, df_cpu)
         net_profile(logdir, cfg, df_cpu)
         vmstat_profile(logdir, cfg, df_vmstat)
+        mpstat_profile(logdir, cfg, df_mpstat)
     except IOError:
         print_warning("cputrace.csv is not found")
         #quit()

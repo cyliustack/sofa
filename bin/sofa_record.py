@@ -12,7 +12,9 @@ import threading
 import time
 from functools import partial
 from pwd import getpwuid
+import pandas as pd
 import numpy as np
+import re
 
 from sofa_print import *
 
@@ -23,6 +25,13 @@ def service_get_cpuinfo(logdir):
         #print(datetime.datetime.now())
         next_call = next_call + 0.1;
         get_cpuinfo(logdir)
+        time.sleep(next_call - time.time())
+
+def service_get_mpstat(logdir):
+    next_call = time.time()
+    while True:
+        next_call = next_call + 0.1;
+        get_mpstat(logdir)
         time.sleep(next_call - time.time())
 
 def get_cpuinfo(logdir):
@@ -36,6 +45,27 @@ def get_cpuinfo(logdir):
         with open('%s/cpuinfo.txt' % logdir, 'a') as logfile:
             unix_time = time.time()
             logfile.write(str('%.9lf %lf'%(unix_time,mhz)+'\n'))
+
+def get_mpstat(logdir):
+    with open('/proc/stat','r') as f:
+        lines = f.readlines()
+        stat_list = []
+        unix_time = time.time()
+        cpu_id = -1
+        for line in lines:
+            if line.find('cpu') != -1: 
+                #cpu, user，nice, system, idle, iowait, irq, softirq
+                #example: cat /proc/stat 
+                #   cpu  36572 0 10886 2648245 1047 0 155 0 0 0
+                #   cpu0 3343 0 990 332364 177 0 80 0 0 0
+                m = line.split()
+                stat_list.append([unix_time,cpu_id]+m[1:8])
+                cpu_id = cpu_id + 1 
+            else:
+                break
+        stat = np.array(stat_list) 
+        df_stat = pd.DataFrame(stat)
+        df_stat.to_csv("%s/mpstat.csv" % logdir, mode='a', header=False, index=False, index_label=False)
 
 def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa):
     if p_pcm_pcie != None:
@@ -177,14 +207,10 @@ def sofa_record(command, cfg):
         subprocess.call('rm %s/*.csv' % (logdir), shell=True)
         subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -o %s/cuhello.perf.data %s/cuhello' % (logdir,logdir,cfg.script_path), shell=True)
 
-        # sofa_time is time base for mpstat, vmstat, nvidia-smi
+        # sofa_time is time base for vmstat, nvidia-smi
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:
             unix_time = time.time()
             logfile.write(str('%.9lf'%unix_time)+'\n')
-
-        with open('%s/mpstat.txt' % logdir, 'w') as logfile:
-            p_mpstat = subprocess.Popen(
-                    ['mpstat', '-P', 'ALL', '1'], stdout=logfile)
 
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
             p_vmstat = subprocess.Popen(['vmstat', '-w', '1'], stdout=logfile)
@@ -192,6 +218,13 @@ def sofa_record(command, cfg):
         with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
             logfile.write('')
             timerThread = threading.Thread(target=service_get_cpuinfo, args=[logdir])
+            timerThread.daemon = True
+            timerThread.start()
+        
+        with open('%s/mpstat.csv' % logdir, 'w') as logfile:
+            print('Create mpstat.csv') 
+            logfile.write('time,cpu,user,nice,system,idle,iowait,irq,softirq\n')
+            timerThread = threading.Thread(target=service_get_mpstat, args=[logdir])
             timerThread.daemon = True
             timerThread.start()
 
