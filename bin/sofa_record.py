@@ -65,7 +65,7 @@ def get_mpstat(logdir):
                 break
         stat = np.array(stat_list) 
         df_stat = pd.DataFrame(stat)
-        df_stat.to_csv("%s/mpstat.csv" % logdir, mode='a', header=False, index=False, index_label=False)
+        df_stat.to_csv("%s/mpstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
 
 def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa):
     if p_pcm_pcie != None:
@@ -86,11 +86,11 @@ def sofa_clean(cfg):
     logdir = cfg.logdir
     print_info('Clean previous logged files')
     subprocess.call('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
-    subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.html > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.js > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.script > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
 
 
 def sofa_record(command, cfg):
@@ -222,8 +222,8 @@ def sofa_record(command, cfg):
             timerThread.daemon = True
             timerThread.start()
         
-        with open('%s/mpstat.csv' % logdir, 'w') as logfile:
-            print('Create mpstat.csv') 
+        with open('%s/mpstat.txt' % logdir, 'w') as logfile:
+            print('Create mpstat.txt') 
             logfile.write('time,cpu,user,nice,system,idle,iowait,irq,softirq\n')
             timerThread = threading.Thread(target=service_get_mpstat, args=[logdir])
             timerThread.daemon = True

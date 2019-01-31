@@ -206,7 +206,16 @@ def vmstat_profile(logdir, cfg, df):
 
 def mpstat_profile(logdir, cfg, df):
     print_title("MPSTAT Profiling:")
-    print(df.as_matrix) 
+    grouped_df = df.groupby("deviceId")["duration"]
+    total_tasktime = 0
+    print("CoreID:\tsum\tmean\tmax\tstd\t (USR Time in Seconds)")
+    for key, item in grouped_df:
+        sum_usr_time = grouped_df.get_group(key).sum()
+        mean_usr_time = grouped_df.get_group(key).mean()
+        std_usr_time = grouped_df.get_group(key).std()
+        max_usr_time = grouped_df.get_group(key).max()
+        cpuid = int(float(key))
+        print(("[%d]:\t%.3lf\t%.3lf,\t%.3lf,\t%.3lf" % ( cpuid, sum_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
 
 
 class ProfiledDomainDNN:
@@ -261,8 +270,8 @@ def sofa_analyze(cfg):
 
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
-    filein_vmstat = logdir + "vmstat_trace.csv"
-    filein_mpstat = logdir + "mpstat_trace.csv"
+    filein_vmstat = logdir + "vmstat.csv"
+    filein_mpstat = logdir + "mpstat.csv"
 
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
 

@@ -1,5 +1,5 @@
-1548893773.689204 restart_syscall(<... resuming interrupted nanosleep ...>) = 0 <2.998626>
-1548893776.688145 close(1)              = 0 <0.000143>
-1548893776.688458 close(2)              = 0 <0.000105>
-1548893776.688691 exit_group(0)         = ?
-1548893776.688982 +++ exited with 0 +++
+1548898350.031106 restart_syscall(<... resuming interrupted nanosleep ...>) = 0 <2.998727>
+1548898353.030127 close(1)              = 0 <0.000143>
+1548898353.030405 close(2)              = 0 <0.000101>
+1548898353.030597 exit_group(0)         = ?
+1548898353.030827 +++ exited with 0 +++

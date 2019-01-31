@@ -489,8 +489,8 @@ def sofa_preprocess(cfg):
     gpulog_header = 'True'
     cpu_count = mp.cpu_count()
 
-    with open('%s/mpstat.csv' % logdir) as f:
-        mpstat = np.genfromtxt(logdir+'/mpstat.csv', delimiter=',', skip_header=1)
+    with open('%s/mpstat.txt' % logdir) as f:
+        mpstat = np.genfromtxt(logdir+'/mpstat.txt', delimiter=',', skip_header=1)
         mp_usr_list = []
         mp_usr_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
         n_cores = int(mpstat[:,1].max() + 1)
@@ -508,7 +508,7 @@ def sofa_preprocess(cfg):
             d_mp_iow =  d_mp[6]
             d_mp_irq =  d_mp[7]
             t_begin = mpstat[i,0]
-            metric = d_mp_usr
+            metric = d_mp_usr * 0.010
             deviceId = core  
             event = -1
             copyKind = -1
@@ -533,7 +533,7 @@ def sofa_preprocess(cfg):
                 mpstat_info,
                 core]
             mp_usr_list.append(trace)
-        mp_usr_traces = list_to_csv_and_traces(logdir, mp_usr_list, 'mpstat_user_trace.csv', 'w')
+        mp_usr_traces = list_to_csv_and_traces(logdir, mp_usr_list, 'mpstat.csv', 'w')
     # procs -----------------------memory---------------------- ---swap-- -
     #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
     #  2  0            0    400091552       936896    386150912    0    0     3    18    0    1   5   0  95   0   0
@@ -740,21 +740,21 @@ def sofa_preprocess(cfg):
                     t = t + 1
 
             vm_bi_traces = list_to_csv_and_traces(
-                logdir, vm_bi_list, 'vmstat_trace.csv', 'w')
+                logdir, vm_bi_list, 'vmstat.csv', 'w')
             vm_bo_traces = list_to_csv_and_traces(
-                logdir, vm_bo_list, 'vmstat_trace.csv', 'a')
+                logdir, vm_bo_list, 'vmstat.csv', 'a')
             vm_in_traces = list_to_csv_and_traces(
-                logdir, vm_in_list, 'vmstat_trace.csv', 'a')
+                logdir, vm_in_list, 'vmstat.csv', 'a')
             vm_cs_traces = list_to_csv_and_traces(
-                logdir, vm_cs_list, 'vmstat_trace.csv', 'a')
+                logdir, vm_cs_list, 'vmstat.csv', 'a')
             vm_wa_traces = list_to_csv_and_traces(
-                logdir, vm_wa_list, 'vmstat_trace.csv', 'a')
+                logdir, vm_wa_list, 'vmstat.csv', 'a')
             vm_st_traces = list_to_csv_and_traces(
-                logdir, vm_st_list, 'vmstat_trace.csv', 'a')
+                logdir, vm_st_list, 'vmstat.csv', 'a')
             vm_usr_traces = list_to_csv_and_traces(
-                logdir, vm_usr_list, 'vmstat_trace.csv', 'a')
+                logdir, vm_usr_list, 'vmstat.csv', 'a')
             vm_sys_traces = list_to_csv_and_traces(
-                logdir, vm_sys_list, 'vmstat_trace.csv', 'a')
+                logdir, vm_sys_list, 'vmstat.csv', 'a')
 
     # gpu    sm   mem   enc   dec
     # Idx     %     %     %     %
