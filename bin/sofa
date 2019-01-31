@@ -20,14 +20,14 @@ from sofa_record import *
 from sofa_viz import *
 
 if __name__ == "__main__":
-
+    cfg = SOFA_Config()
     command = None
     usr_command = None
     # swarm_diff needs multiple input argument, deal with it independently
     swarm_diff_command = None
     sys.stdout.flush()
 
-    print_info("Your Python version is %s.%s.%s" % sys.version_info[:3])
+    print_hint("Welcome to SOFA! Your Python version is %s.%s.%s" % sys.version_info[:3])
     if sys.version_info < (3,5) :
         print_error("But SOFA requires minimum version of Python 3.5.")
         sys.exit(1)
@@ -121,7 +121,6 @@ if __name__ == "__main__":
         required=False,
         help='IP address of POTATO server')
 
-    cfg = SOFA_Config()
     sofa_exec_path = os.path.abspath( __file__ )
     if Path(sofa_exec_path).is_symlink():
         cfg.script_path = os.path.dirname(os.readlink(sofa_exec_path))
@@ -236,13 +235,13 @@ if __name__ == "__main__":
     if args.perf_events is not None:
         cfg.perf_events = args.perf_events
 
-    print("Ratio of raw data points to plotting points : %d" % cfg.plot_ratio)
+    print_info(cfg, "Ratio of raw data points to plotting points : %d" % cfg.plot_ratio)
     for filter in cfg.cpu_filters:
-        print_info("CPU filter = %s:%s" % (filter.keyword, filter.color))
+        print_info(cfg,"CPU filter = %s:%s" % (filter.keyword, filter.color))
     for filter in cfg.gpu_filters:
-        print_info("GPU filter = %s:%s" % (filter.keyword, filter.color))
+        print_info(cfg,"GPU filter = %s:%s" % (filter.keyword, filter.color))
 
-    print_info("logdir = %s" % cfg.logdir)
+    print_info(cfg,"logdir = %s" % cfg.logdir)
 
     if command == 'stat':
         sofa_record(usr_command, cfg)

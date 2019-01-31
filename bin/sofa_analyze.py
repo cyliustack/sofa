@@ -288,7 +288,7 @@ def sofa_analyze(cfg):
                 for word in title.split():
                     if re.match(r'GPU', word) != None :
                        num_gpus = num_gpus + 1
-                print_info('# of GPUs: ' + str(num_gpus) )
+                print_info(cfg,'# of GPUs: ' + str(num_gpus) )
                 edges = []
                 if len(lines) >= num_gpus+1:
                     for i in range(num_gpus):

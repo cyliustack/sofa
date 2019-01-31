@@ -177,7 +177,6 @@ def gpu_trace_read(
     values = record.replace('"', '').split(',')
     kernel_name = values[indices.index('Name')]
 
-    # print("kernel name = %s" % kernel_name)
     time = float(values[indices.index('Start')]) / ts_rescale + t_offset
     duration = float(values[indices.index('Duration')]) / dt_rescale
     t_begin = time
@@ -240,9 +239,7 @@ def gpu_trace_read(
 
     if deviceId != -1:
         kernel_name = '[gpu%d]'%deviceId + kernel_name
-    # print("%d:%d [%s] ck:%d, %lf,%lf: %d -> %d: payload:%d, bandwidth:%lf,
-    # duration:%lf "%(deviceId, streamId, kernel_name, copyKind,
-    # t_begin,t_end, pkt_src, pkt_dst, payload, bandwidth, duration))
+    
     trace = [t_begin,
              payload * 100 + 17,
              duration,
@@ -257,109 +254,6 @@ def gpu_trace_read(
              kernel_name,
              0]
     return trace
-
-def gpu_kernel_trace_read(record, pid, t_base, t_glb_base):
-    t_begin = (record[0] - t_base) / 1e9 + t_glb_base
-    t_end = (record[1] - t_base) / 1e9 + t_glb_base
-    kernel_name = "%s" % (
-        gpu_symbol_table.loc[gpu_symbol_table._id_ == record[2], 'value'])
-    kernel_name = kernel_name[:-30]
-    trace = [	t_begin,
-              record[2],
-              float(t_end - t_begin),
-              record[4],
-              -1,
-              0,
-              0.0,
-              -1,
-              -1,
-              pid,
-              record[3],
-              kernel_name,
-              0]
-    return trace
-
-def gpu_memcpy_trace_read(record, t_base, t_glb_base):
-    t_begin = (record[0] - t_base) / 1e9 + t_glb_base
-    t_end = (record[1] - t_base) / 1e9 + t_glb_base
-
-    src = -1
-    dst = -1
-    if record[3] == 1:
-        src = 0
-        dst = record[4] + 1
-    elif record[3] == 2:
-        src = record[4] + 1
-        dst = 0
-    elif record[3] == 8:
-        src = record[4] + 1
-        dst = record[4] + 1
-
-    trace = [	t_begin,
-              record[2],
-              float(t_end - t_begin),
-              record[4],
-              record[3],
-              record[2],
-              float(record[2]) / (t_end - t_begin) / 1.0e6,
-              src,
-              dst,
-              record[7],  # streamId
-              -1,
-              "gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]),
-              0]
-    return trace
-
-def gpu_memcpy2_trace_read(record, t_base, t_glb_base):
-    t_begin = (record[0] - t_base) / 1e9 + t_glb_base
-    t_end = (record[1] - t_base) / 1e9 + t_glb_base
-    trace = [	t_begin,
-              record[2],
-              float(t_end - t_begin),
-              record[4],
-              record[3],
-              record[2],
-              float(record[2]) / (t_end - t_begin) / 1.0e6,
-              record[8],
-              record[9],
-              record[7],  # streamId
-              -1,
-              "gpu%d_copyKind%d_%dB" % (record[4], record[3], record[2]),
-              0]
-    return trace
-
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-def print_warning(content):
-    print((bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC))
-
-def print_info(content):
-    print((bcolors.OKGREEN + "[INFO] " + content + bcolors.ENDC))
-
-def print_progress(content):
-    print((bcolors.OKBLUE + "[PROGRESS] " + content + bcolors.ENDC))
-
-# traces_to_json()
-#    Please set "turboThreshold:0" in PlotOptions of ScatterChart to unlimit number of points
-#    series: [{
-#        name: 'Female',
-#        color: 'rgba(223, 83, 83, .5)',
-#        data: [{x:161.2, y:51.6, name:'b'}, {x:167.5, y:59.0, name:"a"}]
-#    },
-#    {
-#        name: 'Male',
-#        color: 'rgba(23, 83, 183, .5)',
-#        data: [{x:16.2, y:151.6, name:'bd'}, {x:67.5, y:59.0, name:"ad"}]
-#    }
-#    ]
 
 def traces_to_json(traces, path, cfg):
     if len(traces) == 0:
@@ -428,8 +322,8 @@ def sofa_preprocess(cfg):
     with open(logdir + 'sofa_time.txt') as f:
         lines = f.readlines()
         t_glb_base = float(lines[0]) + cfg.cpu_time_offset
-        print_info('Time offset applied to timestamp (s):' + str(cfg.cpu_time_offset))
-        print_info('SOFA global time base (s):' + str(t_glb_base))
+        print_info(cfg,'Time offset applied to timestamp (s):' + str(cfg.cpu_time_offset))
+        print_info(cfg,'SOFA global time base (s):' + str(t_glb_base))
 
     cpu_mhz_xp = [0.0]
     cpu_mhz_fp = [3000.0]
@@ -445,7 +339,6 @@ def sofa_preprocess(cfg):
                 cpu_mhz_fp.append(mhz)
     except:
         print_warning('no cpuinfo file is found, default cpu MHz = %lf'%(fp[0]))
-    print('cpu_mhz length: ',len(cpu_mhz_xp))
 
     net_traces = []
     cpu_traces = []
@@ -494,7 +387,6 @@ def sofa_preprocess(cfg):
         mp_usr_list = []
         mp_usr_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
         n_cores = int(mpstat[:,1].max() + 1)
-        print('# of cores:', n_cores)
         stride = n_cores + 1
         for i in range(len(mpstat)):
             if i <= stride or mpstat[i,1] == -1:
@@ -540,7 +432,7 @@ def sofa_preprocess(cfg):
     # ============ Preprocessing VMSTAT Trace ==========================
     with open('%s/vmstat.txt' % logdir) as f:
         lines = f.readlines()
-        print_info("Length of vmstat_traces = %d" % len(lines))
+        print_info(cfg,"Length of vmstat_traces = %d" % len(lines))
         if len(lines) > 0:
             vm_usr_list = []
             vm_sys_list = []
@@ -771,7 +663,7 @@ def sofa_preprocess(cfg):
                     print_warning('No nvsmi data.')
                     break
             if nvsmi_has_data:
-                print_info("Length of nvsmi_traces = %d" % len(lines))
+                print_info(cfg,"Length of nvsmi_traces = %d" % len(lines))
                 nvsmi_sm_list = []
                 nvsmi_mem_list = []
                 nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
@@ -842,10 +734,10 @@ def sofa_preprocess(cfg):
         with open(logdir + 'net.tmp', 'w') as f:
             subprocess.check_call(
                 ["tcpdump", "-q", "-n", "-tt", "-r",
-                "%s/sofa.pcap"%logdir ], stdout=f)
+                "%s/sofa.pcap"%logdir ], stdout=f, stderr=subprocess.DEVNULL)
         with open(logdir + 'net.tmp') as f:
             packets = lines = f.readlines()
-            print_info("Length of net_traces = %d" % len(packets))
+            print_info(cfg,"Length of net_traces = %d" % len(packets))
             if packets:
                 with mp.Pool(processes=cpu_count) as pool:
                     res = pool.map(
@@ -900,26 +792,26 @@ def sofa_preprocess(cfg):
         try:
             t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_MEMSET',engine)).iloc[0]['start'])
         except BaseException:
-            print_info('NO MEMSET')
+            print_info(cfg,'NO MEMSET')
         try:
             t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_MEMCPY',engine)).iloc[0]['start'])
         except BaseException:
-            print_info('NO MEMCPY')
+            print_info(cfg,'NO MEMCPY')
         try:
             t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL',engine)).iloc[0]['start'])
         except BaseException:
-            print_info('NO CONCURRENT KERNEL')
+            print_info(cfg,'NO CONCURRENT KERNEL')
         try:
             t_glb_gpu_bases.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_KERNEL',engine)).iloc[0]['start'])
         except BaseException:
-            print_info('NO KERNEL')
-        print(t_glb_gpu_bases)
+            print_info(cfg,'NO KERNEL')
+        
         if len(t_glb_gpu_bases) > 0:
             t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]*1.0/1e+9
         else:
            print_warning("There is no data in tables of NVVP file.")
 
-        print_info("Timestamp of the first GPU trace = " + str(t_glb_gpu_base))
+        print_info(cfg,"Timestamp of the first GPU trace = " + str(t_glb_gpu_base))
 
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
         num_cudaproc = num_cudaproc + 1
@@ -931,7 +823,6 @@ def sofa_preprocess(cfg):
                 indices = records[1].replace(
                     '"', '').replace(
                     '\n', '').split(',')
-                print(indices)
                 # ms,ms,,,,,,,,B,B,MB,GB/s,,,,
                 payload_unit = 1
                 if records[2].split(',')[11] == 'GB':
@@ -943,7 +834,7 @@ def sofa_preprocess(cfg):
                 elif records[2].split(',')[11] == 'B':
                     payload_unit = 1
                 else:
-                    print_info("The payload unit in gputrace.tmp was not recognized!")
+                    print_info(cfg,"The payload unit in gputrace.tmp was not recognized!")
                     sys.exit(1)
 
                 ts_rescale = 1.0
@@ -959,7 +850,7 @@ def sofa_preprocess(cfg):
                     dt_rescale = 1.0e6
 
                 records = records[3:]
-                print_info("Length of gpu_traces = %d" % len(records))
+                print_info(cfg,"Length of gpu_traces = %d" % len(records))
                 t_base = float(records[0].split(',')[0])
                 with mp.Pool(processes=cpu_count) as pool:
                     res = pool.map(
@@ -1015,14 +906,14 @@ def sofa_preprocess(cfg):
                 t_glb_gpu_bases.append((pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['start'])
                 first_corid = (pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['correlationId']
             except BaseException:
-                print_info('NO RUNTIME')
+                print_info(cfg,'NO RUNTIME')
 
             if len(t_glb_gpu_bases) > 0:
                 t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]*1.0/1e+9
             else:
                print_warning("There is no data in tables of NVVP file.")
 
-            print_info("Timestamp of the first CUDA API trace = " + str(t_glb_gpu_base))
+            print_info(cfg,"Timestamp of the first CUDA API trace = " + str(t_glb_gpu_base))
 
             print_progress("Read " + nvvp_filename + " by nvprof -- end")
             num_cudaproc = num_cudaproc + 1
@@ -1033,7 +924,6 @@ def sofa_preprocess(cfg):
                     indices = records[1].replace(
                         '"', '').replace(
                         '\n', '').split(',')
-                    print(indices)
 
                     ts_rescale = 1.0
                     if records[2].split(',')[0] == 'ms':
@@ -1048,7 +938,7 @@ def sofa_preprocess(cfg):
                         dt_rescale = 1.0e6
 
                     records = records[3:]
-                    print_info("Length of cuda_api_traces = %d" % len(records))
+                    print_info(cfg,"Length of cuda_api_traces = %d" % len(records))
 
                     #TODO: Apply parallel search to speed up
                     t_base = float(records[0].split(',')[0])
@@ -1056,8 +946,8 @@ def sofa_preprocess(cfg):
                         for record in records:
                             if int(record.split(',')[3]) == first_corid:
                                 t_base = float(record.split(',')[0])
-                                print_info('First Correlation_ID ' + str(first_corid) + ' is found in cuda_api_trace.tmp')
-                                print_info('First API trace timestamp is ' + str(t_base))
+                                print_info(cfg,'First Correlation_ID ' + str(first_corid) + ' is found in cuda_api_trace.tmp')
+                                print_info(cfg,'First API trace timestamp is ' + str(t_base))
                                 break
 
                     with mp.Pool(processes=cpu_count) as pool:
@@ -1092,7 +982,7 @@ def sofa_preprocess(cfg):
             cfg.perf_events = lines[0]
         else:
             cfg.perf_events = ''
-        print_info('perf_events_used: %s' % (cfg.perf_events))
+        print_info(cfg,'perf_events_used: %s' % (cfg.perf_events))
     # Determine time base for perf traces
     perf_timebase_uptime = 0
     perf_timebase_unix = 0
@@ -1104,22 +994,22 @@ def sofa_preprocess(cfg):
         try:
             last_nvvp_tss.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_MEMSET',engine)).iloc[-1]['start'])
         except BaseException:
-            print_info('NO MEMSET')
+            print_info(cfg,'NO MEMSET')
 
         try:
             last_nvvp_tss.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_MEMCPY',engine)).iloc[-1]['start'])
         except BaseException:
-            print_info('NO MEMCPY')
+            print_info(cfg,'NO MEMCPY')
 
         try:
             last_nvvp_tss.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL',engine)).iloc[-1]['start'])
         except BaseException:
-            print_info('NO CONCURRENT KERNEL')
+            print_info(cfg,'NO CONCURRENT KERNEL')
 
         try:
             last_nvvp_tss.append( (pd.read_sql_table('CUPTI_ACTIVITY_KIND_KERNEL',engine)).iloc[-1]['start'])
         except BaseException:
-            print_info('NO KERNEL')
+            print_info(cfg,'NO KERNEL')
         if len(last_nvvp_tss) > 0:
             last_nvvp_ts = sorted(last_nvvp_tss,reverse=True)[0]*1.0/1e+9
         else:
@@ -1138,7 +1028,7 @@ def sofa_preprocess(cfg):
 
         with open(logdir + 'cuhello.perf.script') as f:
             samples = f.readlines()
-            print_info("Length of cpu_traces = %d" % len(samples))
+            print_info(cfg,"Length of cpu_traces = %d" % len(samples))
             if len(samples) > 0:
                 for sample in reversed(samples):
                     fields = sample.split()
@@ -1159,7 +1049,7 @@ def sofa_preprocess(cfg):
     if os.path.isfile('%s/strace.txt' % logdir):
         with open('%s/strace.txt' % logdir) as f:
             lines = f.readlines()
-            print_info("Length of straces = %d" % len(lines))
+            print_info(cfg,"Length of straces = %d" % len(lines))
             if len(lines) > 0:
                 strace_list = []
                 strace_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())               
@@ -1209,7 +1099,7 @@ def sofa_preprocess(cfg):
                 
                 if len(strace_list)>1:
                     strace_traces = list_to_csv_and_traces(logdir, strace_list, 'strace.csv', 'w')
-    print_info('Total strace duration: %.3lf' % total_strace_duration)
+    print_info(cfg,'Total strace duration: %.3lf' % total_strace_duration)
 
     # Time synchronization among BIOS Time (e.g. used by perf)  and NTP Time (e.g. NVPROF, tcpdump, etc.)
     if perf_timebase_unix == 0:
@@ -1220,7 +1110,7 @@ def sofa_preprocess(cfg):
 
     with open(logdir + 'perf.script') as f:
         samples = f.readlines()
-        print_info("Length of cpu_traces = %d" % len(samples))
+        print_info(cfg,"Length of cpu_traces = %d" % len(samples))
         if len(samples) > 0:
             with mp.Pool(processes=cpu_count) as pool:
                 res = pool.map(
@@ -1264,7 +1154,6 @@ def sofa_preprocess(cfg):
         swarm_stats = []
         swarm_groups, swarm_stats = sofa_hsg(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
     except TypeError:
-        print('Unexpected error:', sys.exc_info()[0])
         print_warning('HSG returned a None object to swarm_groups, check if sofalog/perf.data can be accessed.')
         pass 
     #=== Intel PCM Trace =======#
@@ -1274,7 +1163,7 @@ def sofa_preprocess(cfg):
     if cfg.enable_pcm and os.path.isfile('%s/pcm_pcie.csv' % logdir):
         with open( logdir + '/pcm_pcie.csv' ) as f:
             lines = f.readlines()
-            print_info("Length of pcm_pcie_traces = %d" % len(lines))
+            print_info(cfg,"Length of pcm_pcie_traces = %d" % len(lines))
             if len(lines) > 0:
                 pcm_pcie_list = []
                 pcm_pcie_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
@@ -1342,15 +1231,13 @@ def sofa_preprocess(cfg):
     if cfg.enable_pcm and os.path.isfile('%s/pcm_memory.csv' % logdir):
         with open( logdir + '/pcm_memory.csv' ) as f:
             lines = f.readlines()
-            print_info("Length of pcm_memory_traces = %d" % len(lines))
+            print_info(cfg,"Length of pcm_memory_traces = %d" % len(lines))
             if len(lines) > 0:
                 pcm_memory_list = []
                 pcm_memory_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
                 for line in lines:
                     if line.find('Skt') == -1:
                         fields = line.split(',')
-                        #for f in range(len(fields)):
-                        #    print("field[%d] %s" % (f, fields[f]))
 
                         skt = int(fields[1])
                         t_begin = float(fields[0])
