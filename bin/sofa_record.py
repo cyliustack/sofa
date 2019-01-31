@@ -90,6 +90,7 @@ def sofa_clean(cfg):
     subprocess.call('rm %s/*.html > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.js > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.script > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/*.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
 
 
 def sofa_record(command, cfg):
