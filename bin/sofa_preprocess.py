@@ -1361,7 +1361,7 @@ def sofa_preprocess(cfg):
         sofatrace = SOFATrace()
         sofatrace.name = 'mpstat_usr'
         sofatrace.title = 'MPSTAT_USR'
-        sofatrace.color = 'MidnightBlue'
+        sofatrace.color = 'Cyan'
         sofatrace.x_field = 'timestamp'
         sofatrace.y_field = 'duration'
         sofatrace.data = mp_usr_traces

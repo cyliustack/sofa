@@ -36,31 +36,27 @@ class Event:
         return repr((self.name, self.ttype, self.timestamp, self.duration))
 
 
-def gpu_profile(logdir, cfg, df_gpu):
-    total_kernel_time = 0.0
-    total_gpu_time = 0.0
-
-    print_title("Task Time (MEMCPY included) for each Device (s)")
-    grouped_df = df_gpu.groupby("deviceId")["duration"]
-    total_tasktime = 0
-    for key, item in grouped_df:
-        print(("[%d]: %lf" % (int(float(key)), grouped_df.get_group(key).sum())))
-        total_tasktime = total_tasktime + grouped_df.get_group(key).sum()
-    n_devices = len(grouped_df)
-    per_gpu_time = total_tasktime / n_devices
-    print(("Averaged GPU time of devices: %.2lf" % per_gpu_time))
-
-    print_title("Data Traffic (bidirection) for each Device (MB)")
-    grouped_df = df_gpu.groupby("deviceId")["payload"]
-    for key, item in grouped_df:
-        print(("[%d]: %lf" % (key, grouped_df.get_group(key).sum() / 1000000.0)))
-
+def gpu_profile(logdir, cfg, df_gpu, features):
+    print_title("GPU Profiling")
+    print('Per-GPU time (s):')
+    groups = df_gpu.groupby("deviceId")["duration"]
+    total_gpu_time = 0
+    for key, item in groups:
+        gpuid = int(float(key))
+        per_gpu_time = groups.get_group(key).sum()
+        print("[%d]: %lf" % (gpuid, per_gpu_time))
+        total_gpu_time = total_gpu_time + per_gpu_time 
+    n_gpus = len(groups)
+    mean_gpu_time = total_gpu_time / n_gpus
+    print(("Total GPU time of all GPUs (s) = %.3lf" % total_gpu_time))
+    print(("Mean per-GPU time of all GPUs (s) = %.3lf" % mean_gpu_time))
+   
+    total_kernel_time = 0
     grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
         if key == 0:
             total_kernel_time = grouped_df.get_group(key).sum()
 
-    print_title("All-reduce Time (s)")
     all_reduce_time = 0
     grouped_df = df_gpu.groupby("name")["duration"]
     for key, item in grouped_df:
@@ -68,14 +64,14 @@ def gpu_profile(logdir, cfg, df_gpu):
         if key.find("AllReduce") != -1:
             all_reduce_time = all_reduce_time + grouped_df.get_group(key).sum()
 
-    comm_profile(logdir, cfg, df_gpu)
-    print(("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time))
+    features = comm_profile(logdir, cfg, df_gpu, features)
 
-    print_title("Summary of Kernels")
-    print(("MeasuredTotalKernelTime : %lf (s)" % total_kernel_time))
-    print(("MeasuredAllReduceTime : %lf (s)" % all_reduce_time))
     get_top_k_events(df_gpu, 10)
-
+    df = pd.DataFrame({ 'name':['total_gpu_time', 'mean_gpu_time', 'total_kernel_time', 'all_reduce_time'], 
+                        'value':[total_gpu_time, mean_gpu_time, total_kernel_time, all_reduce_time] }, 
+                        columns=['name','value'])
+    features = pd.concat([features, df])
+    return features
 
 def net_profile(logdir, cfg, df):
     print_title("Network Profiling:")
@@ -93,13 +89,7 @@ def net_profile(logdir, cfg, df):
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
-    with open(logdir+'/misc.txt') as f:
-        lines = f.readlines()
-        elapsed_time = float(lines[0].split()[1])
-        vcores = int(lines[2].split()[1])
-        elapsed_time = float(lines[0].split()[1])
-        print('elapsed_time (s) = %.6lf' % elapsed_time)
-    
+    print('elapsed_time (s) = %.6lf' % cfg.elapsed_time) 
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
     for key, item in grouped_df:
@@ -272,6 +262,12 @@ def sofa_analyze(cfg):
     iter_summary = None
     logdir = cfg.logdir
 
+    with open(logdir+'/misc.txt') as f:
+        lines = f.readlines()
+        elapsed_time = float(lines[0].split()[1])
+        vcores = int(lines[2].split()[1])
+        cfg.elapsed_time = float(lines[0].split()[1])
+    
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
     filein_net = logdir + "nettrace.csv"
@@ -322,6 +318,10 @@ def sofa_analyze(cfg):
                                 with open("sofalog/sofa_hints/xring_order.txt", "w") as f:
                                     f.write('export CUDA_VISIBLE_DEVICES=' + xring_order)
                                 break
+    # Construct Performance Features
+    features = pd.DataFrame({'name':['elapsed_time'], 'value':[cfg.elapsed_time]}, columns=['name','value'])
+    
+    
     try:
         df_cpu = pd.read_csv(filein_cpu)
         df_vmstat = pd.read_csv(filein_vmstat)
@@ -338,11 +338,14 @@ def sofa_analyze(cfg):
     try:
         df_gpu = pd.read_csv(filein_gpu)
         #df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
-        gpu_profile(logdir, cfg, df_gpu)
+        features = gpu_profile(logdir, cfg, df_gpu, features)
         if cfg.enable_aisi:
             iter_summary = sofa_aisi(logdir, cfg, df_cpu, df_gpu)
     except IOError:
         print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
+
+    print_title('Final Performance Features')
+    print(features)
 
     if cfg.potato_server:
         potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary)

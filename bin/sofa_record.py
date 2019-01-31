@@ -159,8 +159,10 @@ def sofa_record(command, cfg):
     print_info(cfg,'Clean previous logged files')
     # Not equal to sofa_clean(...) !!
     subprocess.call('rm %s/perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
+    subprocess.call('rm %s/cuhello.perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
     subprocess.call('rm %s/sofa.pcap > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/gputrace*.nvvp > /dev/null 2> /dev/null' % logdir, shell=True)
+    subprocess.call('rm %s/cuhello*.nvvp > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.txt > /dev/null 2> /dev/null' % logdir, shell=True)

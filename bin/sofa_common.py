@@ -21,7 +21,7 @@ def partial_sum(df):
 cktable = {-1: "NON", 0: "KER", 1: "H2D", 2: "D2H", 8: "D2D", 10: "P2P"}
 ckindex = [1, 2, 8, 10]
 
-def comm_profile(logdir, cfg, df_gpu):
+def comm_profile(logdir, cfg, df_gpu, features):
     total_traffic = 0.0
     total_h2d_traffic = 0.0
     total_d2h_traffic = 0.0
@@ -51,12 +51,9 @@ def comm_profile(logdir, cfg, df_gpu):
         print_warning("No GPU communication traces are collected.")
         return
 
-    print_title("Data Traffic for each CopyKind (MB)")
+    print("Data Traffic for each CopyKind (MB)")
     data_copyKind = grouped_df = df_gpu.groupby("copyKind")["payload"]
     for key, item in grouped_df:
-        print((
-            "[%s]: %lf" %
-            (cktable[key], grouped_df.get_group(key).sum() / 1000000.0)))
         if int(key) == 1:
             total_h2d_traffic = grouped_df.get_group(key).sum() / 1000000.0
         if int(key) == 2:
@@ -68,10 +65,9 @@ def comm_profile(logdir, cfg, df_gpu):
                 grouped_df.get_group(key).sum() / 1000000.0
     print(("Total traffic: %.2lf" % total_traffic))
 
-    print_title("Data Communication Time for each CopyKind (s)")
+    print("Data Communication Time for each CopyKind (s)")
     durations_copyKind = grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
-        print(("[%s]: %lf" % (cktable[key], grouped_df.get_group(key).sum())))
         if key == 0:
             total_kernel_time = grouped_df.get_group(key).sum()
         else:
@@ -88,19 +84,12 @@ def comm_profile(logdir, cfg, df_gpu):
         else:
             continue
 
-    print_title("Bandwidth Report for Large Data-copy (64KB+)")
+    print("Bandwidth Report for Large Data-copy (64KB+)")
     gp = df_gpu.query('payload > 64000').groupby(by='copyKind')['bandwidth']
     for key, item in gp:
         print(("[%s]: %.3lf (GB/s)" % (cktable[key], gp.get_group(key).mean())))
 
-    print_title("Summary of Comm.")
-    print(("MeasuredTotalTraffic : %lf (MB)" % total_traffic))
-    print(("MeasuredTotalH2DTraffic : %lf (MB)" % total_h2d_traffic))
-    print(("MeasuredTotalD2HTraffic : %lf (MB)" % total_d2h_traffic))
-    print(("MeasuredTotalP2PTraffic : %lf (MB)" % total_p2p_traffic))
-
-    print("Payload Report for Data-copy:")
-    print(df_gpu['payload'].value_counts())
+    print("Summary of Comm.")
 
     accum = np.zeros((1 + n_gpus, 1 + n_gpus))
     accum_bw = np.zeros((1 + n_gpus, 1 + n_gpus))
@@ -126,7 +115,6 @@ def comm_profile(logdir, cfg, df_gpu):
             accum_bw[src][dst] = float(accum_bw[src][dst] + bandwidth)
             accum_bw_count[src][dst] = int(accum_bw_count[src][dst] + 1)
 
-    print_title("Traffic Payload Matrix (MB):")
     row_str = "\tHOST\t"
     for i in range(1, accum.shape[1]):
         row_str = row_str + "GPU%d" % i + "\t"
@@ -142,7 +130,6 @@ def comm_profile(logdir, cfg, df_gpu):
         print(row_str)
 
 
-    print_title("Traffic Bandwidth Matrix 64K+ (GB/s):")
     row_str = "\tHOST\t"
     for i in range(1, accum_bw.shape[1]):
         row_str = row_str + "GPU%d" % i + "\t"
@@ -169,3 +156,9 @@ def comm_profile(logdir, cfg, df_gpu):
             "pkt_dst",
             "payload",
             "bandwidth"])
+    
+    df = pd.DataFrame({ 'name':['total_h2d_traffic', 'total_d2h_traffic', 'total_p2p_traffic'], 
+                        'value':[total_h2d_traffic, total_d2h_traffic, total_p2p_traffic] }, 
+                        columns=['name','value'])
+    features = pd.concat([features, df])
+    return features

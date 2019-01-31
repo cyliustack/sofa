@@ -34,3 +34,4 @@ class SOFA_Config:
     cuda_api_tracing = False
     script_path = ''
     potato_server = None
+    elapsed_time = 0 
