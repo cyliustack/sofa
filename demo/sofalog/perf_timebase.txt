@@ -1,8 +1,8 @@
-            perf 31987 69362.032603:          1 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
-            perf 31987 69362.032605:          1 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
-            perf 31987 69362.032607:         42 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
-            perf 31987 69362.032608:       3564 cycles:ppp:  ffffffff86e0a61f intel_pmu_handle_irq ([kernel.kallsyms])
-              ls 31987 69362.032610:     333449 cycles:ppp:  ffffffff86f804c9 __perf_event__output_id_sample ([kernel.kallsyms])
-              ls 31987 69362.032693:   20916013 cycles:ppp:  ffffffff8751c3d0 retint_userspace_restore_args ([kernel.kallsyms])
-              ls 31987 69362.037838: 123881041597997 cycles:ppp:  ffffffff870e6940 avtab_search_node ([kernel.kallsyms])
-1548898346.104204 1548898346.104204
+            perf  7097 74861.357120:          1 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
+            perf  7097 74861.357123:          1 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
+            perf  7097 74861.357124:         46 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
+            perf  7097 74861.357126:       3914 cycles:ppp:  ffffffff86e0b535 intel_bts_enable_local ([kernel.kallsyms])
+              ls  7097 74861.357128:     360639 cycles:ppp:  ffffffff87027f25 setup_new_exec ([kernel.kallsyms])
+              ls  7097 74861.357218:   21352856 cycles:ppp:  ffffffff875256be system_call_after_swapgs ([kernel.kallsyms])
+              ls  7097 74861.362485: 108395911221988 cycles:ppp:  ffffffff870d7786 avc_has_perm_noaudit ([kernel.kallsyms])
+1548903845.299512 1548903845.299512
