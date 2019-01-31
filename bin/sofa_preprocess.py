@@ -100,8 +100,8 @@ def net_trace_read(packet, t_offset):
     if packet.split()[1] != 'IP':
         return []
     payload = int(packet.split()[6])
-    duration = float(payload / 125.0e6)
-    bandwidth = 125.0e6
+    duration = float(payload / 128.0e6)
+    bandwidth = 128.0e6
     pkt_src = 0
     pkt_dst = 0
     for i in range(4):
@@ -857,9 +857,9 @@ def sofa_preprocess(cfg):
                 net_traces = pd.DataFrame(res_viz)
                 net_traces.columns = sofa_fieldnames
                 net_traces.to_csv(
-                    logdir + 'cputrace.csv',
-                    mode='a',
-                    header=False,
+                    logdir + 'nettrace.csv',
+                    mode='w',
+                    header=True,
                     index=False,
                     float_format='%.6f')
 

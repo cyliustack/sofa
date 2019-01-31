@@ -78,7 +78,7 @@ def gpu_profile(logdir, cfg, df_gpu):
 
 
 def net_profile(logdir, cfg, df):
-    print_title("Network Profiling: Communication Time (s)")
+    print_title("Network Profiling:")
     grouped_df = df.groupby("name")["duration"]
     total_net_time = 0
     n_packets = 0
@@ -87,7 +87,7 @@ def net_profile(logdir, cfg, df):
         if key.find("network:tcp:") != -1:
             total_net_time = total_net_time + grouped_df.get_group(key).sum()
             n_packets = n_packets + 1
-    print(("total network time = %.3lf" % total_net_time))
+    print(("total network time (s) = %.3lf" % total_net_time))
     print(("total amount of network packets  = %d" % n_packets))
 
 
@@ -274,6 +274,7 @@ def sofa_analyze(cfg):
 
     filein_gpu = logdir + "gputrace.csv"
     filein_cpu = logdir + "cputrace.csv"
+    filein_net = logdir + "nettrace.csv"
     filein_vmstat = logdir + "vmstat.csv"
     filein_mpstat = logdir + "mpstat.csv"
 
@@ -325,8 +326,9 @@ def sofa_analyze(cfg):
         df_cpu = pd.read_csv(filein_cpu)
         df_vmstat = pd.read_csv(filein_vmstat)
         df_mpstat = pd.read_csv(filein_mpstat)
+        df_net = pd.read_csv(filein_net)
         cpu_profile(logdir, cfg, df_cpu)
-        net_profile(logdir, cfg, df_cpu)
+        net_profile(logdir, cfg, df_net)
         vmstat_profile(logdir, cfg, df_vmstat)
         mpstat_profile(logdir, cfg, df_mpstat)
     except IOError:
