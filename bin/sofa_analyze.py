@@ -92,18 +92,22 @@ def net_profile(logdir, cfg, df):
 
 
 def cpu_profile(logdir, cfg, df):
-    print_title("CPU Profiling: Task Time (IO included) for each Core (s)")
+    print_title("CPU Profiling:")
+    with open(logdir+'/misc.txt') as f:
+        lines = f.readlines()
+        elapsed_time = float(lines[0].split()[1])
+        vcores = int(lines[2].split()[1])
+        elapsed_time = float(lines[0].split()[1])
+        print('elapsed_time (s) = %.6lf' % elapsed_time)
+    
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
     for key, item in grouped_df:
         if cfg.verbose:
             print(("[%d]: %lf" % (key, grouped_df.get_group(key).sum())))
         total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
-    n_devices = len(grouped_df)
-    avg_exec_time = total_exec_time / n_devices
-    print("total execution time = %.3lf" % total_exec_time)
-    print("# of CPUs involved: %d" % n_devices)
-    print("average execution time across devices = %.3lf\n" % avg_exec_time)
+    
+    print("total execution time (s) = %.3lf" % total_exec_time)
 
 def potato_submit(cfg, data_in):
     headers = {'Content-type': 'application/json'}

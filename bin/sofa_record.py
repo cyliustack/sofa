@@ -247,6 +247,7 @@ def sofa_record(command, cfg):
 
         # Primary Profiled Program
         p_command = subprocess.Popen(command, shell=True)
+        t_command_begin = time.time()
         print_info('PID of the profiled program: %d' % p_command.pid)
         print_info('command: %s' % command)
 
@@ -268,7 +269,23 @@ def sofa_record(command, cfg):
         
         print_info("Wait for the target program and profiling process (perf record) to end...")
         p_command.wait()
+        t_command_end = time.time()
         p_perf.wait()
+    
+        with open('%s/misc.txt' % logdir, 'w') as f_misc:
+            vcores = 0
+            cores = 0
+            with open('/proc/cpuinfo','r') as f:
+                lines = f.readlines()
+                vcores = 0
+                cores = 0
+                for line in lines:
+                    if line.find('cpu cores') != -1:
+                        cores = int(line.split()[3])
+                        vcores = vcores + 1
+            f_misc.write('elapsed_time %.6lf\n' % (t_command_end - t_command_begin))
+            f_misc.write('cores %d\n' % (cores))
+            f_misc.write('vcores %d\n' % (vcores))
 
         print_info("Epilog of Recording...")
         if p_command != None:
