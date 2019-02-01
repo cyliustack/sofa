@@ -202,14 +202,14 @@ def mpstat_profile(logdir, cfg, df):
     print_title("MPSTAT Profiling:")
     grouped_df = df.groupby("deviceId")["duration"]
     total_tasktime = 0
-    print("CoreID:\tsum\tmean\tmax\tstd\t (USR Time in Seconds)")
+    print("CoreID:\tmedian\tmean\tmax\tstd\t (USR Time in Seconds)")
     for key, item in grouped_df:
-        sum_usr_time = grouped_df.get_group(key).sum()
+        median_usr_time = grouped_df.get_group(key).median()
         mean_usr_time = grouped_df.get_group(key).mean()
         std_usr_time = grouped_df.get_group(key).std()
         max_usr_time = grouped_df.get_group(key).max()
         cpuid = int(float(key))
-        print(("[%d]:\t%.3lf\t%.3lf,\t%.3lf,\t%.3lf" % ( cpuid, sum_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
+        print(("[%d]:\t%.1lf\t%.1lf,\t%.1lf,\t%.1lf" % ( cpuid, median_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
 
 
 class ProfiledDomainDNN:

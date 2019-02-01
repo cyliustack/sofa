@@ -394,13 +394,14 @@ def sofa_preprocess(cfg):
             #time, cpu,  user，nice, system, idle, iowait, irq, softirq
             core = mpstat[i,1]
             d_mp = mpstat[i,:] - mpstat[i-stride,:]
-            d_mp_usr =  d_mp[2]
-            d_mp_sys =  d_mp[4]
-            d_mp_idl =  d_mp[5]
-            d_mp_iow =  d_mp[6]
-            d_mp_irq =  d_mp[7]
+            d_mp_total = np.sum(d_mp[2:8]) 
+            d_mp_usr =  d_mp[2] * 100 / float(d_mp_total)
+            d_mp_sys =  d_mp[4] * 100 / float(d_mp_total)
+            d_mp_idl =  d_mp[5] * 100 / float(d_mp_total)
+            d_mp_iow =  d_mp[6] * 100 / float(d_mp_total)
+            d_mp_irq =  d_mp[7] * 100 / float(d_mp_total)
             t_begin = mpstat[i,0]
-            metric = d_mp_usr * 0.010
+            metric = d_mp_usr
             deviceId = core  
             event = -1
             copyKind = -1
@@ -408,7 +409,7 @@ def sofa_preprocess(cfg):
             bandwidth = -1
             pkt_src = pkt_dst = -1
             pid = tid = -1
-            mpstat_info = 'mpstat(core|usr|sys|idl|iow|irq): |%d|%d|%d|%d|%d|%d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
+            mpstat_info = 'mpstat(core|usr|sys|idl|iow|irq): |%3d|%3d|%3d|%3d|%3d|%3d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
 
             trace = [
                 t_begin,

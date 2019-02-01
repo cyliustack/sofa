@@ -139,19 +139,6 @@ def main_string_generate_v2(df_gpu):
         tick += 1
     main_string = ",".join(iteration_timelines)
 
-def get_top_k_events(df, topk):
-    topk_events=[]
-    print("Top %d Events:"%topk)
-    gby = df.groupby(['name'])
-    df_agg = gby.aggregate(np.sum)
-    df_agg_sorted = df_agg.sort_values(by=['duration'],ascending=False)
-    #memcpy = ['copyKind_1_','copyKind_2_','copyKind_8_']
-    eventName = df_agg_sorted[df_agg_sorted.columns[0:0]].head(topk).index.values.tolist()
-    #eventName.extend(memcpy)
-
-    for i in range(len(eventName)):
-        print('[%d] %s'%(i,eventName[i]))
-    return eventName
 
 def get_memcpyHtoD(df):
 
