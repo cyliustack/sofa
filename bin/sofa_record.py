@@ -244,8 +244,8 @@ def sofa_record(command, cfg):
         # Primary Profiled Program
         p_command = subprocess.Popen(command, shell=True)
         t_command_begin = time.time()
-        print_info(cfg,'PID of the profiled program: %d' % p_command.pid)
-        print_info(cfg,'command: %s' % command)
+        print_hint('PID of the profiled program: %d' % p_command.pid)
+        print_hint('Command: %s' % command)
 
         with open('%s/strace.txt' % logdir, 'w') as logfile:
             p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(p_command.pid)], stderr=logfile)
@@ -260,8 +260,8 @@ def sofa_record(command, cfg):
             with open(logdir+'perf_events_used.txt','w') as f:
                 f.write(cfg.perf_events)
 
-            print_info(cfg,profile_command)
-            p_perf = subprocess.Popen(profile_command, stdin=PIPE, shell=True, stderr=DEVNULL, stdout=DEVNULL)
+            print_hint(profile_command)
+            p_perf = subprocess.Popen(profile_command, shell=True, stderr=DEVNULL, stdout=DEVNULL)
         
         print_info(cfg,"Wait for the target program and profiling process (perf record) to end...")
         p_command.wait()
@@ -283,7 +283,7 @@ def sofa_record(command, cfg):
             f_misc.write('cores %d\n' % (cores))
             f_misc.write('vcores %d\n' % (vcores))
 
-        print_progress("Epilog of Recording...")
+        print_progress("Epilogue of Recording...")
         if p_command != None:
             p_command.terminate()
             print_info(cfg,"tried terminating the profiled program")

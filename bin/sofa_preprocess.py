@@ -23,6 +23,21 @@ from sofa_hsg import sofa_hsg, sofa_hsg_to_sofatrace
 from sofa_models import SOFATrace
 from sofa_print import *
 
+sofa_fieldnames = [
+    "timestamp",  # 0
+    "event",  # 1
+    "duration",  # 2
+    "deviceId",  # 3
+    "copyKind",  # 4
+    "payload",  # 5
+    "bandwidth",  # 6
+    "pkt_src",  # 7
+    "pkt_dst",  # 8
+    "pid",  # 9
+    "tid",  # 10
+    "name",  # 11
+    "category"] # 12
+
 def list_downsample(list_in, plot_ratio):
     new_list = []
     for i in range(len(list_in)):
@@ -33,15 +48,19 @@ def list_downsample(list_in, plot_ratio):
 
 
 def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
-    traces = pd.DataFrame(_list[1:])
-    traces.columns = sofa_fieldnames
-    _header = True if _mode == 'w' else False
-    traces.to_csv(logdir +
-                  csvfile,
-                  mode=_mode,
-                  header=_header,
-                  index=False,
-                  float_format='%.6f')
+    traces = []
+    if len(_list[1:]) > 0:
+    	traces = pd.DataFrame(_list[1:])
+    	traces.columns = sofa_fieldnames
+    	_header = True if _mode == 'w' else False
+    	traces.to_csv(logdir +
+    	              csvfile,
+    	              mode=_mode,
+    	              header=_header,
+    	              index=False,
+    	              float_format='%.6f')
+    else:
+        print_warning('Empty list cannot be exported to %s!' % csvfile)
     return traces
 
 # 0/0     [004] 96050.733788:          1 bus-cycles:  ffffffff8106315a native_write_msr_safe
@@ -288,20 +307,6 @@ def traces_to_json(traces, path, cfg):
                 f.write(trace.name + ",")
         f.write(" ]")
 
-sofa_fieldnames = [
-    "timestamp",  # 0
-    "event",  # 1
-    "duration",  # 2
-    "deviceId",  # 3
-    "copyKind",  # 4
-    "payload",  # 5
-    "bandwidth",  # 6
-    "pkt_src",  # 7
-    "pkt_dst",  # 8
-    "pid",  # 9
-    "tid",  # 10
-    "name",  # 11
-    "category"] # 12
 
 def sofa_preprocess(cfg):
     t_glb_base = 0
