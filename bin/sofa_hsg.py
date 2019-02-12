@@ -249,7 +249,7 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
                                 # duration time
                                 total_duration = cluster_in_pid_cluster.duration.sum()
                                 mean_duration = cluster_in_pid_cluster.duration.mean()
-
+                                count = len(cluster_in_pid_cluster)
                                 # swarm diff
                                 # caption: assign mode of function name
                                 mode = str(cluster_in_pid_cluster['name'].mode()[0]) # api pd.Series.mode() returns a pandas series
@@ -259,7 +259,8 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
                                 swarm_stats.append({'keyword': 'SWARM_' + '["' + str(mode[:35]) + ']' +  ('_' * showing_idx),
                                                     'duration_sum': total_duration,
                                                     'duration_mean': mean_duration,
-                                                    'example':cluster_in_pid_cluster.head(1)['name'].to_string().split('  ')[2]})
+                                                    'example':cluster_in_pid_cluster.head(1)['name'].to_string().split('  ')[2],
+                                                    'count':count})
 
                                 swarm_groups.append({'group': cluster_in_pid_cluster.drop(columns = ['event_int', 'cluster', 'cluster_in_pid']), # data of each group
                                                      'color':  random_generate_color(),
@@ -271,13 +272,16 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
                 swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True)
                 print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms))
 
-                print('%45s\t%13s\t%30s'%('SwarmCaption', 'ExecutionTime(sum,mean)(s)', 'Example'))
+                print('%45s\t%13s\t%30s'%('SwarmCaption', 'ExecutionTime[sum,mean,count] (s)', 'Example'))
                 for i in range(len(swarm_stats)):
                     if i >= cfg.num_swarms:
                         break
                     else:
                         swarm = swarm_stats[i]
-                        print('%45s\t%.6lf,%.6lf\t%45s'%(swarm['keyword'],swarm['duration_sum']/4.0,swarm['duration_mean']/4.0,swarm['example']))
+                        print('%45s\t%.6lf, %.6lf, %6d\t%45s' % (swarm['keyword'], 
+                            swarm['duration_sum']/4.0, 
+                            swarm['duration_mean']/4.0, 
+                            swarm['count'], swarm['example']))
 
             return swarm_groups, swarm_stats
 
