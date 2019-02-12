@@ -235,10 +235,11 @@ def sofa_record(command, cfg):
                 p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)
 
         # Primary Profiled Program
-        p_command = subprocess.Popen(command, shell=True)
-        t_command_begin = time.time()
-        print_info(cfg,'PID of the profiled program: %d' % p_command.pid)
-        print_info(cfg,'command: %s' % command)
+        with open(os.devnull, 'w') as FNULL:
+            p_command = subprocess.Popen(command, shell=True)
+            t_command_begin = time.time()
+            print_info(cfg,'PID of the profiled program: %d' % p_command.pid)
+            print_info(cfg,'command: %s' % command)
 
         with open('%s/strace.txt' % logdir, 'w') as logfile:
             p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(p_command.pid)], stderr=logfile)
@@ -256,11 +257,20 @@ def sofa_record(command, cfg):
             print_info(cfg,profile_command)
             p_perf = subprocess.Popen(profile_command, stdin=PIPE, shell=True, stderr=DEVNULL, stdout=DEVNULL)
         
-        print_info(cfg,"Wait for the target program and profiling process (perf record) to end...")
-        p_command.wait()
-        t_command_end = time.time()
-        p_perf.wait()
-    
+        try:
+            print_info(cfg,"Wait for the target program and profiling process (perf record) to end...")
+            p_command.wait()
+            t_command_end = time.time()
+        except TimeoutExpired:
+            print_error('Timeout of profiling process')
+            sys.exit(1)
+
+        try:
+            p_perf.wait()
+        except TimeoutExpired:
+            print_error('Timeout of profiling process')
+            sys.exit(1)
+
         with open('%s/misc.txt' % logdir, 'w') as f_misc:
             vcores = 0
             cores = 0

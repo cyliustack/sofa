@@ -31,6 +31,35 @@ def list_downsample(list_in, plot_ratio):
             new_list.append(list_in[i])
     return new_list
 
+def trace_init():
+    t_begin = 0 
+    deviceId = 0
+    metric = 0
+    event = -1
+    copyKind = -1
+    payload = -1
+    bandwidth = -1
+    pkt_src = pkt_dst = -1
+    pid = tid = -1
+    name = ''
+    category = 0
+
+    trace = [
+       t_begin,
+       event,
+       metric,
+       deviceId,
+       copyKind,
+       payload,
+       bandwidth,
+       pkt_src,
+       pkt_dst,
+       pid,
+       tid,
+       name,
+       category]
+    
+    return trace
 
 def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
     traces = pd.DataFrame(_list[1:])
@@ -351,10 +380,7 @@ def sofa_preprocess(cfg):
     vm_cs_traces = []
     vm_wa_traces = []
     vm_st_traces = []
-    mp_usr_traces = []
-    mp_sys_traces = []
-    mp_idl_traces = []
-    mp_iow_traces = []
+    mpstat_traces = []
     strace_traces = []
     nvsmi_sm_traces = []
     nvsmi_mem_traces = []
@@ -384,8 +410,8 @@ def sofa_preprocess(cfg):
 
     with open('%s/mpstat.txt' % logdir) as f:
         mpstat = np.genfromtxt(logdir+'/mpstat.txt', delimiter=',', skip_header=1)
-        mp_usr_list = []
-        mp_usr_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+        mpstat_list = []
+        mpstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
         n_cores = int(mpstat[:,1].max() + 1)
         stride = n_cores + 1
         for i in range(len(mpstat)):
@@ -401,8 +427,8 @@ def sofa_preprocess(cfg):
             d_mp_iow =  d_mp[6] * 100 / float(d_mp_total)
             d_mp_irq =  d_mp[7] * 100 / float(d_mp_total)
             t_begin = mpstat[i,0]
+            deviceId = core
             metric = d_mp_usr
-            deviceId = core  
             event = -1
             copyKind = -1
             payload = -1
@@ -411,7 +437,7 @@ def sofa_preprocess(cfg):
             pid = tid = -1
             mpstat_info = 'mpstat(core|usr|sys|idl|iow|irq): |%3d|%3d|%3d|%3d|%3d|%3d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
 
-            trace = [
+            trace_usr = [
                 t_begin,
                 event,
                 metric,
@@ -424,9 +450,31 @@ def sofa_preprocess(cfg):
                 pid,
                 tid,
                 mpstat_info,
-                core]
-            mp_usr_list.append(trace)
-        mp_usr_traces = list_to_csv_and_traces(logdir, mp_usr_list, 'mpstat.csv', 'w')
+                0]
+            
+            mpstat_list.append(trace_usr)
+            
+            trace_sys = trace_usr.copy()
+            trace_sys[2] = d_mp_sys
+            trace_sys[12] = 1
+            mpstat_list.append(trace_sys)
+
+            trace_idl = trace_usr.copy()
+            trace_idl[2] = d_mp_idl
+            trace_idl[12] = 2
+            mpstat_list.append(trace_idl)
+           
+            trace_iow = trace_usr.copy()
+            trace_iow[2] = d_mp_iow
+            trace_iow[12] = 3
+            mpstat_list.append(trace_iow)
+
+            trace_irq = trace_usr.copy()
+            trace_irq[2] = d_mp_irq
+            trace_irq[12] = 4
+            mpstat_list.append(trace_irq)
+
+        mpstat_traces = list_to_csv_and_traces(logdir, mpstat_list, 'mpstat.csv', 'w')
     # procs -----------------------memory---------------------- ---swap-- -
     #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
     #  2  0            0    400091552       936896    386150912    0    0     3    18    0    1   5   0  95   0   0
@@ -1051,7 +1099,7 @@ def sofa_preprocess(cfg):
         with open('%s/strace.txt' % logdir) as f:
             lines = f.readlines()
             print_info(cfg,"Length of straces = %d" % len(lines))
-            if len(lines) > 0:
+            if len(lines) > 1:
                 strace_list = []
                 strace_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())               
                 for i in range(len(lines)):
@@ -1365,7 +1413,7 @@ def sofa_preprocess(cfg):
         sofatrace.color = 'Cyan'
         sofatrace.x_field = 'timestamp'
         sofatrace.y_field = 'duration'
-        sofatrace.data = mp_usr_traces
+        sofatrace.data = mpstat_traces
         traces.append(sofatrace)
 
 

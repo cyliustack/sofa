@@ -133,7 +133,7 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
     with open(cfg.logdir + 'perf.script') as f, warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         samples = f.readlines()
-        #print_info("Length of cpu_traces = %d" % len(samples))
+        print_info(cfg, "Length of cpu_traces for HSG = %d" % len(samples))
         if len(samples) > 0:
             with mp.Pool() as pool:
                 res = pool.map(
@@ -149,7 +149,7 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
             sofa_fieldnames_ext = sofa_fieldnames + ["feature_types", "mem_addr"] # mem_addr for swarm-diff
             cpu_traces.columns = sofa_fieldnames_ext
             cpu_traces.to_csv(
-                cfg.logdir + 'cputrace.csv',
+                cfg.logdir + 'hsg_trace.csv',
                 mode='w',
                 header=True,
                 index=False,
@@ -192,7 +192,7 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
                 except:
                     pass
 
-            print_info('HSG features: '+','.join(feature_list))
+            print_info(cfg, 'HSG features: '+','.join(feature_list))
 
             idx = 0
             showing_idx = 0

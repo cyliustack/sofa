@@ -8,7 +8,7 @@ import re
 import sys
 from functools import partial
 from operator import attrgetter, itemgetter
-
+from matplotlib import pyplot as plt   
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -200,18 +200,41 @@ def vmstat_profile(logdir, cfg, df):
 
 def mpstat_profile(logdir, cfg, df):
     print_title("MPSTAT Profiling:")
-    grouped_df = df.groupby("deviceId")["duration"]
-    total_tasktime = 0
-    print("CoreID:\tmedian\tmean\tmax\tstd\t (USR Time in Seconds)")
+    grouped_df = df.query('category == 0').groupby("deviceId")["duration"]
+    print("CoreID:\tmedian\tmean\tmax\tstd\t (USR Time in %)")
     for key, item in grouped_df:
-        median_usr_time = grouped_df.get_group(key).median()
-        mean_usr_time = grouped_df.get_group(key).mean()
-        std_usr_time = grouped_df.get_group(key).std()
-        max_usr_time = grouped_df.get_group(key).max()
+        median_usr_time = int(grouped_df.get_group(key).median())
+        mean_usr_time = int(grouped_df.get_group(key).mean())
+        std_usr_time = int(grouped_df.get_group(key).std())
+        max_usr_time = int(grouped_df.get_group(key).max())
         cpuid = int(float(key))
-        print(("[%d]:\t%.1lf\t%.1lf,\t%.1lf,\t%.1lf" % ( cpuid, median_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
+        print(("[%d]:\t%3d,\t%3d,\t%3d,\t%3d" % ( cpuid, median_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
+    grouped_df = df.query('category == 1').groupby("deviceId")["duration"]
+    print("CoreID:\tmedian\tmean\tmax\tstd\t (SYS Time in %)")
+    for key, item in grouped_df:
+        median_usr_time = int(grouped_df.get_group(key).median())
+        mean_usr_time = int(grouped_df.get_group(key).mean())
+        std_usr_time = int(grouped_df.get_group(key).std())
+        max_usr_time = int(grouped_df.get_group(key).max())
+        cpuid = int(float(key))
+        print(("[%d]:\t%3d,\t%3d,\t%3d,\t%3d" % ( cpuid, median_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
+    
+    fig = plt.figure()
+    ax1 = plt.subplot(3, 1, 1)
+    plt.ylabel('USR')
+    df.query('category == 0')['duration'].hist(bins=10)
+    plt.subplot(3, 1, 2, sharex=ax1)
+    plt.ylabel('SYS')
+    df.query('category == 1')['duration'].hist(bins=10)
+    plt.tight_layout()
+    plt.subplot(3, 1, 3, sharex=ax1)
+    plt.xlabel('Percentage of CPU Utilization')
+    plt.ylabel('IOW')
+    df.query('category == 2')['duration'].hist(bins=10)
+    plt.tight_layout()
 
-
+    #bp = df.query('category == 0').boxplot(column=['duration'])
+    fig.savefig(logdir + 'mpstat.png')
 class ProfiledDomainDNN:
     domain_name = "DNN"
     prefix = "[ProfiledDomain%s]\t" % domain_name
@@ -273,6 +296,7 @@ def sofa_analyze(cfg):
     filein_net = logdir + "nettrace.csv"
     filein_vmstat = logdir + "vmstat.csv"
     filein_mpstat = logdir + "mpstat.csv"
+    filein_strace = logdir + "strace.csv"
 
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
 
@@ -327,6 +351,7 @@ def sofa_analyze(cfg):
         df_vmstat = pd.read_csv(filein_vmstat)
         df_mpstat = pd.read_csv(filein_mpstat)
         df_net = pd.read_csv(filein_net)
+        df_strace = pd.read_csv(filein_strace)
         cpu_profile(logdir, cfg, df_cpu)
         net_profile(logdir, cfg, df_net)
         vmstat_profile(logdir, cfg, df_vmstat)
@@ -340,7 +365,7 @@ def sofa_analyze(cfg):
         #df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         features = gpu_profile(logdir, cfg, df_gpu, features)
         if cfg.enable_aisi:
-            iter_summary = sofa_aisi(logdir, cfg, df_cpu, df_gpu)
+            iter_summary = sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat)
     except IOError:
         print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
 

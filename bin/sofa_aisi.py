@@ -18,7 +18,7 @@ table_size = 0
 iteration_timelines = []
 iteration_table = []
 blank_count = 0
-def iter_profile(cfg, fields, df_gpu):
+def iter_profile(cfg, fields, df_cpu, df_gpu, df_strace, df_mpstat):
     elapsed_time = df_gpu['timestamp'].iat[len(df_gpu)-1] - df_gpu['timestamp'].iat[0]
     fw_time = df_gpu[df_gpu['name'].str.contains("_fw")].loc[:,'duration'].sum()
     bw_time = df_gpu[df_gpu['name'].str.contains("_bw")].loc[:,'duration'].sum()
@@ -31,7 +31,13 @@ def iter_profile(cfg, fields, df_gpu):
     copy_time = copy_time + allreduce_time
     kernel_time = gpu_time - copy_time
     payload = df_gpu['payload'].sum()
-    return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams}
+    syscall_time = df_strace['duration'].sum()
+    cpu_time = df_cpu['duration'].sum()
+    print('cpu_time: ', cpu_time)
+    mpstat_usr = df_mpstat['duration'].mean()
+    mpstat_sys = df_mpstat['duration'].mean()
+    mpstat_iow = mpstat_sys
+    return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams, 'syscall_time':syscall_time, 'cpu_time':cpu_time, 'mpstat_usr':mpstat_usr, 'mpstat_sys':mpstat_sys, 'mpstat_iow':mpstat_iow }
 
 def gpu_profile(logdir, cfg, df_gpu):
     total_kernel_time = 0.0
@@ -301,7 +307,7 @@ def trace_timeline(path):
             f.write(str(i) + "," + str(index))
             i += 1
 
-def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
+def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
     global iteration_table
     df_gpu_x1 = df_gpu[df_gpu.deviceId == 1]
     a = 0
@@ -311,6 +317,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
     print_title('AISI: Per-iteration Performance Summary')
     try:
         iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations)
+        #iter_detect(logdir, cfg, df_strace, 0.01, 0.8, cfg.num_iterations)
         traces_to_json(logdir + 'report.js')
         xlist = []
 
@@ -330,7 +337,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
         times = np.sort(times2)
         trace_timeline(logdir + 'iteration_timeline.txt')
 
-        iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'copy_time', 'gpu_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload', 'gemm_time', 'streams']
+        iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'copy_time', 'gpu_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload', 'gemm_time', 'streams', 'cpu_time', 'syscall_time', 'mpstat_usr', 'mpstat_sys', 'mpstat_iow']
         iter_list = []
         for i in range(1,len(times)):
             #print_title("Perormance analyze of iteration-%d"%(i))
@@ -338,25 +345,34 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
             cond1 = (df_gpu_x1['timestamp'] >= times[i-1])
             cond2 = (df_gpu_x1['timestamp'] <  times[i])
             df_gpu_iteration = df_gpu_x1[ cond1 & cond2 ]
+            df_strace_iteration = df_strace[ cond1 & cond2 ]
+            df_cpu_iteration = df_cpu[ cond1 & cond2 ]
+            df_mpstat_iteration = df_mpstat[ cond1 & cond2 ]
             #df_cpu_iteration = df_cpu[ cond1 & cond2 ]
             if len(df_gpu_iteration) > 0:
-                iter_list.append(iter_profile(cfg, iter_summary_fields, df_gpu_iteration))
+                iter_list.append(iter_profile(cfg, iter_summary_fields, df_cpu_iteration, df_gpu_iteration, df_strace_iteration, df_mpstat_iteration))
         iter_summary = pd.DataFrame( iter_list, columns=iter_summary_fields )
 
         if not iter_summary.empty:
             mean_fw_time = iter_summary['fw_time'].mean()
             mean_bw_time = iter_summary['bw_time'].mean()
             mean_copy_time = iter_summary['copy_time'].mean()
+            mean_cpu_time = iter_summary['cpu_time'].mean()
+            mean_syscall_time = iter_summary['syscall_time'].mean()
             mean_gpu_time = iter_summary['gpu_time'].mean()
             mean_gemm_time = iter_summary['gemm_time'].mean()
             mean_kernel_time = mean_gpu_time - mean_copy_time
             mean_payload = iter_summary['payload'].mean()
             mean_streams = iter_summary['streams'].mean()
+            mean_mpstat_usr = int(iter_summary['mpstat_usr'].mean())
+            mean_mpstat_sys = int(iter_summary['mpstat_sys'].mean())
             print("Elapsed time of initial iteration (s): %.6lf " % iter_summary.loc[0,'elapsed_time'])
             mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'])
             if cfg.num_iterations > 1:
                 mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'].iloc[1:])
-            print('Averaged per-iteration elapsed time (s) %.6lf' % mean_step_time) 
+            print('Averaged per-iteration elapsed time (s) %.6lf' % mean_step_time)
+            #print("Averaged CPU time  (s): %.6lf " % mean_cpu_time)
+            print("Averaged SYSCALL time  (s): %.6lf " % mean_syscall_time)
             print("Averaged CUDA GPU time (s): %.6lf " % mean_gpu_time)
             print("Averaged CUDA FW time (s): %.6lf" % mean_fw_time)
             print("Averaged CUDA BW time (s): %.6lf" % mean_bw_time)
@@ -364,6 +380,8 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu):
             print("Averaged CUDA COPY time (s): %.6lf" % mean_copy_time)
             print("Averaged CUDA payload (B): %d" % mean_payload)
             print("Averaged number of CUDA streams: %d" % mean_streams)
+            print("Averaged MPSTAT USR Ratio : %d" % mean_mpstat_usr)
+            print("Averaged MPSTAT SYS Ratio : %d" % mean_mpstat_sys)
 
             print_title('Performance Optimization Hints')
             if mean_copy_time / mean_step_time < 0.15:
