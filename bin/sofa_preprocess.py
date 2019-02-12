@@ -414,12 +414,16 @@ def sofa_preprocess(cfg):
     cpu_count = mp.cpu_count()
 
     with open('%s/mpstat.txt' % logdir) as f:
-        mpstat = np.genfromtxt(logdir+'/mpstat.txt', delimiter=',', skip_header=1)
+        mpstat = np.genfromtxt(logdir+'/mpstat.txt', delimiter=',', invalid_raise=False )
+        header = mpstat[0]
+        mpstat = mpstat[1:]
         mpstat_list = []
         mpstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
         n_cores = int(mpstat[:,1].max() + 1)
         stride = n_cores + 1
         for i in range(len(mpstat)):
+            if len(mpstat[i]) < len(header):
+                continue
             if i <= stride or mpstat[i,1] == -1:
                 continue
             #time, cpu,  user，nice, system, idle, iowait, irq, softirq
