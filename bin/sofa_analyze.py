@@ -218,7 +218,17 @@ def mpstat_profile(logdir, cfg, df):
         max_usr_time = int(grouped_df.get_group(key).max())
         cpuid = int(float(key))
         print(("[%d]:\t%3d,\t%3d,\t%3d,\t%3d" % ( cpuid, median_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
+    grouped_df = df.query('category == 3').groupby("deviceId")["duration"]
+    print("CoreID:\tmedian\tmean\tmax\tstd\t (IOW Time in %)")
+    for key, item in grouped_df:
+        median_usr_time = int(grouped_df.get_group(key).median())
+        mean_usr_time = int(grouped_df.get_group(key).mean())
+        std_usr_time = int(grouped_df.get_group(key).std())
+        max_usr_time = int(grouped_df.get_group(key).max())
+        cpuid = int(float(key))
+        print(("[%d]:\t%3d,\t%3d,\t%3d,\t%3d" % ( cpuid, median_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
     
+
     fig = plt.figure()
     ax1 = plt.subplot(3, 1, 1)
     plt.ylabel('USR')
@@ -230,7 +240,7 @@ def mpstat_profile(logdir, cfg, df):
     plt.subplot(3, 1, 3, sharex=ax1)
     plt.xlabel('Percentage of CPU Utilization')
     plt.ylabel('IOW')
-    df.query('category == 2')['duration'].hist(bins=10)
+    df.query('category == 3')['duration'].hist(bins=10)
     plt.tight_layout()
 
     #bp = df.query('category == 0').boxplot(column=['duration'])

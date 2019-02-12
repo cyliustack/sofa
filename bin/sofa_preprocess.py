@@ -425,12 +425,15 @@ def sofa_preprocess(cfg):
             #time, cpu,  user，nice, system, idle, iowait, irq, softirq
             core = mpstat[i,1]
             d_mp = mpstat[i,:] - mpstat[i-stride,:]
-            d_mp_total = np.sum(d_mp[2:8]) 
-            d_mp_usr =  d_mp[2] * 100 / float(d_mp_total)
-            d_mp_sys =  d_mp[4] * 100 / float(d_mp_total)
-            d_mp_idl =  d_mp[5] * 100 / float(d_mp_total)
-            d_mp_iow =  d_mp[6] * 100 / float(d_mp_total)
-            d_mp_irq =  d_mp[7] * 100 / float(d_mp_total)
+            d_mp_total = np.sum(d_mp[2:8])
+            if d_mp_total == 0 :
+                print_info(cfg, 'No increases in mpstat values')
+                continue
+            d_mp_usr = d_mp[2] * 100 / float(d_mp_total)
+            d_mp_sys = d_mp[4] * 100 / float(d_mp_total)
+            d_mp_idl = d_mp[5] * 100 / float(d_mp_total)
+            d_mp_iow = d_mp[6] * 100 / float(d_mp_total)
+            d_mp_irq = d_mp[7] * 100 / float(d_mp_total)
             t_begin = mpstat[i,0]
             deviceId = core
             metric = d_mp_usr
