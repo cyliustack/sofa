@@ -4,7 +4,7 @@ SOFA: Swarm of Functions Analysis
 Authors: All the contributors of SOFA
 
 # Prerequisite
-1. Run `./tools/prerequisite.sh` to install all the necessary packages and python packages.
+1. Run `./tools/prepare.sh` to install all the necessary packages and python packages.
 2. [OPTIONAL] Run `./tools/empower-tcpdump.sh $(whoami)` to make network related events tracable in SOFA. After running this step, it is required to __re-login__ to __APPLY THE CHANGES__!!!
 
 ## Verify Permissions

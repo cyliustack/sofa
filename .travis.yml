@@ -3,7 +3,7 @@ virtualenv:
   system_site_packages: true
 sudo: required
 before_install:
-  - ./tools/prerequisite.sh
+  - ./tools/prepare.sh
   - ./tools/empower-tcpdump.sh $(whoami)
 install:
   - sudo ./install.sh /usr/local
