@@ -26,14 +26,18 @@ def service_get_cpuinfo(logdir):
         #print(datetime.datetime.now())
         next_call = next_call + 0.1;
         get_cpuinfo(logdir)
-        time.sleep(next_call - time.time())
+        time_remained = next_call - time.time()
+        if time_remained > 0: 
+            time.sleep(time_remained)
 
 def service_get_mpstat(logdir):
     next_call = time.time()
     while True:
         next_call = next_call + 0.1;
         get_mpstat(logdir)
-        time.sleep(next_call - time.time())
+        time_remained = next_call - time.time()
+        if time_remained > 0: 
+            time.sleep(time_remained)
 
 def get_cpuinfo(logdir):
     with open('/proc/cpuinfo','r') as f:
