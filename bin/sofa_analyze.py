@@ -197,54 +197,83 @@ def vmstat_profile(logdir, cfg, df):
     print('max of vmstat wa (%%): %d' % vmstat_traces['wa'].max())
     print('mean of vmstat wa (%%): %.2lf' % vmstat_traces['wa'].mean())
 
-
-def mpstat_profile(logdir, cfg, df):
-    print_title("MPSTAT Profiling:")
-    grouped_df = df.query('category == 0').groupby("deviceId")["duration"]
-    print("CoreID:\tmedian\tmean\tmax\tstd\t (USR Time in %)")
-    for key, item in grouped_df:
-        median_usr_time = int(grouped_df.get_group(key).median())
-        mean_usr_time = int(grouped_df.get_group(key).mean())
-        std_usr_time = int(grouped_df.get_group(key).std())
-        max_usr_time = int(grouped_df.get_group(key).max())
-        cpuid = int(float(key))
-        print(("[%d]:\t%3d,\t%3d,\t%3d,\t%3d" % ( cpuid, median_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
-    grouped_df = df.query('category == 1').groupby("deviceId")["duration"]
-    print("CoreID:\tmedian\tmean\tmax\tstd\t (SYS Time in %)")
-    for key, item in grouped_df:
-        median_usr_time = int(grouped_df.get_group(key).median())
-        mean_usr_time = int(grouped_df.get_group(key).mean())
-        std_usr_time = int(grouped_df.get_group(key).std())
-        max_usr_time = int(grouped_df.get_group(key).max())
-        cpuid = int(float(key))
-        print(("[%d]:\t%3d,\t%3d,\t%3d,\t%3d" % ( cpuid, median_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
-    grouped_df = df.query('category == 3').groupby("deviceId")["duration"]
-    print("CoreID:\tmedian\tmean\tmax\tstd\t (IOW Time in %)")
-    for key, item in grouped_df:
-        median_usr_time = int(grouped_df.get_group(key).median())
-        mean_usr_time = int(grouped_df.get_group(key).mean())
-        std_usr_time = int(grouped_df.get_group(key).std())
-        max_usr_time = int(grouped_df.get_group(key).max())
-        cpuid = int(float(key))
-        print(("[%d]:\t%3d,\t%3d,\t%3d,\t%3d" % ( cpuid, median_usr_time, mean_usr_time, max_usr_time, std_usr_time )))
+def mpstat_topdown(cfg, df_mpstat, features):
     
 
-    fig = plt.figure()
-    ax1 = plt.subplot(3, 1, 1)
-    plt.ylabel('USR')
-    df.query('category == 0')['duration'].hist(bins=10)
-    plt.subplot(3, 1, 2, sharex=ax1)
-    plt.ylabel('SYS')
-    df.query('category == 1')['duration'].hist(bins=10)
-    plt.tight_layout()
-    plt.subplot(3, 1, 3, sharex=ax1)
-    plt.xlabel('Percentage of CPU Utilization')
-    plt.ylabel('IOW')
-    df.query('category == 3')['duration'].hist(bins=10)
-    plt.tight_layout()
+    return features
 
-    #bp = df.query('category == 0').boxplot(column=['duration'])
+def mpstat_profile(logdir, cfg, df, features):
+    print_title("MPSTAT Profiling:")
+    n_cores = int(df['deviceId'].max() + 1)
+    df_summary = pd.DataFrame( np.zeros((n_cores,5)), columns=['USR','SYS','IDL','IOW','IRQ'])
+    for i in range(len(df)):
+        dt = df.iloc[i]['duration']
+        core = int(df.iloc[i]['deviceId'])
+        fields = df.loc[i,'name'].split('|')
+        r_usr = float(fields[5])
+        r_sys = float(fields[6])
+        r_idl = float(fields[7])
+        r_iow = float(fields[8])
+        r_irq = float(fields[9])
+        if r_idl == 100:
+            dt_all = 0.1
+        else:
+            dt_all = dt/((100-r_idl)/100.0)
+        t_usr = dt_all * r_usr/100.0
+        t_sys = dt_all * r_sys/100.0
+        t_idl = dt_all * r_idl/100.0
+        t_iow = dt_all * r_iow/100.0
+        t_irq = dt_all * r_irq/100.0
+        df_summary.iloc[core]['USR'] = df_summary.iloc[core]['USR'] + t_usr 
+        df_summary.iloc[core]['SYS'] = df_summary.iloc[core]['SYS'] + t_sys 
+        df_summary.iloc[core]['IDL'] = df_summary.iloc[core]['IDL'] + t_idl 
+        df_summary.iloc[core]['IOW'] = df_summary.iloc[core]['IOW'] + t_iow 
+        df_summary.iloc[core]['IRQ'] = df_summary.iloc[core]['IRQ'] + t_irq 
+    
+    print('CPU Utilization (%):')
+    print('core\tUSR\tSYS\tIDL\tIOW\tIRQ')
+    for i in range(len(df_summary)):
+        t_sum = df_summary.iloc[i].sum() 
+        print('%3d\t%3d\t%3d\t%3d\t%3d\t%3d'%(i,int(100.0*df_summary.iloc[i]['USR']/t_sum),
+                                                int(100.0*df_summary.iloc[i]['SYS']/t_sum),
+                                                int(100.0*df_summary.iloc[i]['IDL']/t_sum),
+                                                int(100.0*df_summary.iloc[i]['IOW']/t_sum),
+                                                int(100.0*df_summary.iloc[i]['IRQ']/t_sum) ))
+    print('CPU Time (s):')
+    print('core\tUSR\tSYS\tIDL\tIOW\tIRQ')
+    for i in range(len(df_summary)):
+        t_sum = df_summary.iloc[i].sum() 
+        print('%3d\t%.2lf\t%.2lf\t%.2lf\t%.2lf\t%.2lf'%(i,
+                                                df_summary.iloc[i]['USR'],
+                                                df_summary.iloc[i]['SYS'],
+                                                df_summary.iloc[i]['IDL'],
+                                                df_summary.iloc[i]['IOW'],
+                                                df_summary.iloc[i]['IRQ'] ))
+
+    total_cpu_time = df_summary[['USR','SYS','IOW','IRQ']].sum().sum()
+    print('Active CPU Time (s): %.3lf' % total_cpu_time) 
+    active_cpu_ratio = int(100*total_cpu_time / (n_cores*cfg.elapsed_time))
+    print('Active CPU ratio (%%): %3d' % active_cpu_ratio)
+    df_feature = pd.DataFrame({ 'name':['active_cpu_ratio'], 
+                        'value':[active_cpu_ratio] }, 
+                        columns=['name','value'])
+    features = pd.concat([features, df_feature])   
+    fig = plt.figure()
+    ax1 = plt.subplot(2, 1, 1)
+    df_summary.plot.bar(stacked=True);
+    #plt.ylabel('USR')
+    plt.subplot(2, 1, 2)
+    df_summary.plot.area()
+    #plt.ylabel('SYS')
+    #df.query('category == 1')['duration'].hist(bins=10)
+    #plt.tight_layout()
+    #plt.xlabel('Percentage of CPU Utilization')
+    #plt.ylabel('IOW')
+    #df.query('category == 3')['duration'].hist(bins=10)
+    plt.tight_layout()
     fig.savefig(logdir + 'mpstat.png')
+    return features
+
 class ProfiledDomainDNN:
     domain_name = "DNN"
     prefix = "[ProfiledDomain%s]\t" % domain_name
@@ -365,7 +394,7 @@ def sofa_analyze(cfg):
         cpu_profile(logdir, cfg, df_cpu)
         net_profile(logdir, cfg, df_net)
         vmstat_profile(logdir, cfg, df_vmstat)
-        mpstat_profile(logdir, cfg, df_mpstat)
+        features = mpstat_profile(logdir, cfg, df_mpstat, features)
     except IOError:
         print_warning("cputrace.csv is not found")
         #quit()

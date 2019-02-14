@@ -438,16 +438,17 @@ def sofa_preprocess(cfg):
             d_mp_idl = d_mp[5] * 100 / float(d_mp_total)
             d_mp_iow = d_mp[6] * 100 / float(d_mp_total)
             d_mp_irq = d_mp[7] * 100 / float(d_mp_total)
+            cpu_time = (d_mp_total - d_mp[5]) * 0.01
             t_begin = mpstat[i,0]
             deviceId = core
-            metric = d_mp_usr
+            metric = cpu_time
             event = -1
             copyKind = -1
             payload = -1
             bandwidth = -1
             pkt_src = pkt_dst = -1
             pid = tid = -1
-            mpstat_info = 'mpstat(core|usr|sys|idl|iow|irq): |%3d|%3d|%3d|%3d|%3d|%3d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
+            mpstat_info = 'mpstat_core%d (usr|sys|idl|iow|irq): |%3d|%3d|%3d|%3d|%3d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
 
             trace_usr = [
                 t_begin,
@@ -466,25 +467,6 @@ def sofa_preprocess(cfg):
             
             mpstat_list.append(trace_usr)
             
-            trace_sys = trace_usr.copy()
-            trace_sys[2] = d_mp_sys
-            trace_sys[12] = 1
-            mpstat_list.append(trace_sys)
-
-            trace_idl = trace_usr.copy()
-            trace_idl[2] = d_mp_idl
-            trace_idl[12] = 2
-            mpstat_list.append(trace_idl)
-           
-            trace_iow = trace_usr.copy()
-            trace_iow[2] = d_mp_iow
-            trace_iow[12] = 3
-            mpstat_list.append(trace_iow)
-
-            trace_irq = trace_usr.copy()
-            trace_irq[2] = d_mp_irq
-            trace_irq[12] = 4
-            mpstat_list.append(trace_irq)
 
         mpstat_traces = list_to_csv_and_traces(logdir, mpstat_list, 'mpstat.csv', 'w')
     # procs -----------------------memory---------------------- ---swap-- -
