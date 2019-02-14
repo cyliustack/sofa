@@ -409,7 +409,11 @@ def sofa_analyze(cfg):
         print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
 
     print_title('Final Performance Features')
-    print(features)
+    print('%s%s%s' % ('ID'.ljust(10),'Feature'.ljust(30),'Value'.ljust(20)) )
+    for i in range(len(features)):
+        name = features.iloc[i]['name']
+        value = features.iloc[i]['value']
+        print('%s%s%s' % (str(i).ljust(10), name.ljust(30), ('%.3lf'%value).ljust(20)))
 
     if cfg.potato_server:
         potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary)
