@@ -1,0 +1,3 @@
+elapsed_time 0.283577
+cores 8
+vcores 16

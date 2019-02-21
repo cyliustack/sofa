@@ -114,6 +114,7 @@ def sofa_record(command, cfg):
     p_pcm_numa = None 
     logdir = cfg.logdir
     p_strace = None
+    p_ptrace = None
     print_info(cfg,'SOFA_COMMAND: %s' % command)
     sample_freq = 99
 
@@ -250,9 +251,24 @@ def sofa_record(command, cfg):
         t_command_begin = time.time()
         print_hint('PID of the profiled program: %d' % p_command.pid)
         print_hint('Command: %s' % command)
+        
+        # Current environment
+        curr_env = os.environ.copy()
+        curr_env['PATH'] = '/usr/sbin:/sbin:' + curr_env['PATH']
 
-        with open('%s/strace.txt' % logdir, 'w') as logfile:
-            p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(p_command.pid)], stderr=logfile)
+        
+        with open('{}/ptrace.txt'.format(logdir), 'w') as logfile:
+            """
+            --flamechart: with "Timestamp" mode 
+            --p: Attaching To A Running Python Process with PID
+            """
+            p_ptrace = subprocess.Popen(['pyflame','--flamechart', '-s', '1000000', '-p', str(p_command.pid)], env=curr_env, stdout=logfile)
+            # p_ptrace = subprocess.Popen(['pyflame --flamechart -s {} -p {}'.format(100000, p_command.pid)], env=curr_env, stdout=logfile, shell=True)
+
+        # FIXME: Strace won't work since both pyflame and strace call ptrace 
+
+        # with open('%s/strace.txt' % logdir, 'w') as logfile:
+        #     p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(p_command.pid)], stderr=logfile)
 
         if int(os.system('command -v perf 1>/dev/null')) == 0:
             ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
@@ -326,6 +342,9 @@ def sofa_record(command, cfg):
         if p_strace != None:
             p_strace.terminate()
             print_info(cfg,"tried terminating strace")
+        if p_ptrace != None:
+            p_ptrace.terminate()
+            print_info(cfg,"tried terminating pyflame")
     except BaseException:
         print("Unexpected error:", sys.exc_info()[0])
         if p_command != None:
@@ -357,6 +376,10 @@ def sofa_record(command, cfg):
         if p_strace != None:
             p_strace.kill()
             print_info(cfg,"tried killing strace")
+        if p_ptrace != None:
+            p_ptrace.kill()
+            print_info(cfg,"tried killing pyflame")
+
 
         raise
     print_progress("End of Recording")

@@ -5,6 +5,7 @@ import json
 import multiprocessing as mp
 import os
 import re
+import itertools
 
 import subprocess
 import sys
@@ -22,6 +23,7 @@ from sofa_config import *
 from sofa_hsg import sofa_hsg, sofa_hsg_to_sofatrace
 from sofa_models import SOFATrace
 from sofa_print import *
+from sofa_utils import parse_pyflame
 
 sofa_fieldnames = [
     "timestamp",  # 0
@@ -387,6 +389,7 @@ def sofa_preprocess(cfg):
     vm_st_traces = []
     mpstat_traces = []
     strace_traces = []
+    ptrace_traces = []
     nvsmi_sm_traces = []
     nvsmi_mem_traces = []
     pcm_pcie_traces = []
@@ -1143,6 +1146,40 @@ def sofa_preprocess(cfg):
                 if len(strace_list)>1:
                     strace_traces = list_to_csv_and_traces(logdir, strace_list, 'strace.csv', 'w')
     print_info(cfg,'Total strace duration: %.3lf' % total_strace_duration)
+    
+    # Pyflame Preprocessing
+    if os.path.isfile('{}/ptrace.txt'.format(logdir)):
+        func_dict, duration = parse_pyflame('{}/ptrace.txt'.format(logdir))
+        ptrace_list = []
+        py_process_start = min(func_dict.keys())
+        if func_dict:
+            for key, ptrace_info in func_dict.items():
+                deviceId = -1
+                event = -1
+                copyKind = -1
+                payload = -1
+                bandwidth = -1
+                pkt_src = pkt_dst = -1
+                pid = tid = -1
+                trace = [
+                    py_process_start,
+                    event,
+                    duration[key],
+                    deviceId,
+                    copyKind,
+                    payload,
+                    bandwidth,
+                    pkt_src,
+                    pkt_dst,
+                    pid,
+                    tid,
+                    ptrace_info,
+                    cpuid]
+                
+                ptrace_list.append(trace)
+            if ptrace_list:
+                ptrace_traces = list_to_csv_and_traces(logdir, ptrace_list, 'ptrace.csv', 'w')
+
 
     # Time synchronization among BIOS Time (e.g. used by perf)  and NTP Time (e.g. NVPROF, tcpdump, etc.)
     if perf_timebase_unix == 0:
