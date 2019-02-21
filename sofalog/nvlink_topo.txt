@@ -1,1 +1,0 @@
-	[4mGPU0	GPU1	CPU Affinity[0m

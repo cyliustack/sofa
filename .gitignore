@@ -7,3 +7,4 @@ sofa-pcm/*.d
 *.cfg
 *.pyc
 __pycache__
+.vscode

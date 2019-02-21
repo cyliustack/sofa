@@ -1,2 +1,0 @@
-Error: failed to parse "sofalog/flame.out" as a PID.
-
