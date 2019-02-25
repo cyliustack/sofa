@@ -39,6 +39,15 @@ def service_get_mpstat(logdir):
         if time_remained > 0: 
             time.sleep(time_remained)
 
+def service_get_diskstat(logdir):
+    next_call = time.time()
+    while True:
+        next_call = next_call + 0.1;
+        get_diskstat(logdir)
+        time_remained = next_call - time.time()
+        if time_remained > 0: 
+            time.sleep(time_remained)
+
 def get_cpuinfo(logdir):
     with open('/proc/cpuinfo','r') as f:
         lines = f.readlines()
@@ -72,6 +81,18 @@ def get_mpstat(logdir):
         df_stat = pd.DataFrame(stat)
         df_stat.to_csv("%s/mpstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
 
+def get_diskstat(logdir):
+    with open('/proc/diskstats','r') as f:
+        lines = f.readlines()
+        stat_list = []
+        unix_time = time.time()
+        for line in lines:
+            m = line[:-1]
+            m = line.split()
+            stat_list.append([unix_time]+[m[2]]+[m[5]]+[m[9]])
+        df_stat = pd.DataFrame(stat_list)
+        df_stat.to_csv("%s/diskstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
+
 def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa):
     if p_pcm_pcie != None:
         p_pcm_pcie.terminate()
@@ -104,6 +125,7 @@ def sofa_record(command, cfg):
     p_perf = None
     p_tcpdump = None
     p_mpstat  = None
+    p_diskstat = None
     p_vmstat  = None
     p_cpuinfo  = None
     p_nvprof  = None
@@ -229,6 +251,12 @@ def sofa_record(command, cfg):
             timerThread.daemon = True
             timerThread.start()
 
+        with open('%s/diskstat.txt' % logdir, 'w') as logfile:
+            logfile.write('')
+            timerThread = threading.Thread(target=service_get_diskstat, args=[logdir])
+            timerThread.daemon = True
+            timerThread.start()
+            
         with open(os.devnull, 'w') as FNULL:
            p_tcpdump =  subprocess.Popen(["tcpdump",
                               '-i',
@@ -312,6 +340,9 @@ def sofa_record(command, cfg):
         if p_mpstat != None:
             p_mpstat.terminate()
             print_info(cfg,"tried terminating mpstat")
+        if p_diskstat != None:
+            p_diskstat.terminate()
+            print_info(cfg,"tried terminating diskstat")
         if p_nvtopo != None:
             p_nvtopo.terminate()
             print_info(cfg,"tried terminating nvidia-smi topo")
@@ -343,6 +374,9 @@ def sofa_record(command, cfg):
         if p_mpstat != None:
             p_mpstat.kill()
             print_info(cfg,"tried killing mpstat")
+        if p_diskstat != None:
+            p_diskstat.kill()
+            print_info(cfg,"tried killing diskstat")
         if p_nvtopo != None:
             p_nvtopo.kill()
             print_info(cfg,"tried killing nvidia-smi topo")
