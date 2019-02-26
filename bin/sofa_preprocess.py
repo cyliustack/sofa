@@ -1495,6 +1495,15 @@ def sofa_preprocess(cfg):
     traces.append(sofatrace)
     
     sofatrace = SOFATrace()
+    sofatrace.name = 'ptrace-python'
+    sofatrace.title = 'PTRACE-PYTHON.'
+    sofatrace.color = 'LightSeaGreen'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = ptrace_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
     sofatrace.name = 'nvsmi_mem'
     sofatrace.title = 'GPU_MEM_Util.'
     sofatrace.color = 'lightblue'
