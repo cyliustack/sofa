@@ -1,6 +1,6 @@
 ![Alt text](https://travis-ci.org/cyliustack/sofa.svg?branch=master)
 # Introduction
-SOFA: Swarm of Functions Analysis
+SOFA: SOFA (Swarm-Oriented Function Call Analysis)
 Authors: All the contributors of SOFA
 
 # Prerequisite
