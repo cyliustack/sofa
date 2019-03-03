@@ -4,13 +4,16 @@ import itertools
 import os
 from collections import defaultdict, OrderedDict
 
-def parse_pyflame(file_path):
+def parse_pyflame(file_path, ignore_idle = False):
 
     func_dict = {}
     
     with open(file_path, 'r') as f:
         for time_stamp, funct_stack in itertools.zip_longest(*[f] * 2):
             funct_stack = funct_stack.replace('\n', '').replace(';', '<br>')
+            if ignore_idle:
+                if funct_stack.find('idle') != -1:
+                    continue
             func_dict[int(time_stamp)] = funct_stack
         func_dict = OrderedDict(func_dict)
 

@@ -1149,9 +1149,9 @@ def sofa_preprocess(cfg):
     
     # Pyflame Preprocessing
     if os.path.isfile('{}/ptrace.txt'.format(logdir)):
-        func_dict, duration = parse_pyflame('{}/ptrace.txt'.format(logdir))
+        func_dict, duration = parse_pyflame('{}/ptrace.txt'.format(logdir), ignore_idle = True)
         ptrace_list = []
-        py_process_start = min(func_dict.keys())
+
         if func_dict:
             for key, ptrace_info in func_dict.items():
                 deviceId = -1
@@ -1162,9 +1162,9 @@ def sofa_preprocess(cfg):
                 pkt_src = pkt_dst = -1
                 pid = tid = -1
                 trace = [
-                    py_process_start,
+                    float(key) / 10**6,
                     event,
-                    duration[key],
+                    float(duration[key]) / 10 ** 6,
                     deviceId,
                     copyKind,
                     payload,
@@ -1495,9 +1495,9 @@ def sofa_preprocess(cfg):
     traces.append(sofatrace)
     
     sofatrace = SOFATrace()
-    sofatrace.name = 'ptrace-python'
+    sofatrace.name = 'ptrace'
     sofatrace.title = 'PTRACE-PYTHON.'
-    sofatrace.color = 'LightSeaGreen'
+    sofatrace.color = 'Tomato'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
     sofatrace.data = ptrace_traces
