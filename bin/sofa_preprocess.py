@@ -342,6 +342,13 @@ def sofa_preprocess(cfg):
     t_glb_gpu_base = 0
     logdir = cfg.logdir 
 
+    with open(logdir + 'misc.txt', 'r') as f:
+        lines = f.readlines()
+        if len(lines) == 4:
+            cfg.pid = int(lines[3].split()[1])
+        else:
+            print_warning('Incorrect misc.txt content. Some profiling information may not be available.')
+
     with open(logdir + 'perf.script', 'w') as logfile:
         subprocess.call(['perf',
                          'script',
@@ -1087,8 +1094,15 @@ def sofa_preprocess(cfg):
                         break
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
 
-    # STRACE Preprocessing 
+    # STRACE Preprocessing
+    #CASE1: strace: Process 8361 attached
+    #CASE2: 1550311783.488821 mmap(NULL, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f501f910000 <0.000012>
+    #CASE3: [pid  8372] 1550311820.640979 +++ exited with 0 +++
     total_strace_duration = 0
+    filter_keys = []
+    filter_keys.append('resume')
+    filter_keys.append('nanosleep')
+    filter_keys.append('clock_gettime')
     if os.path.isfile('%s/strace.txt' % logdir):
         with open('%s/strace.txt' % logdir) as f:
             lines = f.readlines()
@@ -1097,24 +1111,32 @@ def sofa_preprocess(cfg):
                 strace_list = []
                 strace_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())               
                 for i in range(len(lines)):
-                    if i % cfg.plot_ratio > 0 :
+                    pid = cfg.pid
+                    tid = 0
+                    
+                    b_skip = False
+                    for key in filter_keys:
+                        if lines[i].find(key) != -1:
+                            b_skip = True
+                    if b_skip:
                         continue
-                    if lines[i].find('clock_gettime') != -1:
-                        continue
+
                     fields = lines[i].split()
                     if fields[0].find('pid') != -1 :
+                        tid = int(fields[1].split(']')[0])
                         t_begin = float(fields[2])
-                        strace_info = ''.join(fields[3:-1])
+                        strace_info = ''.join(fields[3:-3])
                     else:
+                        tid = pid
                         t_begin = float(fields[0])
-                        strace_info = ''.join(fields[1:-1])
-                    
+                        strace_info = ''.join(fields[1:-3])
+                    #strace_info = strace_info.split('(')[0] 
                     try:
                         duration = float(fields[-1].split('<')[1].split('>')[0]) 
                     except:
                         duration = 0 
                     total_strace_duration = total_strace_duration + duration
-                    if duration < 1.0e-4:
+                    if duration < 1.0e-5:
                         continue
 
                     deviceId = -1
@@ -1123,7 +1145,6 @@ def sofa_preprocess(cfg):
                     payload = -1
                     bandwidth = -1
                     pkt_src = pkt_dst = -1
-                    pid = tid = -1
                     trace = [
                         t_begin,
                         event,
@@ -1140,6 +1161,7 @@ def sofa_preprocess(cfg):
                         cpuid]
                     strace_list.append(trace)
                 
+                print_info(cfg, 'strace.txt reading is done.')
                 if len(strace_list)>1:
                     strace_traces = list_to_csv_and_traces(logdir, strace_list, 'strace.csv', 'w')
     print_info(cfg,'Total strace duration: %.3lf' % total_strace_duration)

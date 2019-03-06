@@ -403,11 +403,12 @@ def sofa_analyze(cfg):
         df_gpu = pd.read_csv(filein_gpu)
         #df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         features = gpu_profile(logdir, cfg, df_gpu, features)
-        if cfg.enable_aisi:
-            iter_summary = sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat)
     except IOError:
         print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
 
+    if cfg.enable_aisi:
+        selected_pattern, iter_summary = sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat)
+                    
     print_title('Final Performance Features')
     print('%s%s%s' % ('ID'.ljust(10),'Feature'.ljust(30),'Value'.ljust(20)) )
     for i in range(len(features)):

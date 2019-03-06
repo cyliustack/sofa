@@ -77,6 +77,8 @@ if __name__ == "__main__":
     parser.set_defaults(verbose=False)
     parser.add_argument('--enable_aisi', dest='enable_aisi', action='store_true')
     parser.set_defaults(enable_aisi=False)
+    parser.add_argument('--aisi_via_gpu', dest='aisi_via_gpu', action='store_true')
+    parser.set_defaults(aisi_via_gpu=False)
     parser.add_argument('--display_swarms', dest='display_swarms', action='store_true')
     parser.set_defaults(display_swarms=False)
     parser.add_argument('--base_logdir', dest='base_logdir', default='')
@@ -141,6 +143,9 @@ if __name__ == "__main__":
 
     if args.enable_aisi is not None:
         cfg.enable_aisi = args.enable_aisi
+
+    if args.aisi_via_gpu is not None:
+        cfg.aisi_via_gpu = args.aisi_via_gpu
 
     if args.hsg_multifeatures is not None:
         cfg.hsg_multifeatures = args.hsg_multifeatures

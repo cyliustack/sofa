@@ -21,6 +21,7 @@ class SOFA_Config:
     cpu_time_offset = 0
     profile_all_cpus = False
     enable_aisi = False
+    aisi_via_gpu = False
     display_swarms = False
     hsg_multifeatures = False
     use_diff = False # output csv file for sofa swarm-diff
@@ -34,4 +35,5 @@ class SOFA_Config:
     cuda_api_tracing = False
     script_path = ''
     potato_server = None
-    elapsed_time = 0 
+    elapsed_time = 0
+    pid = 0

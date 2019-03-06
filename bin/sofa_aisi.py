@@ -16,7 +16,6 @@ from STree import *
 
 table_size = 0
 iteration_timelines = []
-iteration_table = []
 blank_count = 0
 def iter_profile(cfg, fields, df_cpu, df_gpu, df_strace, df_mpstat):
     elapsed_time = df_gpu['timestamp'].iat[len(df_gpu)-1] - df_gpu['timestamp'].iat[0]
@@ -31,9 +30,11 @@ def iter_profile(cfg, fields, df_cpu, df_gpu, df_strace, df_mpstat):
     copy_time = copy_time + allreduce_time
     kernel_time = gpu_time - copy_time
     payload = df_gpu['payload'].sum()
-    syscall_time = df_strace['duration'].sum()
+    # TODO: Fix bug of strace when enable AISI via GPU 
+    syscall_time = 0
+    if not cfg.aisi_via_gpu:
+        syscall_time = df_strace['duration'].sum()
     cpu_time = df_cpu['duration'].sum()
-    print('cpu_time: ', cpu_time)
     mpstat_usr = df_mpstat['duration'].mean()
     mpstat_sys = df_mpstat['duration'].mean()
     mpstat_iow = mpstat_sys
@@ -87,6 +88,32 @@ def duration_sum(df_gpu):
 def kernel_count(df_gpu):
     count = df_gpu[ df_gpu['duration'] > 1e-5 ].count()[0]
     return count
+
+def main_string_generate_v0(df_gpu):
+    wid = 0
+    name_pre = ''
+    name_table = {'':0}
+    id_seq = []
+    for i in range(len(df_gpu)):
+        trace  = df_gpu.iloc[i]
+        name = trace['name']
+        #TODO: only parsing one GPU with another better method.
+        #name = re.sub(r'<.+>', '', name.rstrip());
+        if name.find('<') !=-1 and name.find('>') !=-1:
+            name2 = name.split('<')[1].split('>')[0]
+        else:
+            name2 = name.split('(')[0]
+        
+        value = name_table.get(name2)
+        if value == None:
+            #print('new name: ', name, 'wid: ', wid)
+            wid = wid + 1
+            name_table[name2] = wid
+            value = wid
+        id_seq.append(str(value))
+        #id_seq.append(str(int(trace['duration']/1e-5)))
+    main_string = ','.join(id_seq)
+    return (main_string,name_table)
 
 
 def main_string_generate_v1(df_gpu):
@@ -169,21 +196,24 @@ def pattern_filter(candidate_patterns):
     return filtered_candidate_patterns
 
 def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
-    global iteration_timelines, iteration_table, blank_count, \
-            iteration_table
+    global iteration_timelines, blank_count 
+    iteration_table = []
     df_gpu.to_csv('dfgpu.csv')
     t_df_begin = df_gpu.iloc[0]['timestamp']
     t_df_end = df_gpu.iloc[-1]['timestamp']
     candidate_patterns=[]
-    (main_string,name_table) = main_string_generate_v1(df_gpu)
+    (main_string,name_table) = main_string_generate_v0(df_gpu)
+    print('AISI Symbol Table:')
+    print(name_table)
     #main_string = "0,1,1,1,1,1,0,2,3,2,3,2,3"
     #main_string = "49,49,49,49,49,49,1,1,2,2,1,2,1,2"
     #print('main_string: '+main_string)
+    #quit()
     st = STree(main_string)
     st.find_repeat_pattern(candidate_patterns, iteration_times)
     candidate_patterns.sort(key = lambda s: len(s), reverse=True)
     filtered_candidate_patterns = pattern_filter(candidate_patterns)
-    print('There are %d candidate patterns for %d-iteration'%(len(candidate_patterns),cfg.num_iterations))
+    #print('There are %d candidate patterns for %d-iteration'%(len(candidate_patterns),cfg.num_iterations))
     pattern_pre = ""
     pat_seq = []
     for pattern in filtered_candidate_patterns:
@@ -209,10 +239,11 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
         step = 1
         iteration_count = 0
         b_overlap = False
-        fw_threshold = 85
+        fw_threshold = 90
         ind = []
         while block_begin <= (total_length - block_size):
             blockString = ",".join(wid_seq[block_begin:block_end])
+
             fuzz_ratio = fuzz.ratio(blockString,pattern)
             if fuzz_ratio >= fw_threshold:
                 ind.append(block_begin)
@@ -223,6 +254,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
                 block_end = block_begin + block_size
 
         #print('Non-overlapped %d-times pattern: %s'%(len(ind),pattern))
+        #print('============ iteration_table ============================')
         if len(ind) == cfg.num_iterations:
             for i in ind:
                 iteration_table.append((df_gpu.iloc[i]['timestamp'],df_gpu.iloc[i+block_size-1]['timestamp']))
@@ -231,9 +263,11 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
             #print_warning("No matched strings by fuzzywuzzy of threshold %d."%fw_threshold)
             continue
 
+    #print(iteration_table)
+    #print('=========================================================')
     print("Selected pattern:")
     print(pat_seq)
-    print("End of AISI")
+    return ','.join(pat_seq), iteration_table 
 
 def event_count(column, eventName, df):
         #get the count of rows that contain eventName
@@ -265,8 +299,7 @@ def similar(a, b, threshold):
             return True
     return False
 
-def traces_to_json(path):
-    global iteration_table
+def traces_to_json(path, iteration_table):
     sofa_traces = None
     with open(path, 'r') as f:
         sofa_traces = f.readlines()
@@ -308,26 +341,50 @@ def trace_timeline(path):
             i += 1
 
 def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
-    global iteration_table
-    df_gpu_x1 = df_gpu[df_gpu.deviceId == 1]
+    
     a = 0
+    df_gpu_x1 = []
+    df_gpu_iteration = []
     times = []
     times2 = []
+    pattern = ''
+    if len(df_gpu) > 0:
+        df_gpu_x1 = df_gpu[df_gpu.deviceId == 1]
 
     print_title('AISI: Per-iteration Performance Summary')
     try:
-        iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations)
-        #iter_detect(logdir, cfg, df_strace, 0.01, 0.8, cfg.num_iterations)
-        traces_to_json(logdir + 'report.js')
+        final_pattern = ''
+        final_iteration_table = ''
+        
+        if cfg.aisi_via_gpu:
+            final_pattern, final_iteration_table = iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations)
+        else:
+            final_pattern, final_iteration_table = iter_detect(logdir, cfg, df_strace, 0.01, 0.8, cfg.num_iterations)
+        
+        #tids = df_strace['tid'].value_counts().keys()
+        #for tid in tids:
+        #    candidate_iter_summary = None
+        #    df_strace_filtered = df_strace[df_strace.tid == tid ]
+        #    candidate_pattern, candidate_iteration_table = iter_detect(logdir, cfg, df_strace, 0.01, 0.8, cfg.num_iterations)
+        #    print("=== Candidate Pattern =====")
+        #    print(candidate_iteration_table)
+        #    if len(candidate_pattern) > len(final_pattern):
+        #        final_iteration_table = candidate_iteration_table.copy()
+        #        final_pattern = candidate_pattern
+        #        print('final_pattern updated:',final_pattern)
+        #        print(candidate_iteration_table)
+
+        
+        if len(final_iteration_table) == 0:
+            print('There is no available patterns.')
+            return '', None 
+
+        traces_to_json(logdir + 'report.js', final_iteration_table)
         xlist = []
-
-        if len(iteration_table) == 0:
-            return
-
-        for t in iteration_table:
+        for t in final_iteration_table:
             xlist.append((t[0],0))
             times2.append(t[0])
-
+        
         X = np.array(xlist)
         kmeans = KMeans(n_clusters=cfg.num_iterations, random_state=0).fit(X)
 
@@ -339,20 +396,30 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
 
         iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'copy_time', 'gpu_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload', 'gemm_time', 'streams', 'cpu_time', 'syscall_time', 'mpstat_usr', 'mpstat_sys', 'mpstat_iow']
         iter_list = []
+        df_strace_iteration = []
+        df_mpstat_iteration = []
+        df_cpu_iteration = []
+        #print(times)
         for i in range(1,len(times)):
-            #print_title("Perormance analyze of iteration-%d"%(i))
             overlapness = 0.0
-            cond1 = (df_gpu_x1['timestamp'] >= times[i-1])
-            cond2 = (df_gpu_x1['timestamp'] <  times[i])
+            if cfg.aisi_via_gpu:
+                cond1 = (df_gpu_x1['timestamp'] >= times[i-1])
+                cond2 = (df_gpu_x1['timestamp'] <  times[i])
+            else:
+                cond1 = (df_strace['timestamp'] >= times[i-1])
+                cond2 = (df_strace['timestamp'] <  times[i])
             df_gpu_iteration = df_gpu_x1[ cond1 & cond2 ]
-            df_strace_iteration = df_strace[ cond1 & cond2 ]
-            df_cpu_iteration = df_cpu[ cond1 & cond2 ]
-            df_mpstat_iteration = df_mpstat[ cond1 & cond2 ]
-            #df_cpu_iteration = df_cpu[ cond1 & cond2 ]
+    
+            # TODO: Fix bug of strace when enable AISI via GPU 
+            if not cfg.aisi_via_gpu:
+                df_strace_iteration = df_strace[ cond1 & cond2 ]
+            df_mpstat_iteration = df_mpstat
+            df_cpu_iteration = df_cpu
+            
             if len(df_gpu_iteration) > 0:
                 iter_list.append(iter_profile(cfg, iter_summary_fields, df_cpu_iteration, df_gpu_iteration, df_strace_iteration, df_mpstat_iteration))
         iter_summary = pd.DataFrame( iter_list, columns=iter_summary_fields )
-
+        print(iter_summary)
         if not iter_summary.empty:
             mean_fw_time = iter_summary['fw_time'].mean()
             mean_bw_time = iter_summary['bw_time'].mean()
@@ -389,10 +456,12 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
             else:
                 print("The profiled program is a communication-bound workload, %d bytes are monitored on PCIe bus"%mean_payload)
                 print("Try using RP Mode parameter synchronization method instead of PS Mode.")
-            print('\n\n')
-            return iter_summary
+            print('\n\n') 
         else:
             print_warning('No iteration detected after scanning runtime string!')
+
+        return pattern, iter_summary 
+
     except IOError:
         print_warning(
             "gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")

@@ -247,6 +247,7 @@ def sofa_record(command, cfg):
 
         # Primary Profiled Program
         p_command = subprocess.Popen(command, shell=True)
+        p_command_pid = p_command.pid 
         t_command_begin = time.time()
         print_hint('PID of the profiled program: %d' % p_command.pid)
         print_hint('Command: %s' % command)
@@ -295,6 +296,7 @@ def sofa_record(command, cfg):
             f_misc.write('elapsed_time %.6lf\n' % (t_command_end - t_command_begin))
             f_misc.write('cores %d\n' % (cores))
             f_misc.write('vcores %d\n' % (vcores))
+            f_misc.write('pid %d\n' % (p_command_pid))
 
         print_progress("Epilogue of Recording...")
         if p_command != None:
