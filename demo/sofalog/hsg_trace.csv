@@ -1,0 +1,8 @@
+timestamp,event,duration,deviceId,copyKind,payload,bandwidth,pkt_src,pkt_dst,pid,tid,name,category,feature_types,mem_addr
+1548903852.071722,19.566950,0.000000,-1,-1,0,0,-1,-1,7125,7125,[cycles:]native_write_msr_safe+0xa([kernel.kallsyms]),0,cycles,ffffffff86e6a3aa
+1548903852.071946,19.566950,0.000000,-1,-1,0,0,-1,-1,7125,7125,[cycles:]native_write_msr_safe+0xa([kernel.kallsyms]),0,cycles,ffffffff86e6a3aa
+1548903852.072225,19.566950,0.000000,-1,-1,0,0,-1,-1,7125,7125,[cycles:]native_write_msr_safe+0xd([kernel.kallsyms]),0,cycles,ffffffff86e6a3ad
+1548903852.072407,19.566950,0.000000,-1,-1,0,0,-1,-1,7125,7125,[cycles:]x86_pmu_enable+0x28f([kernel.kallsyms]),0,cycles,ffffffff86e058df
+1548903852.072488,19.566950,0.000000,-1,-1,0,0,-1,-1,7125,7125,[cycles:]ptrace_stop+0x16a([kernel.kallsyms]),0,cycles,ffffffff86eaa1da
+1548903852.072494,19.566950,0.000006,-1,-1,0,0,-1,-1,7125,7125,[cycles:]ptrace_stop+0x16a([kernel.kallsyms]),0,cycles,ffffffff86eaa1da
+1548903852.072502,19.566950,0.001329,-1,-1,0,0,-1,-1,7125,7125,[cycles:]_raw_spin_lock_irqsave+0x26([kernel.kallsyms]),0,cycles,ffffffff8751b646

@@ -1,0 +1,3 @@
+timestamp,event,duration,deviceId,copyKind,payload,bandwidth,pkt_src,pkt_dst,pid,tid,name,category
+1548903849.223918,-1,2.998793,-1,-1,-1,-1,-1,-1,-1,-1,restart_syscall(<...resuminginterruptednanosleep...>)=0,0
+1548903852.223006,-1,0.000155,-1,-1,-1,-1,-1,-1,-1,-1,close(1)=0,0

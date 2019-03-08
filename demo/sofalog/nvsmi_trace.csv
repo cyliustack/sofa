@@ -1,0 +1,3 @@
+timestamp,event,duration,deviceId,copyKind,payload,bandwidth,pkt_src,pkt_dst,pid,tid,name,category
+1548903853.198123,-1,0.000010,0,-1,-1,-1,-1,-1,-1,-1,GPUID_sm_mem=0_0.000010_0.000010,0
+1548903853.198123,-1,0.000010,0,-1,-1,-1,-1,-1,-1,-1,GPUID_sm_mem=0_0.000010_0.000010,0

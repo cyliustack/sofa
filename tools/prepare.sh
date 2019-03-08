@@ -64,6 +64,9 @@ function install_python_packages()
 	$WITH_SUDO add-apt-repository universe
         $WITH_SUDO apt update -y
         $WITH_SUDO apt install -y python3.6 python3-pip python3-dev 
+        $WITH_SUDO apt-add-repository ppa:trevorjay/pyflame
+        $WITH_SUDO apt update
+        $WITH_SUDO apt install pyflame
     else
 	    file_pytar="Python-3.6.0.tar.xz"
 	    wget https://www.python.org/ftp/python/3.6.0/$file_pytar
