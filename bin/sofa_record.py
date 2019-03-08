@@ -262,13 +262,13 @@ def sofa_record(command, cfg):
             --flamechart: with "Timestamp" mode 
             --p: Attaching To A Running Python Process with PID
             """
-            p_ptrace = subprocess.Popen(['pyflame','--flamechart', '-s', '1000000', '-p', str(p_command.pid)], env=curr_env, stdout=logfile)
+            p_ptrace = subprocess.Popen(['pyflame','--flamechart', '-s', str(sys.maxsize), '-p', str(p_command.pid)], env=curr_env, stdout=logfile)
             # p_ptrace = subprocess.Popen(['pyflame --flamechart -s {} -p {}'.format(100000, p_command.pid)], env=curr_env, stdout=logfile, shell=True)
 
         # FIXME: Strace won't work since both pyflame and strace call ptrace 
 
-        # with open('%s/strace.txt' % logdir, 'w') as logfile:
-        #     p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(p_command.pid)], stderr=logfile)
+        with open('%s/strace.txt' % logdir, 'w') as logfile:
+            p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(p_command.pid)], stderr=logfile)
 
         if int(os.system('command -v perf 1>/dev/null')) == 0:
             ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
