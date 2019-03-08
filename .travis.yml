@@ -14,5 +14,9 @@ script:
   - sudo sysctl -w kernel.kptr_restrict=0
   - sudo sysctl -w kernel.perf_event_paranoid=-1   
   - sudo chown $(whoami) -R demo
+  - sudo rm /usr/bin/python
+  - sudo rm /usr/bin/python3
+  - sudo ln -s python3.6 /usr/bin/python
+  - sudo ln -s python3.6 /usr/bin/python3
   - sofa preprocess --logdir demo/sofalog  
   - sofa analyze --logdir demo/sofalog  
