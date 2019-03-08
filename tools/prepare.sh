@@ -106,7 +106,7 @@ function install_packages()
         $WITH_SUDO apt-get update --fix-missing
 	    $WITH_SUDO apt-get install -y curl wget make gcc g++ cmake \
             linux-tools-common tcpdump sysstat strace \
-            linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic 
+            linux-tools-generic linux-cloud-tools-generic 
 	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install -y epel-release 
