@@ -78,7 +78,7 @@ function install_python_packages()
     fi
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip"
-    PIP_PACKAGES="numpy pandas matplotlib scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein requests"
+    PIP_PACKAGES="numpy pandas matplotlib scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein requests pathlib"
     $WITH_SUDO python3.6 -m pip install --upgrade pip
     $WITH_SUDO python3.6 -m pip install --no-cache-dir ${PIP_PACKAGES}
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
@@ -86,7 +86,7 @@ function install_python_packages()
     if [[ $(which conda) ]] ; then 
     	echo "Install via conda python"
     	CONDA_PY3=$(dirname $(which conda))/python3
-    	PIP_PACKAGES="numpy pandas matplotlib scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein requests"
+    	PIP_PACKAGES="numpy pandas matplotlib scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein requests pathlib"
     	$WITH_SUDO ${CONDA_PY3} -m pip install --upgrade pip
     	$WITH_SUDO ${CONDA_PY3} -m pip install --no-cache-dir ${PIP_PACKAGES}
     	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
