@@ -395,8 +395,10 @@ def sofa_analyze(cfg):
         net_profile(logdir, cfg, df_net)
         vmstat_profile(logdir, cfg, df_vmstat)
         features = mpstat_profile(logdir, cfg, df_mpstat, features)
-    except IOError:
+    except IOError as e:
         print_warning("cputrace.csv is not found")
+        print("I/O error({0}): {1}".format(e.errno, e.strerror))
+        print("Unexpected error:", sys.exc_info()[0])
         #quit()
 
     try:

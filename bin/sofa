@@ -59,6 +59,8 @@ if __name__ == "__main__":
                         help='number of iterations by which a program runs')
     parser.add_argument('--cpu_time_offset_ms', metavar='N', type=int, required=False,
             help='timestamp offset (unit: ms) between CPU and GPU, +N or -N')
+    parser.add_argument('--strace_min_time', metavar='F', type=float, required=False,
+            help='strace records whose durations less than this limit will not be processed in the following stages. (unit: s)')
     parser.add_argument(
         '--plot_ratio',
         metavar='N',
@@ -77,8 +79,8 @@ if __name__ == "__main__":
     parser.set_defaults(verbose=False)
     parser.add_argument('--enable_aisi', dest='enable_aisi', action='store_true')
     parser.set_defaults(enable_aisi=False)
-    parser.add_argument('--aisi_via_gpu', dest='aisi_via_gpu', action='store_true')
-    parser.set_defaults(aisi_via_gpu=False)
+    parser.add_argument('--aisi_via_strace', dest='aisi_via_strace', action='store_true')
+    parser.set_defaults(aisi_via_strace=False)
     parser.add_argument('--display_swarms', dest='display_swarms', action='store_true')
     parser.set_defaults(display_swarms=False)
     parser.add_argument('--base_logdir', dest='base_logdir', default='')
@@ -144,8 +146,8 @@ if __name__ == "__main__":
     if args.enable_aisi is not None:
         cfg.enable_aisi = args.enable_aisi
 
-    if args.aisi_via_gpu is not None:
-        cfg.aisi_via_gpu = args.aisi_via_gpu
+    if args.aisi_via_strace is not None:
+        cfg.aisi_via_strace = args.aisi_via_strace
 
     if args.hsg_multifeatures is not None:
         cfg.hsg_multifeatures = args.hsg_multifeatures
@@ -199,6 +201,13 @@ if __name__ == "__main__":
         cfg.cpu_time_offset = 0.001*args.cpu_time_offset_ms
     else:
         cfg.cpu_time_offset = 0.0
+
+    if args.strace_min_time is not None:
+        cfg.strace_min_time = args.strace_min_time
+
+    else:
+        cfg.strace_min_time = 1e-6
+
 
     if args.viz_port is not None:
         cfg.viz_port = args.viz_port

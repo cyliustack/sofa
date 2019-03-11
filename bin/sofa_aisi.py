@@ -32,7 +32,7 @@ def iter_profile(cfg, fields, df_cpu, df_gpu, df_strace, df_mpstat):
     payload = df_gpu['payload'].sum()
     # TODO: Fix bug of strace when enable AISI via GPU 
     syscall_time = 0
-    if not cfg.aisi_via_gpu:
+    if cfg.aisi_via_strace:
         syscall_time = df_strace['duration'].sum()
     cpu_time = df_cpu['duration'].sum()
     mpstat_usr = df_mpstat['duration'].mean()
@@ -89,16 +89,18 @@ def kernel_count(df_gpu):
     count = df_gpu[ df_gpu['duration'] > 1e-5 ].count()[0]
     return count
 
-def main_string_generate_v0(df_gpu):
+def main_string_generate_v0(df):
     wid = 0
     name_pre = ''
     name_table = {'':0}
     id_seq = []
-    for i in range(len(df_gpu)):
-        trace  = df_gpu.iloc[i]
+    
+    for i in range(len(df)):
+        trace  = df.iloc[i]
         name = trace['name']
         #TODO: only parsing one GPU with another better method.
         #name = re.sub(r'<.+>', '', name.rstrip());
+        #print(name)
         if name.find('<') !=-1 and name.find('>') !=-1:
             name2 = name.split('<')[1].split('>')[0]
         else:
@@ -109,7 +111,7 @@ def main_string_generate_v0(df_gpu):
             #print('new name: ', name, 'wid: ', wid)
             wid = wid + 1
             name_table[name2] = wid
-            value = wid
+            value = wid 
         id_seq.append(str(value))
         #id_seq.append(str(int(trace['duration']/1e-5)))
     main_string = ','.join(id_seq)
@@ -195,16 +197,15 @@ def pattern_filter(candidate_patterns):
             filtered_candidate_patterns.append(pattern)
     return filtered_candidate_patterns
 
-def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
+def iter_detect(logdir, cfg, df, time_interval, threshold, iteration_times):
     global iteration_timelines, blank_count 
     iteration_table = []
-    df_gpu.to_csv('dfgpu.csv')
-    t_df_begin = df_gpu.iloc[0]['timestamp']
-    t_df_end = df_gpu.iloc[-1]['timestamp']
+    t_df_begin = df.iloc[0]['timestamp']
+    t_df_end = df.iloc[-1]['timestamp']
     candidate_patterns=[]
-    (main_string,name_table) = main_string_generate_v0(df_gpu)
-    print('AISI Symbol Table:')
-    print(name_table)
+    (main_string,name_table) = main_string_generate_v0(df)
+    #print('AISI Symbol Table:')
+    #print(name_table)
     #main_string = "0,1,1,1,1,1,0,2,3,2,3,2,3"
     #main_string = "49,49,49,49,49,49,1,1,2,2,1,2,1,2"
     #print('main_string: '+main_string)
@@ -217,15 +218,13 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
     pattern_pre = ""
     pat_seq = []
     for pattern in filtered_candidate_patterns:
-        #print('A: ',pattern_pre)
-        #print('B: ',pattern)
+        #NOTE: To prevent using similar patterns for scanning
         pp_ratio = fuzz.ratio(pattern,pattern_pre)
         if pp_ratio > 80:
-            #print("pattern too similar: ",pp_ratio)
             continue
         else:
             pattern_pre = pattern
-        #print('original string length of main_string = %d' % len(main_string))
+        
         wid_seq = main_string.split(',')
         pat_seq = pattern.split(',')
         total_length = num_wids = len(wid_seq)
@@ -239,13 +238,13 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
         step = 1
         iteration_count = 0
         b_overlap = False
-        fw_threshold = 90
+        fuzzy_threshold = 90
         ind = []
         while block_begin <= (total_length - block_size):
             blockString = ",".join(wid_seq[block_begin:block_end])
 
             fuzz_ratio = fuzz.ratio(blockString,pattern)
-            if fuzz_ratio >= fw_threshold:
+            if fuzz_ratio >= fuzzy_threshold:
                 ind.append(block_begin)
                 block_begin = block_end
                 block_end = block_begin + block_size
@@ -257,7 +256,7 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
         #print('============ iteration_table ============================')
         if len(ind) == cfg.num_iterations:
             for i in ind:
-                iteration_table.append((df_gpu.iloc[i]['timestamp'],df_gpu.iloc[i+block_size-1]['timestamp']))
+                iteration_table.append((df.iloc[i]['timestamp'],df.iloc[i+block_size-1]['timestamp']))
             break
         else:
             #print_warning("No matched strings by fuzzywuzzy of threshold %d."%fw_threshold)
@@ -265,8 +264,8 @@ def iter_detect(logdir, cfg, df_gpu, time_interval, threshold, iteration_times):
 
     #print(iteration_table)
     #print('=========================================================')
-    print("Selected pattern:")
-    print(pat_seq)
+    #print("selected pattern:")
+    #print(pat_seq)
     return ','.join(pat_seq), iteration_table 
 
 def event_count(column, eventName, df):
@@ -341,7 +340,6 @@ def trace_timeline(path):
             i += 1
 
 def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
-    
     a = 0
     df_gpu_x1 = []
     df_gpu_iteration = []
@@ -356,10 +354,11 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
         final_pattern = ''
         final_iteration_table = ''
         
-        if cfg.aisi_via_gpu:
-            final_pattern, final_iteration_table = iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations)
-        else:
+
+        if cfg.aisi_via_strace or len(df_gpu) == 0:  
             final_pattern, final_iteration_table = iter_detect(logdir, cfg, df_strace, 0.01, 0.8, cfg.num_iterations)
+        else:
+            final_pattern, final_iteration_table = iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations)
         
         #tids = df_strace['tid'].value_counts().keys()
         #for tid in tids:
@@ -402,16 +401,17 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
         #print(times)
         for i in range(1,len(times)):
             overlapness = 0.0
-            if cfg.aisi_via_gpu:
-                cond1 = (df_gpu_x1['timestamp'] >= times[i-1])
-                cond2 = (df_gpu_x1['timestamp'] <  times[i])
-            else:
+            if cfg.aisi_via_strace:
                 cond1 = (df_strace['timestamp'] >= times[i-1])
                 cond2 = (df_strace['timestamp'] <  times[i])
+            else:
+                cond1 = (df_gpu_x1['timestamp'] >= times[i-1])
+                cond2 = (df_gpu_x1['timestamp'] <  times[i])
+                
             df_gpu_iteration = df_gpu_x1[ cond1 & cond2 ]
     
-            # TODO: Fix bug of strace when enable AISI via GPU 
-            if not cfg.aisi_via_gpu:
+            # TODO: Fix bug of strace when enable AISI via GPU
+            if cfg.aisi_via_strace:
                 df_strace_iteration = df_strace[ cond1 & cond2 ]
             df_mpstat_iteration = df_mpstat
             df_cpu_iteration = df_cpu
@@ -419,7 +419,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
             if len(df_gpu_iteration) > 0:
                 iter_list.append(iter_profile(cfg, iter_summary_fields, df_cpu_iteration, df_gpu_iteration, df_strace_iteration, df_mpstat_iteration))
         iter_summary = pd.DataFrame( iter_list, columns=iter_summary_fields )
-        print(iter_summary)
+        #print(iter_summary)
         if not iter_summary.empty:
             mean_fw_time = iter_summary['fw_time'].mean()
             mean_bw_time = iter_summary['bw_time'].mean()

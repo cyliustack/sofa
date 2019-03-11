@@ -21,7 +21,8 @@ class SOFA_Config:
     cpu_time_offset = 0
     profile_all_cpus = False
     enable_aisi = False
-    aisi_via_gpu = False
+    aisi_via_strace = False
+    strace_min_time = 1e-6
     display_swarms = False
     hsg_multifeatures = False
     use_diff = False # output csv file for sofa swarm-diff

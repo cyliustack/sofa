@@ -1100,9 +1100,18 @@ def sofa_preprocess(cfg):
     #CASE3: [pid  8372] 1550311820.640979 +++ exited with 0 +++
     total_strace_duration = 0
     filter_keys = []
+    #filter_keys.append('futex')
     filter_keys.append('resume')
     filter_keys.append('nanosleep')
     filter_keys.append('clock_gettime')
+    filter_keys.append('brk')
+    filter_keys.append('stat')
+    filter_keys.append('close')
+    filter_keys.append('exited')
+    filter_keys.append('access')
+    filter_keys.append('lseek')
+    filter_keys.append('exited')
+    filter_keys.append('read')
     if os.path.isfile('%s/strace.txt' % logdir):
         with open('%s/strace.txt' % logdir) as f:
             lines = f.readlines()
@@ -1111,6 +1120,8 @@ def sofa_preprocess(cfg):
                 strace_list = []
                 strace_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())               
                 for i in range(len(lines)):
+                    if i % cfg.plot_ratio > 0:
+                        continue
                     pid = cfg.pid
                     tid = 0
                     
@@ -1136,7 +1147,8 @@ def sofa_preprocess(cfg):
                     except:
                         duration = 0 
                     total_strace_duration = total_strace_duration + duration
-                    if duration < 1.0e-5:
+
+                    if duration < cfg.strace_min_time:
                         continue
 
                     deviceId = -1
