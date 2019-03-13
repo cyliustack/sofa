@@ -387,26 +387,38 @@ def sofa_analyze(cfg):
     
     try:
         df_cpu = pd.read_csv(filein_cpu)
-        df_vmstat = pd.read_csv(filein_vmstat)
-        df_mpstat = pd.read_csv(filein_mpstat)
-        df_net = pd.read_csv(filein_net)
-        df_strace = pd.read_csv(filein_strace)
         cpu_profile(logdir, cfg, df_cpu)
+    except IOError as e:
+        print_warning("%s is not found" % filein_cpu)
+
+    try:
+        df_strace = pd.read_csv(filein_strace)
+    except IOError as e:
+        print_warning("%s is not found" % filein_strace)
+
+    try:
+        df_net = pd.read_csv(filein_net)
         net_profile(logdir, cfg, df_net)
+    except IOError as e:
+        print_warning("%s is not found" % filein_net)
+
+    try:
+        df_vmstat = pd.read_csv(filein_vmstat)
         vmstat_profile(logdir, cfg, df_vmstat)
+    except IOError as e:
+        print_warning("%s is not found" % filein_vmstat)
+
+    try:
+        df_mpstat = pd.read_csv(filein_mpstat)
         features = mpstat_profile(logdir, cfg, df_mpstat, features)
     except IOError as e:
-        print_warning("cputrace.csv is not found")
-        print("I/O error({0}): {1}".format(e.errno, e.strerror))
-        print("Unexpected error:", sys.exc_info()[0])
-        #quit()
+        print_warning("%s is not found" % filein_mpstat)
 
     try:
         df_gpu = pd.read_csv(filein_gpu)
-        #df_gpu.loc[:, 'timestamp'] -= df_gpu.loc[0, 'timestamp']
         features = gpu_profile(logdir, cfg, df_gpu, features)
     except IOError:
-        print_warning("gputrace.csv is not found. If there is no need to profile GPU, just ignore it.")
+        print_warning("%s is not found. If there is no need to profile GPU, just ignore it." % filein_gpu)
 
     if cfg.enable_aisi:
         selected_pattern, iter_summary = sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat)

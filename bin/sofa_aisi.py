@@ -23,7 +23,7 @@ def iter_profile(cfg, fields, df_cpu, df_gpu, df_strace, df_mpstat):
     bw_time = df_gpu[df_gpu['name'].str.contains("_bw")].loc[:,'duration'].sum()
     gemm_time = df_gpu[df_gpu['name'].str.contains("gemm")].loc[:,'duration'].sum()
     copy_time = df_gpu[df_gpu['name'].str.contains("CUDA_COPY")].loc[:,'duration'].sum()
-    allreduce_time = df_gpu[df_gpu['name'].str.contains("AllReduceKernel")].loc[:,'duration'].sum()
+    allreduce_time = df_gpu[df_gpu['name'].str.contains("nccl")].loc[:,'duration'].sum() 
     streams = len(df_gpu['tid'].value_counts())
     #print("streams: ",streams)
     gpu_time = df_gpu['duration'].sum()
@@ -38,7 +38,7 @@ def iter_profile(cfg, fields, df_cpu, df_gpu, df_strace, df_mpstat):
     mpstat_usr = df_mpstat['duration'].mean()
     mpstat_sys = df_mpstat['duration'].mean()
     mpstat_iow = mpstat_sys
-    return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams, 'syscall_time':syscall_time, 'cpu_time':cpu_time, 'mpstat_usr':mpstat_usr, 'mpstat_sys':mpstat_sys, 'mpstat_iow':mpstat_iow }
+    return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'allreduce_time': allreduce_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams, 'syscall_time':syscall_time, 'cpu_time':cpu_time, 'mpstat_usr':mpstat_usr, 'mpstat_sys':mpstat_sys, 'mpstat_iow':mpstat_iow }
 
 def gpu_profile(logdir, cfg, df_gpu):
     total_kernel_time = 0.0
@@ -393,7 +393,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
         times = np.sort(times2)
         trace_timeline(logdir + 'iteration_timeline.txt')
 
-        iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'copy_time', 'gpu_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload', 'gemm_time', 'streams', 'cpu_time', 'syscall_time', 'mpstat_usr', 'mpstat_sys', 'mpstat_iow']
+        iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'copy_time', 'allreduce_time', 'gpu_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload', 'gemm_time', 'streams', 'cpu_time', 'syscall_time', 'mpstat_usr', 'mpstat_sys', 'mpstat_iow']
         iter_list = []
         df_strace_iteration = []
         df_mpstat_iteration = []
@@ -424,6 +424,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
             mean_fw_time = iter_summary['fw_time'].mean()
             mean_bw_time = iter_summary['bw_time'].mean()
             mean_copy_time = iter_summary['copy_time'].mean()
+            mean_allreduce_time = iter_summary['allreduce_time'].mean()
             mean_cpu_time = iter_summary['cpu_time'].mean()
             mean_syscall_time = iter_summary['syscall_time'].mean()
             mean_gpu_time = iter_summary['gpu_time'].mean()
@@ -445,17 +446,18 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
             print("Averaged CUDA BW time (s): %.6lf" % mean_bw_time)
             print("Averaged CUDA gemm time (s): %.6lf" % mean_gemm_time)
             print("Averaged CUDA COPY time (s): %.6lf" % mean_copy_time)
+            print("Averaged CUDA AllReduce time (s): %.6lf" % mean_allreduce_time)
             print("Averaged CUDA payload (B): %d" % mean_payload)
             print("Averaged number of CUDA streams: %d" % mean_streams)
             print("Averaged MPSTAT USR Ratio : %d" % mean_mpstat_usr)
             print("Averaged MPSTAT SYS Ratio : %d" % mean_mpstat_sys)
 
             print_title('Performance Optimization Hints')
-            if mean_copy_time / mean_step_time < 0.15:
+            comm_ratio = mean_copy_time / mean_step_time
+            if comm_ratio < 0.15:
                 print("The profiled program is a compute-bound workload, try increasing # of GPUs to improve throughput")
             else:
-                print("The profiled program is a communication-bound workload, %d bytes are monitored on PCIe bus"%mean_payload)
-                print("Try using RP Mode parameter synchronization method instead of PS Mode.")
+                print("The profiled program is a communication-bound workload, communication ratio is %.2lf!" % comm_ratio)
             print('\n\n') 
         else:
             print_warning('No iteration detected after scanning runtime string!')
