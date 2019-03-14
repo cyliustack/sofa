@@ -398,6 +398,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
         df_strace_iteration = []
         df_mpstat_iteration = []
         df_cpu_iteration = []
+        df_gpu_iteration = []
         #print(times)
         for i in range(1,len(times)):
             overlapness = 0.0
@@ -408,7 +409,8 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
                 cond1 = (df_gpu_x1['timestamp'] >= times[i-1])
                 cond2 = (df_gpu_x1['timestamp'] <  times[i])
                 
-            df_gpu_iteration = df_gpu_x1[ cond1 & cond2 ]
+            if len(df_gpu_iteration) > 0:
+                df_gpu_iteration = df_gpu_x1[ cond1 & cond2 ]
     
             # TODO: Fix bug of strace when enable AISI via GPU
             if cfg.aisi_via_strace:
