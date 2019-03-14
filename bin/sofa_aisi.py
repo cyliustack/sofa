@@ -17,26 +17,43 @@ from STree import *
 table_size = 0
 iteration_timelines = []
 blank_count = 0
+
 def iter_profile(cfg, fields, df_cpu, df_gpu, df_strace, df_mpstat):
-    elapsed_time = df_gpu['timestamp'].iat[len(df_gpu)-1] - df_gpu['timestamp'].iat[0]
-    fw_time = df_gpu[df_gpu['name'].str.contains("_fw")].loc[:,'duration'].sum()
-    bw_time = df_gpu[df_gpu['name'].str.contains("_bw")].loc[:,'duration'].sum()
-    gemm_time = df_gpu[df_gpu['name'].str.contains("gemm")].loc[:,'duration'].sum()
-    copy_time = df_gpu[df_gpu['name'].str.contains("CUDA_COPY")].loc[:,'duration'].sum()
-    allreduce_time = df_gpu[df_gpu['name'].str.contains("nccl")].loc[:,'duration'].sum() 
-    streams = len(df_gpu['tid'].value_counts())
-    #print("streams: ",streams)
-    gpu_time = df_gpu['duration'].sum()
-    copy_time = copy_time + allreduce_time
-    kernel_time = gpu_time - copy_time
-    payload = df_gpu['payload'].sum()
+    elapsed_time = 0 
+    fw_time = 0
+    bw_time = 0
+    gemm_time = 0
+    copy_time = 0
+    allreduce_time = 0
+    streams = 0
+    gpu_time = 0
+    kernel_time = 0
+    payload = 0
+    if len(df_gpu) > 0:
+        elapsed_time = df_gpu['timestamp'].iat[len(df_gpu)-1] - df_gpu['timestamp'].iat[0]
+        fw_time = df_gpu[df_gpu['name'].str.contains("_fw")].loc[:,'duration'].sum()
+        bw_time = df_gpu[df_gpu['name'].str.contains("_bw")].loc[:,'duration'].sum()
+        gemm_time = df_gpu[df_gpu['name'].str.contains("gemm")].loc[:,'duration'].sum()
+        copy_time = df_gpu[df_gpu['name'].str.contains("CUDA_COPY")].loc[:,'duration'].sum()
+        allreduce_time = df_gpu[df_gpu['name'].str.contains("nccl")].loc[:,'duration'].sum() 
+        streams = len(df_gpu['tid'].value_counts())
+        #print("streams: ",streams)
+        gpu_time = df_gpu['duration'].sum()
+        copy_time = copy_time + allreduce_time
+        kernel_time = gpu_time - copy_time
+        payload = df_gpu['payload'].sum()
+    elif len(df_strace) > 0: 
+        elapsed_time = df_strace['timestamp'].iat[len(df_strace)-1] - df_strace['timestamp'].iat[0]
+    else:
+        elapsed_time = df_cpu['timestamp'].iat[len(df_cpu)-1] - df_cpu['timestamp'].iat[0]
+    
     # TODO: Fix bug of strace when enable AISI via GPU 
     syscall_time = 0
     if cfg.aisi_via_strace:
         syscall_time = df_strace['duration'].sum()
     cpu_time = df_cpu['duration'].sum()
-    mpstat_usr = df_mpstat['duration'].mean()
-    mpstat_sys = df_mpstat['duration'].mean()
+    mpstat_usr = df_mpstat['duration'].sum()
+    mpstat_sys = df_mpstat['duration'].sum()
     mpstat_iow = mpstat_sys
     return {'elapsed_time': elapsed_time, 'fw_time': fw_time, 'bw_time': bw_time, 'kernel_time': kernel_time, 'payload': payload, 'copy_time':copy_time, 'allreduce_time': allreduce_time, 'gpu_time':gpu_time, 'gemm_time':gemm_time, 'streams':streams, 'syscall_time':syscall_time, 'cpu_time':cpu_time, 'mpstat_usr':mpstat_usr, 'mpstat_sys':mpstat_sys, 'mpstat_iow':mpstat_iow }
 
@@ -264,9 +281,8 @@ def iter_detect(logdir, cfg, df, time_interval, threshold, iteration_times):
 
     #print(iteration_table)
     #print('=========================================================')
-    #print("selected pattern:")
-    #print(pat_seq)
-    return ','.join(pat_seq), iteration_table 
+     
+    return pat_seq, iteration_table, name_table 
 
 def event_count(column, eventName, df):
         #get the count of rows that contain eventName
@@ -352,14 +368,20 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
     print_title('AISI: Per-iteration Performance Summary')
     try:
         final_pattern = ''
+        final_pattern_seq = ''
+        name_table = None
         final_iteration_table = ''
-        
 
         if cfg.aisi_via_strace or len(df_gpu) == 0:  
-            final_pattern, final_iteration_table = iter_detect(logdir, cfg, df_strace, 0.01, 0.8, cfg.num_iterations)
+            final_pattern_seq, final_iteration_table, name_table = iter_detect(logdir, cfg, df_strace, 0.01, 0.8, cfg.num_iterations)
         else:
-            final_pattern, final_iteration_table = iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations)
-        
+            final_pattern_seq, final_iteration_table, name_table = iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations)
+      
+        print("Selected pattern:")
+        print(final_pattern_seq)
+        final_pattern = ','.join(final_pattern_seq) 
+        for c in final_pattern_seq:
+            print( '%s : %s ' % (c, list(name_table.keys())[list(name_table.values()).index(int(c))])) 
         #tids = df_strace['tid'].value_counts().keys()
         #for tid in tids:
         #    candidate_iter_summary = None
@@ -374,7 +396,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
         #        print(candidate_iteration_table)
 
         
-        if len(final_iteration_table) == 0:
+        if len(final_pattern_seq) == 0: 
             print('There is no available patterns.')
             return '', None 
 
@@ -402,23 +424,28 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
         #print(times)
         for i in range(1,len(times)):
             overlapness = 0.0
-            if cfg.aisi_via_strace:
+            if cfg.aisi_via_strace or len(df_gpu_x1) == 0:
                 cond1 = (df_strace['timestamp'] >= times[i-1])
                 cond2 = (df_strace['timestamp'] <  times[i])
+                df_strace_iteration = df_strace[ cond1 & cond2 ]
             else:
                 cond1 = (df_gpu_x1['timestamp'] >= times[i-1])
                 cond2 = (df_gpu_x1['timestamp'] <  times[i])
                 
             if len(df_gpu_iteration) > 0:
                 df_gpu_iteration = df_gpu_x1[ cond1 & cond2 ]
-    
-            # TODO: Fix bug of strace when enable AISI via GPU
-            if cfg.aisi_via_strace:
-                df_strace_iteration = df_strace[ cond1 & cond2 ]
-            df_mpstat_iteration = df_mpstat
-            df_cpu_iteration = df_cpu
             
-            if len(df_gpu_iteration) > 0:
+            try: 
+                df_mpstat_iteration = df_mpstat[cond1 & cond2]
+            except:
+                print('MPSTAT data not within iterations')
+
+            try: 
+                df_cpu_iteration = df_cpu[cond1 & cond2]
+            except:
+                print('CPU data not within iterations')
+            
+            if len(df_gpu_iteration) > 0  or len(df_strace_iteration) > 0 :
                 iter_list.append(iter_profile(cfg, iter_summary_fields, df_cpu_iteration, df_gpu_iteration, df_strace_iteration, df_mpstat_iteration))
         iter_summary = pd.DataFrame( iter_list, columns=iter_summary_fields )
         #print(iter_summary)
