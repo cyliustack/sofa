@@ -91,6 +91,10 @@ if __name__ == "__main__":
     parser.set_defaults(enable_aisi=False)
     parser.add_argument('--skip_preprocess', dest='skip_preprocess', action='store_true')
     parser.set_defaults(skip_preprocess=False)
+    parser.add_argument('--pid', metavar='PID', type=int, required=False,
+                        help='Specify the PID of the process you want to trace')
+    parser.add_argument('--timeout', metavar='T', type=int, required=False,
+                        help='Timeout of SOFA recording')
 
     parser.add_argument(
         'command',
@@ -137,6 +141,7 @@ if __name__ == "__main__":
 
     if args.command is not None:
         command = args.command[0]
+    
     if args.usr_command is not None:
         usr_command = args.usr_command
 
@@ -190,6 +195,12 @@ if __name__ == "__main__":
 
     if args.num_iterations is not None:
         cfg.num_iterations = args.num_iterations
+
+    if args.pid is not None:
+        cfg.pid = args.pid
+
+    if args.timeout is not None:
+        cfg.timeout = args.timeout
 
     if args.num_swarms is not None:
         cfg.num_swarms = args.num_swarms

@@ -37,4 +37,6 @@ class SOFA_Config:
     script_path = ''
     potato_server = None
     elapsed_time = 0
-    pid = 0
+    pid = -1
+    timeout = 30
+    columns = ['timestamp', 'duration']

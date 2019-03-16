@@ -246,22 +246,29 @@ def sofa_record(command, cfg):
                 p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)
 
         # Primary Profiled Program
+        if cfg.pid > 0:
+            command = "sleep %d && echo Done!" % cfg.timeout
+            
         p_command = subprocess.Popen(command, shell=True)
-        p_command_pid = p_command.pid 
+        p_command_pid = p_command.pid
+        if cfg.pid > 0 :
+            target_pid = cfg.pid 
+        else:
+            target_pid = p_command_pid
         t_command_begin = time.time()
-        print_hint('PID of the profiled program: %d' % p_command.pid)
+        print_hint('PID of the target program: %d' % target_pid)
         print_hint('Command: %s' % command)
 
         with open('%s/strace.txt' % logdir, 'w') as logfile:
-            p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(p_command.pid)], stderr=logfile)
+            p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(target_pid)], stderr=logfile)
 
         if int(os.system('command -v perf 1>/dev/null')) == 0:
             ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
             if ret.find('not supported') >=0:
-                profile_command = 'perf record -o %s/perf.data -F %s %s -p %d' % (logdir, sample_freq, perf_options, p_command.pid)
+                profile_command = 'perf record -o %s/perf.data -F %s %s -p %d' % (logdir, sample_freq, perf_options, target_pid)
                 cfg.perf_events = ""
             else:
-                profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -p %d' % (logdir, cfg.perf_events, sample_freq, perf_options, p_command.pid) 
+                profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -p %d' % (logdir, cfg.perf_events, sample_freq, perf_options, target_pid) 
             with open(logdir+'perf_events_used.txt','w') as f:
                 f.write(cfg.perf_events)
 
@@ -273,13 +280,13 @@ def sofa_record(command, cfg):
             p_command.wait()
             t_command_end = time.time()
         except TimeoutExpired:
-            print_error('Timeout of profiling process')
+            print_error('command: Timeout of profiling process')
             sys.exit(1)
 
         try:
             p_perf.wait()
         except TimeoutExpired:
-            print_error('Timeout of profiling process')
+            print_error('perf: Timeout of profiling process')
             sys.exit(1)
 
         with open('%s/misc.txt' % logdir, 'w') as f_misc:
@@ -296,7 +303,7 @@ def sofa_record(command, cfg):
             f_misc.write('elapsed_time %.6lf\n' % (t_command_end - t_command_begin))
             f_misc.write('cores %d\n' % (cores))
             f_misc.write('vcores %d\n' % (vcores))
-            f_misc.write('pid %d\n' % (p_command_pid))
+            f_misc.write('pid %d\n' % (target_pid))
 
         print_progress("Epilogue of Recording...")
         if p_command != None:

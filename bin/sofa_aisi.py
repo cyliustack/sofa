@@ -1,7 +1,7 @@
 import multiprocessing as mp
 import re
 from functools import partial
-
+from statistics import mean
 import numpy as np
 import pandas as pd
 import scipy
@@ -51,6 +51,7 @@ def iter_profile(cfg, fields, df_cpu, df_gpu, df_strace, df_mpstat):
     syscall_time = 0
     if cfg.aisi_via_strace:
         syscall_time = df_strace['duration'].sum()
+    print(df_cpu)
     cpu_time = df_cpu['duration'].sum()
     mpstat_usr = df_mpstat['duration'].sum()
     mpstat_sys = df_mpstat['duration'].sum()
@@ -357,13 +358,13 @@ def trace_timeline(path):
 
 def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
     a = 0
-    df_gpu_x1 = []
-    df_gpu_iteration = []
     times = []
-    times2 = []
+    times_nosort = []
     pattern = ''
     if len(df_gpu) > 0:
         df_gpu_x1 = df_gpu[df_gpu.deviceId == 1]
+    else:
+        df_gpu_x1 = pd.DataFrame([], columns=df_cpu.columns) 
 
     print_title('AISI: Per-iteration Performance Summary')
     try:
@@ -376,12 +377,13 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
             final_pattern_seq, final_iteration_table, name_table = iter_detect(logdir, cfg, df_strace, 0.01, 0.8, cfg.num_iterations)
         else:
             final_pattern_seq, final_iteration_table, name_table = iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations)
-      
-        print("Selected pattern:")
-        print(final_pattern_seq)
-        final_pattern = ','.join(final_pattern_seq) 
-        for c in final_pattern_seq:
-            print( '%s : %s ' % (c, list(name_table.keys())[list(name_table.values()).index(int(c))])) 
+     
+        if cfg.verbose:
+            print("Selected pattern:")
+            print(final_pattern_seq)
+            final_pattern = ','.join(final_pattern_seq) 
+            for c in final_pattern_seq:
+                print( '%s : %s ' % (c, list(name_table.keys())[list(name_table.values()).index(int(c))])) 
         #tids = df_strace['tid'].value_counts().keys()
         #for tid in tids:
         #    candidate_iter_summary = None
@@ -404,23 +406,22 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
         xlist = []
         for t in final_iteration_table:
             xlist.append((t[0],0))
-            times2.append(t[0])
         
         X = np.array(xlist)
         kmeans = KMeans(n_clusters=cfg.num_iterations, random_state=0).fit(X)
 
         for c in kmeans.cluster_centers_:
-            times.append(c[0])
+            times_nosort.append(c[0])
 
-        times = np.sort(times2)
+        times = np.sort(times_nosort)
         trace_timeline(logdir + 'iteration_timeline.txt')
 
         iter_summary_fields = ['elapsed_time', 'kernel_time', 'fw_time', 'bw_time', 'copy_time', 'allreduce_time', 'gpu_time', 'cpu_time', 'bw_h2d', 'bw_d2h', 'bw_p2p', 'bw_d2h_big', 'bw_d2h_big', 'bw_p2p_big', 'payload', 'gemm_time', 'streams', 'cpu_time', 'syscall_time', 'mpstat_usr', 'mpstat_sys', 'mpstat_iow']
         iter_list = []
-        df_strace_iteration = []
-        df_mpstat_iteration = []
-        df_cpu_iteration = []
-        df_gpu_iteration = []
+        df_strace_iteration = pd.DataFrame([], columns=df_strace.columns)
+        df_mpstat_iteration = pd.DataFrame([], columns=df_mpstat.columns)
+        df_cpu_iteration = pd.DataFrame([], columns=df_cpu.columns)
+        df_gpu_iteration =  pd.DataFrame([], columns=df_gpu.columns)
         #print(times)
         for i in range(1,len(times)):
             overlapness = 0.0
@@ -438,16 +439,21 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
             try: 
                 df_mpstat_iteration = df_mpstat[cond1 & cond2]
             except:
-                print('MPSTAT data not within iterations')
+                print_warning('MPSTAT data not within iterations')
 
             try: 
                 df_cpu_iteration = df_cpu[cond1 & cond2]
             except:
-                print('CPU data not within iterations')
+                print_warning('CPU data are not within iterations')
             
-            if len(df_gpu_iteration) > 0  or len(df_strace_iteration) > 0 :
-                iter_list.append(iter_profile(cfg, iter_summary_fields, df_cpu_iteration, df_gpu_iteration, df_strace_iteration, df_mpstat_iteration))
+            if len(df_gpu_iteration) > 0 or len(df_strace_iteration) > 0 :
+                iter_list.append( iter_profile(cfg, iter_summary_fields, df_cpu_iteration, df_gpu_iteration, df_strace_iteration, df_mpstat_iteration))
         iter_summary = pd.DataFrame( iter_list, columns=iter_summary_fields )
+
+        elapsed_times = []    
+        for i in range(1,len(times)):
+           elapsed_times.append(times[i]-times[i-1]) 
+
         #print(iter_summary)
         if not iter_summary.empty:
             mean_fw_time = iter_summary['fw_time'].mean()
@@ -464,10 +470,13 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
             mean_mpstat_usr = int(iter_summary['mpstat_usr'].mean())
             mean_mpstat_sys = int(iter_summary['mpstat_sys'].mean())
             print("Elapsed time of initial iteration (s): %.6lf " % iter_summary.loc[0,'elapsed_time'])
-            mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'])
+            gmean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'])
+            mean_step_time =  iter_summary['elapsed_time'].mean()
             if cfg.num_iterations > 1:
                 mean_step_time = scipy.stats.gmean(iter_summary['elapsed_time'].iloc[1:])
+            print('Averaged per-iteration elapsed time (strict) (s) %.6lf' % mean(elapsed_times))
             print('Averaged per-iteration elapsed time (s) %.6lf' % mean_step_time)
+            print('GMEAN of per-iteration elapsed time (s) %.6lf' % gmean_step_time)
             #print("Averaged CPU time  (s): %.6lf " % mean_cpu_time)
             print("Averaged SYSCALL time  (s): %.6lf " % mean_syscall_time)
             print("Averaged CUDA GPU time (s): %.6lf " % mean_gpu_time)

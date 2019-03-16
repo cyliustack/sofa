@@ -13,7 +13,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import requests
-
+import time
 from sofa_aisi import *
 from sofa_common import *
 from sofa_config import *
@@ -318,9 +318,11 @@ class ProfiledDomainDNN:
 
 def sofa_analyze(cfg):
     filein = []
-    df_gpu = []
-    df_cpu = []
-    df_vmstat = []
+    df_cpu = pd.DataFrame([], columns=cfg.columns)
+    df_gpu = pd.DataFrame([], columns=cfg.columns)
+    df_net = pd.DataFrame([], columns=cfg.columns)
+    df_mpstat = pd.DataFrame([], columns=cfg.columns)
+    df_vmstat = pd.DataFrame([], columns=cfg.columns)
     iter_summary = None
     logdir = cfg.logdir
 
@@ -389,35 +391,41 @@ def sofa_analyze(cfg):
         df_cpu = pd.read_csv(filein_cpu)
         cpu_profile(logdir, cfg, df_cpu)
     except IOError as e:
+        df_cpu = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_cpu)
 
     try:
         df_strace = pd.read_csv(filein_strace)
     except IOError as e:
+        df_strace = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_strace)
 
     try:
         df_net = pd.read_csv(filein_net)
         net_profile(logdir, cfg, df_net)
     except IOError as e:
+        df_net = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_net)
 
     try:
         df_vmstat = pd.read_csv(filein_vmstat)
         vmstat_profile(logdir, cfg, df_vmstat)
     except IOError as e:
+        df_vmstat = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_vmstat)
 
     try:
         df_mpstat = pd.read_csv(filein_mpstat)
         features = mpstat_profile(logdir, cfg, df_mpstat, features)
     except IOError as e:
+        df_mpstat = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_mpstat)
 
     try:
         df_gpu = pd.read_csv(filein_gpu)
         features = gpu_profile(logdir, cfg, df_gpu, features)
     except IOError:
+        df_gpu = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found. If there is no need to profile GPU, just ignore it." % filein_gpu)
 
     if cfg.enable_aisi:
@@ -434,6 +442,7 @@ def sofa_analyze(cfg):
         potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary)
         print_title('POTATO Feedback')
         r = requests.get(cfg.potato_server+'/image/best')
+        
         print('Tag of optimal image recommended from POTATO: '+ highlight(r.json()['tag']))
         print('Estimated speedup: %.2lfx' % r.json()['score'] )
         print('Optimization action: '+r.json()['description'])

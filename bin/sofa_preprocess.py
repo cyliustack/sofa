@@ -1110,8 +1110,8 @@ def sofa_preprocess(cfg):
     filter_keys.append('exited')
     filter_keys.append('access')
     filter_keys.append('lseek')
+    filter_keys.append('getrusage')
     filter_keys.append('exited')
-    filter_keys.append('read')
     if os.path.isfile('%s/strace.txt' % logdir):
         with open('%s/strace.txt' % logdir) as f:
             lines = f.readlines()
