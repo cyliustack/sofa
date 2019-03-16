@@ -99,6 +99,12 @@ def cpu_profile(logdir, cfg, df):
     
     print("total execution time (s) = %.3lf" % total_exec_time)
 
+    cpu_detail_profile_df = df[['timestamp','duration','name']]
+    cpu_detail_profile_df = cpu_detail_profile_df.sort_values(by=['duration'], ascending=False)
+    cpu_detail_profile_df['ratio(%)'] = cpu_detail_profile_df['duration']/total_exec_time * 100
+    cpu_detail_profile_df = cpu_detail_profile_df[['timestamp','ratio(%)','duration','name']]
+    print(cpu_detail_profile_df[:20].to_string(index=False))
+
 def potato_submit(cfg, data_in):
     headers = {'Content-type': 'application/json'}
     url = cfg.potato_server+'/metric/' + data_in['name']
