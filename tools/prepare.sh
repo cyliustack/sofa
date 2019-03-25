@@ -7,7 +7,7 @@ C_YELLOW="\033[1;93m"
 WITH_SUDO=""
 if [[ $(which sudo) ]]; then 
     echo -e "${C_GREEN}You are going to install SOFA with sudo${C_NONE}"
-    WITH_SUDO="sudo" 
+    WITH_SUDO="sudo -E" 
 fi
 
 # Detect OS distribution
