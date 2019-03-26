@@ -116,6 +116,7 @@ def sofa_record(command, cfg):
     p_strace = None
     print_info(cfg,'SOFA_COMMAND: %s' % command)
     sample_freq = 99
+    command_prefix = ''
 
     if int(open("/proc/sys/kernel/yama/ptrace_scope").read()) != 0:
         print_error(
@@ -250,25 +251,25 @@ def sofa_record(command, cfg):
             command = "sleep %d && echo Done!" % cfg.timeout
             
         p_command = subprocess.Popen(command, shell=True)
-        p_command_pid = p_command.pid
         if cfg.pid > 0 :
             target_pid = cfg.pid 
         else:
-            target_pid = p_command_pid
+            target_pid = p_command.pid
         t_command_begin = time.time()
         print_hint('PID of the target program: %d' % target_pid)
         print_hint('Command: %s' % command)
 
-        with open('%s/strace.txt' % logdir, 'w') as logfile:
-            p_strace = subprocess.Popen(['strace', '-q', '-T', '-t', '-tt', '-f', '-p', str(target_pid)], stderr=logfile)
+
+        if cfg.enable_strace:
+            command_prefix = ' '.join(['strace', '-q', '-T', '-t', '-tt', '-f', '-o', '%s/strace.txt'%logdir]) + ' '
 
         if int(os.system('command -v perf 1>/dev/null')) == 0:
             ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
             if ret.find('not supported') >=0:
-                profile_command = 'perf record -o %s/perf.data -F %s %s -p %d' % (logdir, sample_freq, perf_options, target_pid)
+                profile_command = 'perf record -o %s/perf.data -F %s %s %s' % (logdir, sample_freq, perf_options, command_prefix+command)
                 cfg.perf_events = ""
             else:
-                profile_command = 'perf record -o %s/perf.data -e %s -F %s %s -p %d' % (logdir, cfg.perf_events, sample_freq, perf_options, target_pid) 
+                profile_command = 'perf record -o %s/perf.data -e %s -F %s %s %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command_prefix+command) 
             with open(logdir+'perf_events_used.txt','w') as f:
                 f.write(cfg.perf_events)
 

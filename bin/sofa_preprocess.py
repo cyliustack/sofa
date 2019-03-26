@@ -1139,7 +1139,7 @@ def sofa_preprocess(cfg):
                         strace_info = ''.join(fields[3:-3])
                     else:
                         tid = pid
-                        t_begin = float(fields[0])
+                        t_begin = float(fields[1])
                         strace_info = ''.join(fields[1:-3])
                     #strace_info = strace_info.split('(')[0] 
                     try:

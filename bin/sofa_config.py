@@ -40,3 +40,4 @@ class SOFA_Config:
     pid = -1
     timeout = 30
     columns = ['timestamp', 'duration']
+    enable_strace = False
