@@ -410,6 +410,7 @@ def sofa_preprocess(cfg):
     vm_wa_traces = []
     vm_st_traces = []
     mpstat_traces = []
+    diskstat_traces = []
     strace_traces = []
     nvsmi_sm_traces = []
     nvsmi_mem_traces = []
@@ -497,6 +498,66 @@ def sofa_preprocess(cfg):
             
 
         mpstat_traces = list_to_csv_and_traces(logdir, mpstat_list, 'mpstat.csv', 'w')
+
+    with open('%s/diskstat.txt' % logdir) as f:
+        diskstats = f.readlines()
+        diskstat_list = []
+        diskstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+        tmp_list = []
+        for diskstat in diskstats:
+            m = diskstat[:-1]
+            m = m.split(',')
+            tmp_list.append(m)
+        devs = list(map(lambda x: x[1], tmp_list))
+        n_dev = len(set(devs)) 
+
+        for i in range(len(diskstats)):
+            if i < n_dev:
+                continue
+            m = diskstats[i][:-1]
+            m = m.split(',')
+            dev = m[1]
+            m_last = diskstats[i-n_dev][:-1]
+            m_last = m_last.split(',')
+            d_read = int(m[2]) - int(m_last[2])
+            d_write = int(m[3]) - int(m_last[3])
+            d_disk_total = d_read + d_write
+            if not d_disk_total:
+                continue
+            t_begin = float(m[0])
+
+            if not cfg.absolute_timestamp:
+                t_begin = t_begin - cfg.time_base     
+            
+            event = -1
+            rw = d_disk_total
+            deviceId = -1
+            copyKind = -1
+            payload = -1
+            bandwidth = -1
+            pkt_src = -1
+            pkt_dst = -1
+            pid = -1
+            tid = -1
+            diskstat_info = 'diskstat_dev:%s (read|write): |%3d|%3d|' % (m[1], d_read, d_write)
+            trace = [
+                t_begin,
+                event,
+                rw,
+                deviceId,
+                copyKind,
+                payload,
+                bandwidth,
+                pkt_src,
+                pkt_dst,
+                pid,
+                tid,
+                diskstat_info,
+                0]
+
+            diskstat_list.append(trace)
+        diskstat_traces = list_to_csv_and_traces(logdir, diskstat_list, 'diskstat.csv', 'w')
+
     # procs -----------------------memory---------------------- ---swap-- -
     #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
     #  2  0            0    400091552       936896    386150912    0    0     3    18    0    1   5   0  95   0   0
@@ -1484,6 +1545,16 @@ def sofa_preprocess(cfg):
         sofatrace.x_field = 'timestamp'
         sofatrace.y_field = 'duration'
         sofatrace.data = mpstat_traces
+        traces.append(sofatrace)
+
+    if cfg.enable_diskstat:
+        sofatrace = SOFATrace()
+        sofatrace.name = 'diskstat'
+        sofatrace.title = 'DISK_USAGE'
+        sofatrace.color = 'GreenYellow'
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = diskstat_traces
         traces.append(sofatrace)
 
 
