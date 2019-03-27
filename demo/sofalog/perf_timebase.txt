@@ -1,8 +1,8 @@
-            perf  7097 74861.357120:          1 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
-            perf  7097 74861.357123:          1 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
-            perf  7097 74861.357124:         46 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
-            perf  7097 74861.357126:       3914 cycles:ppp:  ffffffff86e0b535 intel_bts_enable_local ([kernel.kallsyms])
-              ls  7097 74861.357128:     360639 cycles:ppp:  ffffffff87027f25 setup_new_exec ([kernel.kallsyms])
-              ls  7097 74861.357218:   21352856 cycles:ppp:  ffffffff875256be system_call_after_swapgs ([kernel.kallsyms])
-              ls  7097 74861.362485: 108395911221988 cycles:ppp:  ffffffff870d7786 avc_has_perm_noaudit ([kernel.kallsyms])
-1548903845.299512 1548903845.299512
+            perf  7061 4848761.241442:          1 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
+            perf  7061 4848761.241444:          1 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
+            perf  7061 4848761.241446:         43 cycles:ppp:  ffffffff86e6a3a8 native_write_msr_safe ([kernel.kallsyms])
+            perf  7061 4848761.241447:       3701 cycles:ppp:  ffffffff86e0a61f intel_pmu_handle_irq ([kernel.kallsyms])
+              ls  7061 4848761.241449:     332604 cycles:ppp:  ffffffff86f80480 __perf_event__output_id_sample ([kernel.kallsyms])
+              ls  7061 4848761.241531:   20781978 cycles:ppp:      7f636b536290 [unknown] ([unknown])
+              ls  7061 4848761.246664: 123881041938317 cycles:ppp:  ffffffff8717fe8b strncpy_from_user ([kernel.kallsyms])
+1553677632.969886 1553677632.969886
