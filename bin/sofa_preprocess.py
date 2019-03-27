@@ -525,6 +525,10 @@ def sofa_preprocess(cfg):
             if not d_disk_total:
                 continue
             t_begin = float(m[0])
+
+            if not cfg.absolute_timestamp:
+                t_begin = t_begin - cfg.time_base     
+            
             event = -1
             rw = d_disk_total
             deviceId = -1
