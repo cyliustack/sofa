@@ -373,8 +373,11 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
         name_table = None
         final_iteration_table = ''
 
-        if cfg.aisi_via_strace or len(df_gpu) == 0:  
-            final_pattern_seq, final_iteration_table, name_table = iter_detect(logdir, cfg, df_strace, 0.01, 0.8, cfg.num_iterations)
+        if cfg.aisi_via_strace or len(df_gpu) == 0: 
+            if len(df_strace) > 0:
+                final_pattern_seq, final_iteration_table, name_table = iter_detect(logdir, cfg, df_strace, 0.01, 0.8, cfg.num_iterations)
+            else:
+                print_warning("No strace found, you may need to record strace by: sofa record --enable_strace.")
         else:
             final_pattern_seq, final_iteration_table, name_table = iter_detect(logdir, cfg, df_gpu_x1, 0.01, 0.8, cfg.num_iterations)
      

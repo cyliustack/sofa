@@ -98,7 +98,7 @@ def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
 # 359342/359342 2493492.850128:          1 cycles:  ffffffff8106450a
 # native_write_msr_safe
 
-def cpu_trace_read(sample, t_offset, cfg, cpu_mhz_xp, cpu_mhz_fp):
+def cpu_trace_read(sample, cfg, t_offset, cpu_mhz_xp, cpu_mhz_fp):
     fields = sample.split()
     event = event_raw = 0
     counts = 0
@@ -112,6 +112,9 @@ def cpu_trace_read(sample, t_offset, cfg, cpu_mhz_xp, cpu_mhz_fp):
         func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6]
         counts = float(fields[2])
         event_raw = 1.0 * int("0x01" + fields[4], 16)
+
+    if not cfg.absolute_timestamp:
+        time = time - cfg.time_base
 
     t_begin = time + t_offset
     t_end = time + t_offset
@@ -141,8 +144,12 @@ def cpu_trace_read(sample, t_offset, cfg, cpu_mhz_xp, cpu_mhz_fp):
              0]                                # 12
     return trace
 
-def net_trace_read(packet, t_offset):
+def net_trace_read(packet, cfg, t_offset):
     time = float(packet.split()[0])
+    
+    if not cfg.absolute_timestamp:
+        time = time - cfg.time_base
+    
     t_begin = time + t_offset
     t_end = time + t_offset
     if packet.split()[1] != 'IP':
@@ -175,6 +182,7 @@ def net_trace_read(packet, t_offset):
 
 def cuda_api_trace_read(
         record,
+        cfg,
         indices,
         n_cudaproc,
         ts_rescale,
@@ -186,6 +194,10 @@ def cuda_api_trace_read(
 
     # print("kernel name = %s" % kernel_name)
     time = float(values[indices.index('Start')]) / ts_rescale + t_offset
+
+    if not cfg.absolute_timestamp:
+        time = time - cfg.time_base
+
     duration = float(values[indices.index('Duration')]) / dt_rescale
     t_begin = time
     t_end = time + duration
@@ -216,6 +228,7 @@ def cuda_api_trace_read(
 
 def gpu_trace_read(
         record,
+        cfg, 
         indices,
         n_cudaproc,
         ts_rescale,
@@ -226,6 +239,10 @@ def gpu_trace_read(
     kernel_name = values[indices.index('Name')]
 
     time = float(values[indices.index('Start')]) / ts_rescale + t_offset
+    
+    if not cfg.absolute_timestamp:
+        time = time - cfg.time_base
+    
     duration = float(values[indices.index('Duration')]) / dt_rescale
     t_begin = time
     t_end = time + duration
@@ -338,7 +355,7 @@ def traces_to_json(traces, path, cfg):
 
 
 def sofa_preprocess(cfg):
-    t_glb_base = 0
+    cfg.time_base = 0
     t_glb_gpu_base = 0
     logdir = cfg.logdir 
 
@@ -362,9 +379,9 @@ def sofa_preprocess(cfg):
 
     with open(logdir + 'sofa_time.txt') as f:
         lines = f.readlines()
-        t_glb_base = float(lines[0]) + cfg.cpu_time_offset
+        cfg.time_base = float(lines[0]) + cfg.cpu_time_offset
         print_info(cfg,'Time offset applied to timestamp (s):' + str(cfg.cpu_time_offset))
-        print_info(cfg,'SOFA global time base (s):' + str(t_glb_base))
+        print_info(cfg,'SOFA global time base (s):' + str(cfg.time_base))
 
     cpu_mhz_xp = [0.0]
     cpu_mhz_fp = [3000.0]
@@ -447,6 +464,10 @@ def sofa_preprocess(cfg):
             d_mp_irq = d_mp[7] * 100 / float(d_mp_total)
             cpu_time = (d_mp_total - d_mp[5]) * 0.01
             t_begin = mpstat[i,0]
+
+            if not cfg.absolute_timestamp:
+                t_begin = t_begin - cfg.time_base
+
             deviceId = core
             metric = cpu_time
             event = -1
@@ -525,7 +546,11 @@ def sofa_preprocess(cfg):
                     vm_wa = float(fields[15]) + 1e-5
                     vm_st = float(fields[16]) + 1e-5
 
-                    t_begin = t + t_glb_base
+                    if cfg.absolute_timestamp:
+                        t_begin = t + cfg.time_base
+                    else:
+                        t_begin = t
+                    
                     deviceId = cpuid = -1
                     event = -1
                     copyKind = -1
@@ -728,7 +753,10 @@ def sofa_preprocess(cfg):
                         nvsmi_sm = float(fields[1]) + 1e-5
                         nvsmi_mem = float(fields[2]) + 1e-5
 
-                        t_begin = t + t_glb_base
+                        if cfg.absolute_timestamp: 
+                            t_begin = t + cfg.time_base
+                        else:
+                            t_begin = t
                         deviceId = cpuid = nvsmi_id
                         event = -1
                         copyKind = -1
@@ -793,6 +821,7 @@ def sofa_preprocess(cfg):
                     res = pool.map(
                         partial(
                             net_trace_read,
+                            cfg=cfg,
                             t_offset=0),
                         packets)
                 res_viz = list_downsample(res, cfg.plot_ratio)
@@ -906,6 +935,7 @@ def sofa_preprocess(cfg):
                     res = pool.map(
                         partial(
                             gpu_trace_read,
+                            cfg=cfg,
                             indices=indices,
                             ts_rescale=ts_rescale,
                             dt_rescale=dt_rescale,
@@ -1004,6 +1034,7 @@ def sofa_preprocess(cfg):
                         res = pool.map(
                             partial(
                                 cuda_api_trace_read,
+                                cfg=cfg,
                                 indices=indices,
                                 ts_rescale=ts_rescale,
                                 dt_rescale=dt_rescale,
@@ -1141,6 +1172,10 @@ def sofa_preprocess(cfg):
                         tid = pid
                         t_begin = float(fields[1])
                         strace_info = ''.join(fields[1:-3])
+                    
+                    if not cfg.absolute_timestamp:
+                        t_begin = t_begin - cfg.time_base
+                    
                     #strace_info = strace_info.split('(')[0] 
                     try:
                         duration = float(fields[-1].split('<')[1].split('>')[0]) 
@@ -1193,8 +1228,8 @@ def sofa_preprocess(cfg):
                 res = pool.map(
                     partial(
                         cpu_trace_read,
-                        t_offset = perf_timebase_unix - perf_timebase_uptime,
                         cfg = cfg,
+                        t_offset = perf_timebase_unix - perf_timebase_uptime,
                         cpu_mhz_xp = cpu_mhz_xp,
 			cpu_mhz_fp = cpu_mhz_fp),
                     samples)
@@ -1252,6 +1287,10 @@ def sofa_preprocess(cfg):
 
                         skt = int(fields[1])
                         t_begin = float(fields[0])
+
+                        if not absolute_timestamp:
+                            t_begin = t_begin - cfg.time_base
+
                         deviceId = skt
                         event = -1
                         copyKind = -1
@@ -1333,6 +1372,9 @@ def sofa_preprocess(cfg):
                         pid = tid = -1
                         pcm_memory_info = "PCM=memory | skt=%d | RD=%d (MB/s)" % (
                             skt, pcm_memory_rd_count)
+
+                        if not absolute_timestamp:
+                            t_begin = t_begin - cfg.time_base
 
                         bandwidth = pcm_memory_rd_count
                         trace = [

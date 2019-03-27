@@ -77,6 +77,9 @@ def cpu_trace_read_hsg(sample, t_offset, cfg, cpu_mhz_xp, cpu_mhz_fp):
         feature_types = fields[3].split(':')[0]
         mem_addr = fields[4]
 
+    if not cfg.absolute_timestamp:
+        time = time - cfg.time_base
+
     t_begin = time + t_offset
     t_end = time + t_offset
 

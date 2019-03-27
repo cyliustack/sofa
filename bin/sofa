@@ -130,6 +130,8 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help='IP address of POTATO server')
+    parser.add_argument('--absolute_timestamp', dest='absolute_timestamp', action='store_true')
+    parser.set_defaults(absolute_timestamp=False)
 
     sofa_exec_path = os.path.abspath( __file__ )
     if Path(sofa_exec_path).is_symlink():
@@ -264,6 +266,9 @@ if __name__ == "__main__":
 
     if args.perf_events is not None:
         cfg.perf_events = args.perf_events
+
+    if args.absolute_timestamp is not None:
+        cfg.absolute_timestamp = args.absolute_timestamp
 
     print_info(cfg, "Ratio of raw data points to plotting points : %d" % cfg.plot_ratio)
     for filter in cfg.cpu_filters:
