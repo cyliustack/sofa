@@ -436,7 +436,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
                 cond1 = (df_gpu_x1['timestamp'] >= times[i-1])
                 cond2 = (df_gpu_x1['timestamp'] <  times[i])
                 
-            if len(df_gpu_iteration) > 0:
+            if len(df_gpu_x1) > 0:
                 df_gpu_iteration = df_gpu_x1[ cond1 & cond2 ]
             
             try: 
