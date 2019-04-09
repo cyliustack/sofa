@@ -314,7 +314,14 @@ def sofa_hsg_to_sofatrace(cfg, swarm_groups, traces): # record_for_auto_caption 
         #print('*************************')
         # --- for auto-caption --- #
         dummy_i += 1
-
+    csv_input = pd.read_csv(auto_caption_filename_with_path, names=list(copy))
+    if 'instructions' not in copy.columns:
+        csv_input.insert(17, 'instructions', 0)
+    if 'cache-misses' not in copy.columns:
+        csv_input.insert(18, 'cache-misses', 0)
+    if 'branch-miss' not in copy.columns:
+        csv_input.insert(19, 'branch-misses', 0)
+    csv_input.to_csv(auto_caption_filename_with_path, header=False)
     return traces
 
 def matching_two_dicts_of_swarm(standard_dict, matching_dict, res_dict):
@@ -457,7 +464,8 @@ def sofa_swarm_diff(cfg):
     for level in df.columns:
         # tuple to list
         flat_column_names.extend(list(level)) # extend(): in-place
-
+    if '' in flat_column_names:
+        flat_column_names.remove('')
     # remove duplicate and empty
     #flat_column_names = filter(None, flat_column_names) # filter empty
     flat_column_names = list(set(flat_column_names)) # deduplicate
@@ -541,7 +549,7 @@ def sofa_swarm_diff(cfg):
     log_str = '/'.join(log_list) # str.join() returns str
     output_logdir =  log_str + '/' + 'sofalog/' # please adjust the output directory path to fit your need
     if not os.path.exists(output_logdir): # df.to_csv does not create directory automatically, create it manually
-        os.mkdir(output_logdir)
+        os.makedirs(output_logdir)
     final_df.to_csv(os.path.join(output_logdir, 'swarm_diff.csv'))
 
     # check result
