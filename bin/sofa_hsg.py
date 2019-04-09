@@ -370,8 +370,6 @@ def evaluation_of_matching_result(base_df, matching_df1, final_df, eval_list, tm
     # calculate num_t_stdswarm & total_num_t_mtchswarm
     for id_of_cluster in final_df.index:
         base_id = final_df['base_cluster_ID'].loc[id_of_cluster]
-        #print('\n# of cluster in standard cluster: {}\n'.format(base_id))
-
         bs_df = base_df.groupby(['cluster_ID','function_name'])\
                         .agg({'function_name':['count']})\
                         .loc[base_id]\
@@ -384,7 +382,6 @@ def evaluation_of_matching_result(base_df, matching_df1, final_df, eval_list, tm
 
         # total_num_t_mtchswarm
         match_id = final_df['match_cluster_ID'].loc[id_of_cluster]
-        #print('\n# of cluster in matching cluster: {}'.format(match_id))
 
         match_df = matching_df1.groupby(['cluster_ID','function_name'])\
                         .agg({'function_name':['count']})\
@@ -448,8 +445,8 @@ def sofa_swarm_diff(cfg):
                 "cycles", "instructions", "cache-misses", "branch-misses",
                 "cluster_ID"]
     base_df = pd.read_csv(cfg.base_logdir + 'auto_caption.csv', names=column_list)
-    print(base_df)
-    print('There are {} clusters in standard_df\n'.format(len(base_df['cluster_ID'].unique())))
+    #print(base_df)
+    #print('There are {} clusters in standard_df\n'.format(len(base_df['cluster_ID'].unique())))
 
     base_df_groupby = base_df.groupby(['cluster_ID','function_name']).agg({'function_name':['count']})
 
@@ -480,10 +477,10 @@ def sofa_swarm_diff(cfg):
     base_df_dict = {}
     # Transform multi-index to single index, and update string to dict standard_df_dict
     for id_of_cluster in base_df['cluster_ID'].unique():
-        print('\n# of cluster: {}'.format(id_of_cluster))
+        #print('\nCluster ID : {}'.format(id_of_cluster))
         df = base_df_groupby.loc[id_of_cluster].reset_index()
         df.columns = flat_column_names
-        print(df.sort_values(by=['count'], ascending=False)) # pd.DataFrame.sort_values() return a DataFrame
+        #print(df.sort_values(by=['count'], ascending=False)) # pd.DataFrame.sort_values() return a DataFrame
         base_df_dict.update({id_of_cluster: df.function_name.str.cat(sep='  ', na_rep='?')})
 
     ## Dataframe that i want to match
@@ -511,8 +508,8 @@ def sofa_swarm_diff(cfg):
     matching_df1_dict = {}
 
     # Transform multi-index to single index, and update string to dict standard_df_dict
-    for id_of_cluster in matching_df1['cluster_ID'].unique():
-        # print('\n# of cluster: {}'.format(id_of_cluster))
+    for id_of_cluster in matching_df1['cluster_ID'].unique(): 
+        #print('\nCluster ID : {}'.format(id_of_cluster))
         df = matching_df1_groupby.loc[id_of_cluster].reset_index()
         df.columns = flat_column_names
         # print(df.sort_values(by=['count'], ascending=False))
