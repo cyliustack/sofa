@@ -49,21 +49,21 @@ function install_python_packages()
 
     if [[ $(which yum) ]]  ; then
         echo "yum detected"
-	$WITH_SUDO yum install -y epel-release
+	    $WITH_SUDO yum install -y epel-release
         $WITH_SUDO yum install -y https://centos7.iuscommunity.org/ius-release.rpm
         $WITH_SUDO yum install -y python36u python36u-pip python36u-devel
     elif [[ "${OS}" == "Ubuntu" ]] && ( [[ "${VERSION}" == "14.04"* ]] || [[ "${VERSION}" == "16.04"* ]] ) ; then	
         $WITH_SUDO apt-get install software-properties-common -y
         $WITH_SUDO add-apt-repository ppa:deadsnakes/ppa -y
         $WITH_SUDO apt-get update -y
-        $WITH_SUDO apt-get install python3.6 python3.6-dev -y
+        $WITH_SUDO apt-get install python3.6 python3.6-dev python3.6-tk -y
 	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
-	$WITH_SUDO python3.6 get-pip.py
+	    $WITH_SUDO python3.6 get-pip.py
         $WITH_SUDO rm get-pip.py
     elif [[ $(which apt) ]] ; then
-	$WITH_SUDO add-apt-repository universe
+	    $WITH_SUDO add-apt-repository universe
         $WITH_SUDO apt update -y
-        $WITH_SUDO apt install -y python3.6 python3-pip python3-dev 
+        $WITH_SUDO apt install -y python3.6 python3.6-pip python3.6-dev python3.6-tk 
     else
 	    file_pytar="Python-3.6.0.tar.xz"
 	    wget https://www.python.org/ftp/python/3.6.0/$file_pytar
