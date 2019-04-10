@@ -8,7 +8,6 @@ import re
 import sys
 from functools import partial
 from operator import attrgetter, itemgetter
-from matplotlib import pyplot as plt   
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -264,20 +263,6 @@ def mpstat_profile(logdir, cfg, df, features):
                         'value':[active_cpu_ratio] }, 
                         columns=['name','value'])
     features = pd.concat([features, df_feature])   
-    fig = plt.figure()
-    ax1 = plt.subplot(2, 1, 1)
-    df_summary.plot.bar(stacked=True);
-    #plt.ylabel('USR')
-    plt.subplot(2, 1, 2)
-    df_summary.plot.area()
-    #plt.ylabel('SYS')
-    #df.query('category == 1')['duration'].hist(bins=10)
-    #plt.tight_layout()
-    #plt.xlabel('Percentage of CPU Utilization')
-    #plt.ylabel('IOW')
-    #df.query('category == 3')['duration'].hist(bins=10)
-    plt.tight_layout()
-    fig.savefig(logdir + 'mpstat.png')
     return features
 
 class ProfiledDomainDNN:
