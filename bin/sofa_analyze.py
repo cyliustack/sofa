@@ -17,6 +17,7 @@ from sofa_common import *
 from sofa_config import *
 from sofa_hsg import *
 from sofa_print import *
+import potato_client as potato 
 
 
 def payload_sum(df):
@@ -102,11 +103,6 @@ def cpu_profile(logdir, cfg, df):
     cpu_detail_profile_df['ratio(%)'] = cpu_detail_profile_df['duration']/total_exec_time * 100
     cpu_detail_profile_df = cpu_detail_profile_df[['timestamp','ratio(%)','duration','name']]
     print(cpu_detail_profile_df[:20].to_string(index=False))
-
-
-def potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary):
-    print_title("POTATO Client")
-
 
 def vmstat_profile(logdir, cfg, df):
     print_title("VMSTAT Profiling:")
@@ -361,12 +357,10 @@ def sofa_analyze(cfg):
         print('%s%s%s' % (str(i).ljust(10), name.ljust(30), ('%.3lf'%value).ljust(20)))
 
     if cfg.potato_server:
-        potato_client(logdir, cfg, df_cpu, df_gpu, df_vmstat, iter_summary)
         print_title('POTATO Feedback')
-        r = {'image':'im001', 'score':1.2, 'action':'None'}
-        print('Tag of optimal image recommended from POTATO: '+ highlight(r['image']))
-        print('Estimated speedup: %.2lfx' % r['score'] )
-        print('Optimization action: '+r['action'])
+        hint, docker_image = potato.get_hint(features)
+        print('Optimization hints: ' + hint)
+        print('Tag of optimal image recommended from POTATO: ' + highlight(docker_image))
         print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
     #print_warning('Something wrong with POTATO client')
 
