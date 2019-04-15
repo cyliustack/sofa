@@ -182,7 +182,7 @@ def mpstat_profile(logdir, cfg, df, features):
                                                 df_summary.iloc[i]['IOW'],
                                                 df_summary.iloc[i]['IRQ'] ))
 
-    total_cpu_time = df_summary[['USR','SYS','IOW','IRQ']].sum().sum()
+    total_cpu_time = df_summary[['USR','SYS','IRQ']].sum().sum()
     print('Active CPU Time (s): %.3lf' % total_cpu_time) 
     active_cpu_ratio = int(100*total_cpu_time / (n_cores*cfg.elapsed_time))
     print('Active CPU ratio (%%): %3d' % active_cpu_ratio)
