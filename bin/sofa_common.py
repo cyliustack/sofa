@@ -90,7 +90,7 @@ def comm_profile(logdir, cfg, df_gpu, features):
     for key, item in groups:
         if key == 1 or key == 2 or key == 8 or key == 10 :
             bw_table[key] = groups.get_group(key).mean()
-            print('%s : %.2lf (gb/s)' % (cktable[key], bw_table[key]))
+            print('%s : %.2lf (GB/s)' % (cktable[key], bw_table[key]))
 
     print("\n=========== Duration report for large data-copy (64kb+) =======")
     h2d_bandwidth = d2h_bandwidth = d2d_bandwidth = p2p_bandwidth = 16
