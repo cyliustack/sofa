@@ -15,12 +15,14 @@ BIN_FILES=(bin/sofa
            bin/sofa_record.py
            bin/sofa_preprocess.py
            bin/sofa_analyze.py
-           bin/sofa_deepprof.py
            bin/STree.py
            bin/sofa_viz.py
            bin/sofa_config.py
            bin/sofa_print.py
            bin/sofa_common.py
+           bin/potato_client.py
+           bin/potato_pb2.py
+           bin/potato_pb2_grpc.py
            sofa-pcm/pcm-core.x
            sofa-pcm/pcm-numa.x
            sofa-pcm/pcm-pcie.x
