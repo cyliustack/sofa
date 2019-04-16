@@ -17,8 +17,42 @@ from sofa_common import *
 from sofa_config import *
 from sofa_hsg import *
 from sofa_print import *
-import potato_client as potato 
 
+import grpc
+import potato_pb2
+import potato_pb2_grpc
+import socket
+
+# input: pfv(performance feature vector), Pandas.DataFrame
+# output: hint, docker_image  
+def get_hint(features):
+
+    if len(features) > 0:
+        pfv = potato_pb2.PerformanceFeatureVector() 
+        for i in range(len(features)):
+            name = features.iloc[i]['name']
+            value = features.iloc[i]['value']
+            print('%s%s%s' % (str(i).ljust(10), name.ljust(30), ('%.3lf'%value).ljust(20)))
+            pfv.name.append(name)
+            pfv.value.append(value)
+			
+        print('Wait for response from POTATO server...')
+        myhostname = socket.gethostname()
+        channel = grpc.insecure_channel('localhost:50051')
+        stub = potato_pb2_grpc.HintStub(channel)
+        request = potato_pb2.HintRequest( hostname = myhostname,
+                                          pfv = pfv) 
+        response = stub.Hint(request)
+        hint = response.hint 
+        docker_image = response.docker_image
+    else:
+        hint = 'There is no pfv to get hints.' 
+        docker_image = 'NA' 
+
+    print(hint)
+    print(docker_image) 
+    return hint, docker_image 
+     
 
 def payload_sum(df):
     print((len(df)))
@@ -351,6 +385,7 @@ def sofa_analyze(cfg):
                     
     print_title('Final Performance Features')
     print('%s%s%s' % ('ID'.ljust(10),'Feature'.ljust(30),'Value'.ljust(20)) )
+    
     for i in range(len(features)):
         name = features.iloc[i]['name']
         value = features.iloc[i]['value']
@@ -358,10 +393,9 @@ def sofa_analyze(cfg):
 
     if cfg.potato_server:
         print_title('POTATO Feedback')
-        hint, docker_image = potato.get_hint(features)
+        hint, docker_image = get_hint(features)
         print('Optimization hints: ' + hint)
         print('Tag of optimal image recommended from POTATO: ' + highlight(docker_image))
         print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
-    #print_warning('Something wrong with POTATO client')
-
+    
     print('\n\n')
