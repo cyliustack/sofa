@@ -73,52 +73,54 @@ def gpu_profile(logdir, cfg, df_gpu, features):
     print_title("GPU Profiling")
     print('Per-GPU time (s):')
     groups = df_gpu.groupby("deviceId")["duration"]
-    total_gpu_time = 0
+    gpu_time = 0
     for key, item in groups:
         gpuid = int(float(key))
         per_gpu_time = groups.get_group(key).sum()
         print("[%d]: %lf" % (gpuid, per_gpu_time))
-        total_gpu_time = total_gpu_time + per_gpu_time 
+        gpu_time = gpu_time + per_gpu_time 
     n_gpus = len(groups)
-    mean_gpu_time = total_gpu_time / n_gpus
-    print(("Total GPU time of all GPUs (s) = %.3lf" % total_gpu_time))
-    print(("Mean per-GPU time of all GPUs (s) = %.3lf" % mean_gpu_time))
+    print(("Total GPU time of all GPUs (s) = %.3lf" % gpu_time))
    
-    total_kernel_time = 0
+    kernel_time = 0
     grouped_df = df_gpu.groupby("copyKind")["duration"]
     for key, item in grouped_df:
         if key == 0:
-            total_kernel_time = grouped_df.get_group(key).sum()
+            kernel_time = grouped_df.get_group(key).sum()
 
-    all_reduce_time = 0
+    nccl_time = 0
     grouped_df = df_gpu.groupby("name")["duration"]
     for key, item in grouped_df:
         #print("[%s]: %lf" % (key, grouped_df.get_group(key).sum()))
-        if key.find("AllReduce") != -1:
-            all_reduce_time = all_reduce_time + grouped_df.get_group(key).sum()
+        if key.find("nccl") != -1:
+            nccl_time = nccl_time + grouped_df.get_group(key).sum()
 
     features = comm_profile(logdir, cfg, df_gpu, features)
 
     get_top_k_events(df_gpu, 10)
-    df = pd.DataFrame({ 'name':['total_gpu_time', 'mean_gpu_time', 'total_kernel_time', 'all_reduce_time'], 
-                        'value':[total_gpu_time, mean_gpu_time, total_kernel_time, all_reduce_time] }, 
+    df = pd.DataFrame({'name':['gpu_time', 'num_gpus', 'kernel_time', 'nccl_time'], 
+                        'value':[gpu_time, n_gpus, kernel_time, nccl_time] }, 
                         columns=['name','value'])
     features = pd.concat([features, df])
     return features
 
-def net_profile(logdir, cfg, df):
+def net_profile(logdir, cfg, df, features):
     print_title("Network Profiling:")
     grouped_df = df.groupby("name")["duration"]
-    total_net_time = 0
+    net_time = 0
     n_packets = 0
     for key, item in grouped_df:
         #print("[%s]: %lf" % (key, grouped_df.get_group(key).sum()))
         if key.find("network:tcp:") != -1:
-            total_net_time = total_net_time + grouped_df.get_group(key).sum()
+            net_time = net_time + grouped_df.get_group(key).sum()
             n_packets = n_packets + 1
-    print(("total network time (s) = %.3lf" % total_net_time))
+    print(("total network time (s) = %.3lf" % net_time))
     print(("total amount of network packets  = %d" % n_packets))
-
+    df = pd.DataFrame({'name':['net_time'], 
+                        'value':[net_time] }, 
+                        columns=['name','value'])
+    features = pd.concat([features, df])
+    return features
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
@@ -138,7 +140,7 @@ def cpu_profile(logdir, cfg, df):
     cpu_detail_profile_df = cpu_detail_profile_df[['timestamp','ratio(%)','duration','name']]
     print(cpu_detail_profile_df[:20].to_string(index=False))
 
-def vmstat_profile(logdir, cfg, df):
+def vmstat_profile(logdir, cfg, df, features):
     print_title("VMSTAT Profiling:")
     df_name = df['name']
 
@@ -170,8 +172,8 @@ def mpstat_topdown(cfg, df_mpstat, features):
 
 def mpstat_profile(logdir, cfg, df, features):
     print_title("MPSTAT Profiling:")
-    n_cores = int(df['deviceId'].max() + 1)
-    df_summary = pd.DataFrame( np.zeros((n_cores,5)), columns=['USR','SYS','IDL','IOW','IRQ'])
+    num_cores = int(df['deviceId'].max() + 1)
+    df_summary = pd.DataFrame( np.zeros((num_cores,5)), columns=['USR','SYS','IDL','IOW','IRQ'])
     for i in range(len(df)):
         dt = df.iloc[i]['duration']
         core = int(df.iloc[i]['deviceId'])
@@ -218,10 +220,10 @@ def mpstat_profile(logdir, cfg, df, features):
 
     total_cpu_time = df_summary[['USR','SYS','IRQ']].sum().sum()
     print('Active CPU Time (s): %.3lf' % total_cpu_time) 
-    active_cpu_ratio = int(100*total_cpu_time / (n_cores*cfg.elapsed_time))
+    active_cpu_ratio = int(100*total_cpu_time / (num_cores*cfg.elapsed_time))
     print('Active CPU ratio (%%): %3d' % active_cpu_ratio)
-    df_feature = pd.DataFrame({ 'name':['active_cpu_ratio'], 
-                        'value':[active_cpu_ratio] }, 
+    df_feature = pd.DataFrame({ 'name':['num_cores', 'active_cpu_ratio'], 
+                        'value':[num_cores, active_cpu_ratio] }, 
                         columns=['name','value'])
     features = pd.concat([features, df_feature])   
     return features
@@ -338,7 +340,6 @@ def sofa_analyze(cfg):
     # Construct Performance Features
     features = pd.DataFrame({'name':['elapsed_time'], 'value':[cfg.elapsed_time]}, columns=['name','value'])
     
-    
     try:
         df_cpu = pd.read_csv(filein_cpu)
         cpu_profile(logdir, cfg, df_cpu)
@@ -354,14 +355,14 @@ def sofa_analyze(cfg):
 
     try:
         df_net = pd.read_csv(filein_net)
-        net_profile(logdir, cfg, df_net)
+        features = net_profile(logdir, cfg, df_net, features)
     except IOError as e:
         df_net = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_net)
 
     try:
         df_vmstat = pd.read_csv(filein_vmstat)
-        vmstat_profile(logdir, cfg, df_vmstat)
+        features = vmstat_profile(logdir, cfg, df_vmstat, features)
     except IOError as e:
         df_vmstat = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_vmstat)

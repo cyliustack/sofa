@@ -169,7 +169,7 @@ def comm_profile(logdir, cfg, df_gpu, features):
             "payload",
             "bandwidth"])
     
-    df = pd.DataFrame({ 'name':['total_h2d_payload', 'total_d2h_payload', 'total_d2d_payload', 'total_p2p_payload', 
+    df = pd.DataFrame({ 'name':['h2d_payload', 'd2h_payload', 'd2d_payload', 'p2p_payload', 
                                 'h2d_bandwidth', 'd2h_bandwidth', 'd2d_bandwidth', 'p2p_bandwidth', 
                                 'h2d_time', 'd2h_time', 'd2d_time', 'p2p_time'], 
                         'value':[ payload_table[1], payload_table[2], payload_table[8], payload_table[10], 
