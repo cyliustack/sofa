@@ -121,7 +121,6 @@ def sofa_clean(cfg):
 
 def sofa_record(command, cfg):
 
-    p_command = None
     p_perf = None
     p_tcpdump = None
     p_mpstat  = None
@@ -229,7 +228,8 @@ def sofa_record(command, cfg):
         subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
 
         print_info(cfg,"Script path of SOFA: "+cfg.script_path)
-        subprocess.call('%s/sofa_perf_timebase > %s/perf_timebase.txt' % (cfg.script_path,logdir), shell=True)
+        with open(logdir+'/perf_timebase.txt', 'w') as logfile:
+            subprocess.call('%s/sofa_perf_timebase' % (cfg.script_path), shell=True, stderr=logfile, stdout=logfile)
         subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -q -o %s/cuhello.perf.data %s/cuhello' % (logdir,logdir,cfg.script_path), shell=True, stderr=DEVNULL, stdout=DEVNULL)
 
         # sofa_time is time base for vmstat, nvidia-smi
@@ -275,14 +275,12 @@ def sofa_record(command, cfg):
                 p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)
 
         # Primary Profiled Program
-        if cfg.pid > 0:
-            command = "sleep %d && echo Done!" % cfg.timeout
             
-        p_command = subprocess.Popen(command, shell=True)
         if cfg.pid > 0 :
             target_pid = cfg.pid 
         else:
-            target_pid = p_command.pid
+            target_pid = -1
+        
         t_command_begin = time.time()
         print_hint('PID of the target program: %d' % target_pid)
         print_hint('Command: %s' % command)
@@ -305,15 +303,8 @@ def sofa_record(command, cfg):
             p_perf = subprocess.Popen(profile_command, shell=True, stderr=DEVNULL, stdout=DEVNULL)
         
         try:
-            print_info(cfg,"Wait for the target program and profiling process (perf record) to end...")
-            p_command.wait()
-            t_command_end = time.time()
-        except TimeoutExpired:
-            print_error('command: Timeout of profiling process')
-            sys.exit(1)
-
-        try:
             p_perf.wait()
+            t_command_end = time.time()
         except TimeoutExpired:
             print_error('perf: Timeout of profiling process')
             sys.exit(1)
@@ -335,9 +326,6 @@ def sofa_record(command, cfg):
             f_misc.write('pid %d\n' % (target_pid))
 
         print_progress("Epilogue of Recording...")
-        if p_command != None:
-            p_command.terminate()
-            print_info(cfg,"tried terminating the profiled program")
         if p_tcpdump != None:
             p_tcpdump.terminate()
             print_info(cfg,"tried terminating tcpdump")
@@ -369,9 +357,6 @@ def sofa_record(command, cfg):
             print_info(cfg,"tried terminating strace")
     except BaseException:
         print("Unexpected error:", sys.exc_info()[0])
-        if p_command != None:
-            p_command.kill()
-            print_info(cfg,"tried killing the profiled program")
         if p_tcpdump != None:
             p_tcpdump.kill()
             print_info(cfg,"tried killing tcpdump")
