@@ -258,14 +258,15 @@ def vmstat_profile(logdir, cfg, df, features):
     vmstat_traces = pd.DataFrame(records)
     vmstat_traces.columns = vmstat_fieldnames
 
-    vm_bi = vmstat_traces['cs'].mean()
-    vm_bo = vmstat_traces['in'].mean()
-    vm_cs = vmstat_traces['bi'].mean()
-    vm_in = vmstat_traces['bo'].mean()
-    print('sum of vmstat cs: ', vm_bi)
-    print('sum of vmstat in: ', vm_bo)
+    vm_bi = vmstat_traces['bi'].mean()
+    vm_bo = vmstat_traces['bo'].mean()
+    vm_cs = vmstat_traces['cs'].mean()
+    vm_in = vmstat_traces['in'].mean()
     print('sum of vmstat bi: ', vm_cs)
     print('sum of vmstat bo: ', vm_in)
+    print('sum of vmstat cs: ', vm_bi)
+    print('sum of vmstat in: ', vm_bo)
+
     df_feature = pd.DataFrame({ 'name':['vm_bi', 'vm_bo', 'vm_cs', 'vm_in' ], 
                         'value':[vm_bi, vm_bo, vm_cs, vm_in] }, 
                         columns=['name','value'])
