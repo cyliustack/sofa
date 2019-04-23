@@ -1,4 +1,4 @@
-elapsed_time 6.276158
+elapsed_time 3.161659
 cores 4
 vcores 8
-pid 4233
+pid -1
