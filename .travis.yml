@@ -1,6 +1,6 @@
 language: python
 virtualenv:
-  system_site_packages: true
+  system_site_packages: false
 sudo: required
 before_install:
   - ./tools/prepare.sh
