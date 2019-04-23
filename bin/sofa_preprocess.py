@@ -830,7 +830,7 @@ def sofa_preprocess(cfg):
 
                         trace = [
                             t_begin,
-                            event,
+                            0,
                             nvsmi_sm,
                             deviceId,
                             copyKind,
@@ -847,7 +847,7 @@ def sofa_preprocess(cfg):
 
                         trace = [
                             t_begin,
-                            event,
+                            1,
                             nvsmi_mem,
                             deviceId,
                             copyKind,
@@ -866,7 +866,8 @@ def sofa_preprocess(cfg):
                 if len(nvsmi_sm_list)>1:
                     nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
                     nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
-
+                else:
+                    print_warning("Program exectution time is fewer than 3 seconds, so nvsmi trace analysis will not be displayed.")
     # ============ Preprocessing Network Trace ==========================
     filtered_net_groups = []
     if os.path.isfile('%s/sofa.pcap' % logdir):
