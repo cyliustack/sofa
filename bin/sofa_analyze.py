@@ -137,6 +137,30 @@ class Event:
     def __repr__(self):
         return repr((self.name, self.ttype, self.timestamp, self.duration))
 
+def nvsmi_profile(logdir):
+    print_title("SM & MEM Profiling")
+    nv = pd.DataFrame(columns=['GPU_ID', 'SM', 'MEM'])
+    i = 0
+    with open(logdir + '/nvsmi_trace.csv') as nvsmi:
+        lines = nvsmi.readlines()[1:]
+        sm_start = lines[0].split(',')[0]
+        sm_end = lines[-1].split(',')[0]
+        for line in lines:
+            name =  line.split(',')[11]
+            sm = name.split('.')[0].split('_')[-1]
+            mem = name.split('.')[-2].split('_')[-1]
+            idx = name.split('mem=')[1].split('_')[0]
+            item = [idx, sm, mem]
+            nv.loc[i] = item
+            i = i + 1
+    nv = nv.astype(int)
+    SM_time = int(sm_end) - int(sm_start)
+    nv_id = nv.groupby('GPU_ID').mean().round(decimals=2)
+    print('SM & MEM Utilization (%) :')
+    print(nv_id,'\n')
+    print('Average SM Utilization (%): ', float(nv_id['SM'].mean().round(decimals=2)))
+    print('Average MEM Utilization (%): ', float(nv_id['MEM'].mean().round(decimals=2)))
+    print('SM Active Time (s): %d' % (SM_time * (float(nv_id['SM'].mean().round(decimals=2))/100)))
 
 def gpu_profile(logdir, cfg, df_gpu, features):
     print_title("GPU Profiling")
@@ -438,6 +462,11 @@ def sofa_analyze(cfg):
     except IOError as e:
         df_mpstat = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_mpstat)
+
+    try:
+        nvsmi_profile(logdir)
+    except IOError:
+        print_warning("nvsmi_trace.csv is not found")
 
     try:
         df_gpu = pd.read_csv(filein_gpu)
