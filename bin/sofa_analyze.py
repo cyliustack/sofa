@@ -59,7 +59,11 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, features):
 
     total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
     elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
-    
+   
+    if len(df_mpstat) == 0 or len(df_cpu) == 0:
+        print_warning('no mpstat and perf traces!')
+        return features
+
     t_begin = df_mpstat.iloc[0]['timestamp']
     t_end = df_mpstat.iloc[-1]['timestamp']
     
