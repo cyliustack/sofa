@@ -88,7 +88,7 @@ function install_python_packages()
     	CONDA_PY3=$(dirname $(which conda))/python3
     	$WITH_SUDO ${CONDA_PY3} -m pip install --upgrade pip
     	$WITH_SUDO ${CONDA_PY3} -m pip install --no-cache-dir ${PIP_PACKAGES}
-    	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+    	[[ $? != 0 ]] && echo -e "${C_YELLOW}[warninig] Failed to install required package for conda python3! Skip it if you don't need conda.${C_NONE}" 
     fi
 }
 
