@@ -91,6 +91,9 @@ if __name__ == "__main__":
     parser.set_defaults(aisi_via_strace=False)
     parser.add_argument('--display_swarms', dest='display_swarms', action='store_true')
     parser.set_defaults(display_swarms=False)
+    parser.add_argument('--enable_py_stacks', dest='enable_py_stacks', action='store_true', required=False, 
+                            help='Record the callstack of python program via py-spy')
+    parser.set_defaults(enable_py_stacks=False)
     parser.add_argument('--base_logdir', dest='base_logdir', default='')
     parser.add_argument('--match_logdir', dest='match_logdir', default='')
     parser.add_argument('--hsg_multifeatures', dest='hsg_multifeatures', action='store_true')
@@ -166,6 +169,9 @@ if __name__ == "__main__":
 
     if args.aisi_via_strace is not None:
         cfg.aisi_via_strace = args.aisi_via_strace
+
+    if args.enable_py_stacks is not None:
+        cfg.enable_py_stacks = args.enable_py_stacks
 
     if args.hsg_multifeatures is not None:
         cfg.hsg_multifeatures = args.hsg_multifeatures
