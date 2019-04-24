@@ -51,6 +51,12 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help='A string of list of pairs of keyword and color')
+    parser.add_argument(
+        '--cluster_ip',
+        metavar='"192.168.0.1,192.168.0.2"',
+        type=str,
+        required=False,
+        help='cluster ip is designed for cluster sofa report')
     parser.add_argument('--cpu_top_k', metavar='N', type=int, required=False,
                         help='K functions of the highest overheads')
     parser.add_argument('--num_iterations', metavar='N', type=int, required=False,
@@ -230,6 +236,9 @@ if __name__ == "__main__":
     if args.viz_port is not None:
         cfg.viz_port = args.viz_port
 
+    if args.cluster_ip is not None:
+        cfg.cluster_ip = args.cluster_ip
+
     if args.profile_all_cpus is not None:
         cfg.profile_all_cpus = args.profile_all_cpus
 
@@ -301,9 +310,13 @@ if __name__ == "__main__":
     elif command == 'clean':
         sofa_clean(cfg)
     elif command == 'report':
-        sofa_preprocess(cfg)
-        sofa_analyze(cfg)
-        sofa_viz(cfg)
+        if cfg.cluster_ip:
+            sofa_preprocess(cfg)
+            cluster_analyze(cfg)
+        else:
+            sofa_preprocess(cfg)
+            sofa_analyze(cfg)
+            sofa_viz(cfg)
     else:
         print_error("Cannot recognized SOFA-command [%s]" % command)
         sys.exit(1)
