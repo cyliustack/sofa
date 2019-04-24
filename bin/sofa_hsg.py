@@ -273,18 +273,20 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
 
                 swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
                 swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True)
-                print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms))
+                if not cfg.cluster_ip:
+                    print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms))
 
-                print('%45s\t%13s\t%30s'%('SwarmCaption', 'ExecutionTime[sum,mean,count] (s)', 'Example'))
+                    print('%45s\t%13s\t%30s'%('SwarmCaption', 'ExecutionTime[sum,mean,count] (s)', 'Example'))
                 for i in range(len(swarm_stats)):
                     if i >= cfg.num_swarms:
                         break
                     else:
                         swarm = swarm_stats[i]
-                        print('%45s\t%.6lf, %.6lf, %6d\t%45s' % (swarm['keyword'], 
-                            swarm['duration_sum']/4.0, 
-                            swarm['duration_mean']/4.0, 
-                            swarm['count'], swarm['example']))
+                        if not cfg.cluster_ip:
+                            print('%45s\t%.6lf, %.6lf, %6d\t%45s' % (swarm['keyword'], 
+                                swarm['duration_sum']/4.0, 
+                                swarm['duration_mean']/4.0, 
+                                swarm['count'], swarm['example']))
 
             return swarm_groups, swarm_stats
 

@@ -144,7 +144,8 @@ class Event:
         return repr((self.name, self.ttype, self.timestamp, self.duration))
 
 def nvsmi_profile(logdir, cfg, df_nvsmi, features):
-    print_title("SM & MEM Profiling")
+    if not cfg.cluster_ip:
+        print_title("SM & MEM Profiling")
     
     if len(df_nvsmi) > 0 :
         sm_start = df_nvsmi.iloc[0].timestamp 
@@ -152,13 +153,15 @@ def nvsmi_profile(logdir, cfg, df_nvsmi, features):
         SM_time = sm_end - sm_start
         result = df_nvsmi.groupby(['deviceId','event'])['duration'].mean() 
         result = result.astype(int)
-        print(result)
         
         gpu_sm_util = df_nvsmi.groupby(['event'])['duration'].mean()[0]
         gpu_mem_util = df_nvsmi.groupby(['event'])['duration'].mean()[1]
-        print('Average SM Utilization (%): ', int(gpu_sm_util))
-        print('Average MEM Utilization (%): ', int(gpu_mem_util))
-        print('Active GPU Time (s): %.3lf' % (SM_time * gpu_sm_util/100.0))
+        
+        if not cfg.cluster_ip:
+            print(result)
+            print('Average SM Utilization (%): ', int(gpu_sm_util))
+            print('Average MEM Utilization (%): ', int(gpu_mem_util))
+            print('Active GPU Time (s): %.3lf' % (SM_time * gpu_sm_util/100.0))
         df = pd.DataFrame({'name':['gpu_sm_util', 'gpu_mem_util'], 
                         'value':[gpu_sm_util, gpu_mem_util] }, 
                         columns=['name','value'])
@@ -202,7 +205,8 @@ def gpu_profile(logdir, cfg, df_gpu, features):
     return features
 
 def net_profile(logdir, cfg, df, features):
-    print_title("Network Profiling:")
+    if not cfg.cluster_ip:
+        print_title("Network Profiling:")
     grouped_df = df.groupby("name")["duration"]
     net_time = 0
     n_packets = 0
@@ -211,11 +215,102 @@ def net_profile(logdir, cfg, df, features):
         if key.find("network:tcp:") != -1:
             net_time = net_time + grouped_df.get_group(key).sum()
             n_packets = n_packets + 1
-    print(("total network time (s) = %.3lf" % net_time))
-    print(("total amount of network packets  = %d" % n_packets))
-    df = pd.DataFrame({'name':['net_time'], 
-                        'value':[net_time] }, 
-                        columns=['name','value'])
+    #print(("total network time (s) = %.3lf" % net_time))
+    #print(("total amount of network packets  = %d" % n_packets))
+    
+    packet_num_matrix = df.groupby(['pkt_src','pkt_dst','payload']).size().unstack(level=1, fill_value=0)
+    
+    # total network traffic
+    packet_sum_matrix = df.groupby(['pkt_src','pkt_dst'])["payload"].sum().unstack(level=1, fill_value=0)
+    
+    # ================ change pandas table columns and index name ====
+    rename_index = packet_sum_matrix.index.tolist()
+    rename_index2 = packet_num_matrix.index.tolist()
+    rename_columns = packet_sum_matrix.columns.tolist()
+    rename_columns2 = packet_num_matrix.columns.tolist() 
+
+    def zero(s):
+        if s[0:2] == '00':
+            s = s[2]
+        elif (s[0] == '0') and (s[1] != '0'): 
+            s = s[1:3]
+        return(s)
+
+    def check_str(rename_list):
+        rename_list_new = []
+        for j in rename_list:
+            j = str(int(j))
+            a = j[-9:-6]
+            b = j[-6:-3]
+            c = j[-3:]  
+            j = j[:-9] + '.' + zero(a) + '.' + zero(b) + '.' + zero(c)
+            rename_list_new.append(j)
+        return(rename_list_new)
+ 
+    def check_str2(rename_list):
+        rename_columns_2 = []
+        for i in rename_list:
+            i = str(int(i[0]))
+            a = i[-9:-6] 
+            b = i[-6:-3]
+            c = i[-3:]
+            i = i[:-9] + '.' + zero(a) + '.' + zero(b) + '.' + zero(c)
+            rename_columns_2.append(i)
+        return(rename_columns_2)
+ 
+    rename_index_new = check_str(rename_index)
+    rename_index_new = dict(zip(rename_index, rename_index_new))
+    
+    rename_index2_new = check_str2(rename_index2)
+    rename_index2_final = list(set(rename_index2_new))
+    rename_index2_final.sort(key=rename_index2_new.index)
+    
+    rename_columns_new = check_str(rename_columns)
+    rename_columns_new = dict(zip(rename_columns, rename_columns_new))
+    
+    rename_columns2_new = check_str(rename_columns2)
+    rename_columns2_new = dict(zip(rename_columns2, rename_columns2_new))          
+ 
+    # rename here
+    packet_sum_matrix = packet_sum_matrix.rename(columns=rename_columns_new)
+    packet_num_matrix = packet_num_matrix.rename(columns=rename_columns2_new)
+    packet_sum_matrix = packet_sum_matrix.rename(index=rename_index_new)
+    packet_num_matrix.index.set_levels(rename_index2_final , level = 0, inplace = True)
+    
+    print("total amount of network traffic : ", df['payload'].sum(), "(Bytes)\n", packet_sum_matrix.to_string(), "\n")
+    if cfg.verbose:
+        print("total amount of network packets = %d\n" % packet_num_matrix.sum().sum() ,packet_num_matrix.to_string(), "\n")
+    
+    network_value = []
+    src = []
+    dst = []
+    final = []
+
+    for index in packet_sum_matrix.index:
+        for column in packet_sum_matrix.columns:
+            src.append(index)
+            dst.append(column)
+            network_value.append(packet_sum_matrix[column][index])
+    record = list(zip(src, dst, network_value))
+    record.sort(key=lambda tup:tup[2], reverse=True)
+    
+    for src, dst, value in record:
+        if src == dst:
+            pass
+        elif value == 0:
+            pass
+        else:
+            item = [src, dst, int(value)]
+            final.append(item)
+    summary = pd.DataFrame(final, columns=['Source', 'Destination', 'Amount'])
+    summary.to_csv(logdir + 'netrank.csv',
+                mode='w',
+                header=True,
+                index=False)
+
+    df = pd.DataFrame({'name':['net_time'],                                                 
+                       'value':[net_time] },  
+                       columns=['name','value'])
     features = pd.concat([features, df])
     return features
 
@@ -275,7 +370,8 @@ def vmstat_profile(logdir, cfg, df, features):
     return features
 
 def mpstat_profile(logdir, cfg, df, features):
-    print_title("MPSTAT Profiling:")
+    if not cfg.cluster_ip:
+        print_title("MPSTAT Profiling:")
     num_cores = int(df['deviceId'].max() + 1)
     df_summary = pd.DataFrame( np.zeros((num_cores,5)), columns=['USR','SYS','IDL','IOW','IRQ'])
     for i in range(len(df)):
@@ -301,31 +397,35 @@ def mpstat_profile(logdir, cfg, df, features):
         df_summary.iloc[core]['IDL'] = df_summary.iloc[core]['IDL'] + t_idl 
         df_summary.iloc[core]['IOW'] = df_summary.iloc[core]['IOW'] + t_iow 
         df_summary.iloc[core]['IRQ'] = df_summary.iloc[core]['IRQ'] + t_irq 
-    
-    print('CPU Utilization (%):')
-    print('core\tUSR\tSYS\tIDL\tIOW\tIRQ')
+    if not cfg.cluster_ip:
+        print('CPU Utilization (%):')
+        print('core\tUSR\tSYS\tIDL\tIOW\tIRQ')
     for i in range(len(df_summary)):
         t_sum = df_summary.iloc[i].sum() 
-        print('%3d\t%3d\t%3d\t%3d\t%3d\t%3d'%(i,int(100.0*df_summary.iloc[i]['USR']/t_sum),
-                                                int(100.0*df_summary.iloc[i]['SYS']/t_sum),
-                                                int(100.0*df_summary.iloc[i]['IDL']/t_sum),
-                                                int(100.0*df_summary.iloc[i]['IOW']/t_sum),
-                                                int(100.0*df_summary.iloc[i]['IRQ']/t_sum) ))
-    print('CPU Time (s):')
-    print('core\tUSR\tSYS\tIDL\tIOW\tIRQ')
+        if not cfg.cluster_ip:
+            print('%3d\t%3d\t%3d\t%3d\t%3d\t%3d'%(i,int(100.0*df_summary.iloc[i]['USR']/t_sum),
+                                                    int(100.0*df_summary.iloc[i]['SYS']/t_sum),
+                                                    int(100.0*df_summary.iloc[i]['IDL']/t_sum),
+                                                    int(100.0*df_summary.iloc[i]['IOW']/t_sum),
+                                                    int(100.0*df_summary.iloc[i]['IRQ']/t_sum) ))
+    if not cfg.cluster_ip:
+        print('CPU Time (s):')
+        print('core\tUSR\tSYS\tIDL\tIOW\tIRQ')
     for i in range(len(df_summary)):
-        t_sum = df_summary.iloc[i].sum() 
-        print('%3d\t%.2lf\t%.2lf\t%.2lf\t%.2lf\t%.2lf'%(i,
-                                                df_summary.iloc[i]['USR'],
-                                                df_summary.iloc[i]['SYS'],
-                                                df_summary.iloc[i]['IDL'],
-                                                df_summary.iloc[i]['IOW'],
-                                                df_summary.iloc[i]['IRQ'] ))
+        t_sum = df_summary.iloc[i].sum()
+        if not cfg.cluster_ip:
+            print('%3d\t%.2lf\t%.2lf\t%.2lf\t%.2lf\t%.2lf'%(i,
+                                                    df_summary.iloc[i]['USR'],
+                                                    df_summary.iloc[i]['SYS'],
+                                                    df_summary.iloc[i]['IDL'],
+                                                    df_summary.iloc[i]['IOW'],
+                                                    df_summary.iloc[i]['IRQ'] ))
 
     total_cpu_time = df_summary[['USR','SYS','IRQ']].sum().sum()
-    print('Active CPU Time (s): %.3lf' % total_cpu_time) 
     cpu_util = int(100*total_cpu_time / (num_cores*cfg.elapsed_time))
-    print('Active CPU ratio (%%): %3d' % cpu_util)
+    if not cfg.cluster_ip:
+        print('Active CPU Time (s): %.3lf' % total_cpu_time)
+        print('Active CPU ratio (%%): %3d' % cpu_util)
     df_feature = pd.DataFrame({ 'name':['num_cores', 'cpu_util'], 
                         'value':[num_cores, cpu_util] }, 
                         columns=['name','value'])
@@ -477,3 +577,59 @@ def sofa_analyze(cfg):
         print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
     
     print('\n\n')
+
+def cluster_analyze(cfg):
+    print_title("Cluster Network Profiling :")
+    cluster = cfg.cluster_ip.split(',')
+    summary_net = pd.DataFrame([], columns=['Source', 'Destination', 'Amount'])
+    summary_compute = pd.DataFrame([], columns=['gpu_sm_util','gpu_mem_util','cpu_util'])
+    
+    i = 0
+    for ip in cluster:
+        features = pd.DataFrame({'name':['elapsed_time'],
+                                 'value':[cfg.elapsed_time]},
+                                 columns=['name','value'])
+        
+        node = 'node ' + str(i)
+        print('node ' + str(i) + ' is ' + ip)
+        logdir = cfg.logdir[0:-1] + ip +'/'
+        filein_net = logdir + "nettrace.csv"
+        filein_mpstat = logdir + "mpstat.csv"
+        filein_nvsmi = logdir + "nvsmi_trace.csv"
+        with open(logdir+'/misc.txt') as f:
+            lines = f.readlines()
+            elapsed_time = float(lines[0].split()[1])
+            vcores = int(lines[2].split()[1])
+            cfg.elapsed_time = float(lines[0].split()[1])
+        try:
+            df_net = pd.read_csv(filein_net)
+            features = net_profile(logdir, cfg, df_net, features)
+        except IOError as e:
+            df_net = pd.DataFrame([], columns=cfg.columns)
+            print_warning("%s is not found" % filein_net)
+        try:
+            df_mpstat = pd.read_csv(filein_mpstat)
+            features = mpstat_profile(logdir, cfg, df_mpstat, features)
+        except IOError as e:
+            df_mpstat = pd.DataFrame([], columns=cfg.columns)
+            print_warning("%s is not found" % filein_mpstat)
+        try:
+            df_nvsmi = pd.read_csv(filein_nvsmi) 
+            features = nvsmi_profile(logdir, cfg, df_nvsmi, features)
+        except IOError:
+            print_warning("nvsmi_trace.csv is not found")
+
+        sm = int(features[features['name'] == 'gpu_sm_util']['value'])
+        mem = int(features[features['name'] == 'gpu_mem_util']['value'])
+        cpu = int(features[features['name'] == 'cpu_util']['value'])
+        sm_mem_cpu = [sm, mem, cpu]
+   
+        compute_tmp = pd.DataFrame([sm_mem_cpu], columns = ['gpu_sm_util', 'gpu_mem_util', 'cpu_util'])
+        summary_compute = pd.concat([summary_compute, pd.concat([compute_tmp], keys=[node])]) 
+        net_tmp = pd.read_csv(logdir + "netrank.csv")
+        summary_net = pd.concat([summary_net, pd.concat([net_tmp], keys=[node])])
+        
+        i = i + 1
+    print('Ranked Network Traffic : \n', summary_net)
+    print_title('Cluster Computation Profiling:')
+    print(summary_compute)

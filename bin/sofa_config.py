@@ -11,6 +11,7 @@ class SOFA_Config:
     cpu_filters = []
     gpu_filters = []
     net_filters = []
+    cluster_ip = []
     perf_events = 'cycles'
     verbose = False
     num_iterations = 20
