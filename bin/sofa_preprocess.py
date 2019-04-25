@@ -354,11 +354,10 @@ def traces_to_json(traces, path, cfg):
         f.write(" ]")
 
 
-def sofa_preprocess(cfg):
+def sofa_preprocess(cfg, logdir):
     cfg.time_base = 0
     t_glb_gpu_base = 0
-    logdir = cfg.logdir 
-
+    
     with open(logdir + 'misc.txt', 'r') as f:
         lines = f.readlines()
         if len(lines) == 4:
@@ -438,66 +437,65 @@ def sofa_preprocess(cfg):
     gpulog_header = 'True'
     cpu_count = mp.cpu_count()
 
-    def openmpstat(cfg, logdir):
-        with open('%s/mpstat.txt' % logdir) as f:
-            mpstat = np.genfromtxt(logdir+'/mpstat.txt', delimiter=',', invalid_raise=False )
-            header = mpstat[0]
-            mpstat = mpstat[1:]
-            mpstat_list = []
-            mpstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            n_cores = int(mpstat[:,1].max() + 1)
-            stride = n_cores + 1
-            for i in range(len(mpstat)):
-                if len(mpstat[i]) < len(header):
-                    continue
-                if i <= stride or mpstat[i,1] == -1:
-                    continue
-                #time, cpu,  user，nice, system, idle, iowait, irq, softirq
-                core = mpstat[i,1]
-                d_mp = mpstat[i,:] - mpstat[i-stride,:]
-                d_mp_total = np.sum(d_mp[2:8])
-                if d_mp_total == 0 :
-                    print_info(cfg, 'No increases in mpstat values')
-                    continue
-                d_mp_usr = d_mp[2] * 100 / float(d_mp_total)
-                d_mp_sys = d_mp[4] * 100 / float(d_mp_total)
-                d_mp_idl = d_mp[5] * 100 / float(d_mp_total)
-                d_mp_iow = d_mp[6] * 100 / float(d_mp_total)
-                d_mp_irq = d_mp[7] * 100 / float(d_mp_total)
-                cpu_time = (d_mp_total - d_mp[5]) * 0.01
-                t_begin = mpstat[i,0]
+    with open('%s/mpstat.txt' % logdir) as f:
+        mpstat = np.genfromtxt(logdir+'/mpstat.txt', delimiter=',', invalid_raise=False )
+        header = mpstat[0]
+        mpstat = mpstat[1:]
+        mpstat_list = []
+        mpstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+        n_cores = int(mpstat[:,1].max() + 1)
+        stride = n_cores + 1
+        for i in range(len(mpstat)):
+            if len(mpstat[i]) < len(header):
+                continue
+            if i <= stride or mpstat[i,1] == -1:
+                continue
+            #time, cpu,  user，nice, system, idle, iowait, irq, softirq
+            core = mpstat[i,1]
+            d_mp = mpstat[i,:] - mpstat[i-stride,:]
+            d_mp_total = np.sum(d_mp[2:8])
+            if d_mp_total == 0 :
+                print_info(cfg, 'No increases in mpstat values')
+                continue
+            d_mp_usr = d_mp[2] * 100 / float(d_mp_total)
+            d_mp_sys = d_mp[4] * 100 / float(d_mp_total)
+            d_mp_idl = d_mp[5] * 100 / float(d_mp_total)
+            d_mp_iow = d_mp[6] * 100 / float(d_mp_total)
+            d_mp_irq = d_mp[7] * 100 / float(d_mp_total)
+            cpu_time = (d_mp_total - d_mp[5]) * 0.01
+            t_begin = mpstat[i,0]
 
-                if not cfg.absolute_timestamp:
-                    t_begin = t_begin - cfg.time_base
+            if not cfg.absolute_timestamp:
+                t_begin = t_begin - cfg.time_base
 
-                deviceId = core
-                metric = cpu_time
-                event = -1
-                copyKind = -1
-                payload = -1
-                bandwidth = -1
-                pkt_src = pkt_dst = -1
-                pid = tid = -1
-                mpstat_info = 'mpstat_core%d (usr|sys|idl|iow|irq): |%3d|%3d|%3d|%3d|%3d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
+            deviceId = core
+            metric = cpu_time
+            event = -1
+            copyKind = -1
+            payload = -1
+            bandwidth = -1
+            pkt_src = pkt_dst = -1
+            pid = tid = -1
+            mpstat_info = 'mpstat_core%d (usr|sys|idl|iow|irq): |%3d|%3d|%3d|%3d|%3d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
 
-                trace_usr = [
-                    t_begin,
-                    event,
-                    metric,
-                    deviceId,
-                    copyKind,
-                    payload,
-                    bandwidth,
-                    pkt_src,
-                    pkt_dst,
-                    pid,
-                    tid,
-                    mpstat_info,
-                    0]
+            trace_usr = [
+                t_begin,
+                event,
+                metric,
+                deviceId,
+                copyKind,
+                payload,
+                bandwidth,
+                pkt_src,
+                pkt_dst,
+                pid,
+                tid,
+                mpstat_info,
+                0]
             
-                mpstat_list.append(trace_usr)
+            mpstat_list.append(trace_usr)
             
-            mpstat_traces = list_to_csv_and_traces(logdir, mpstat_list, 'mpstat.csv', 'w')
+        mpstat_traces = list_to_csv_and_traces(logdir, mpstat_list, 'mpstat.csv', 'w')
 
     with open('%s/diskstat.txt' % logdir) as f:
         diskstats = f.readlines()
@@ -789,148 +787,135 @@ def sofa_preprocess(cfg):
     #        0     0     0     0     0
     #        1     0     0     0     0
     #        2     0     0     0     0
-    def opennvsmi(cfg, logdir):
-        if os.path.isfile('%s/nvsmi.txt' % logdir):
-            with open('%s/nvsmi.txt' % logdir) as f:
-                lines = f.readlines()
-                nvsmi_has_data = True
-                for line in lines:
-                    if line.find('failed') != -1 or line.find('Failed') != -1:
-                        nvsmi_has_data = False
-                        print_warning('No nvsmi data.')
-                        break
-                if nvsmi_has_data:
-                    print_info(cfg,"Length of nvsmi_traces = %d" % len(lines))
-                    nvsmi_sm_list = []
-                    nvsmi_mem_list = []
-                    nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-                    nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-                    t = 0
-                    for i in range(len(lines)):
-                        if lines[i].find('gpu') == -1 and lines[i].find('Idx') == -1:
-                            fields = lines[i].split()
-                            if len(fields) < 5:
-                                continue
-                            nvsmi_id = int(fields[0])
-                            nvsmi_sm = float(fields[1]) + 1e-5
-                            nvsmi_mem = float(fields[2]) + 1e-5
+    if os.path.isfile('%s/nvsmi.txt' % logdir):
+        with open('%s/nvsmi.txt' % logdir) as f:
+            lines = f.readlines()
+            nvsmi_has_data = True
+            for line in lines:
+                if line.find('failed') != -1 or line.find('Failed') != -1:
+                    nvsmi_has_data = False
+                    print_warning('No nvsmi data.')
+                    break
+            if nvsmi_has_data:
+                print_info(cfg,"Length of nvsmi_traces = %d" % len(lines))
+                nvsmi_sm_list = []
+                nvsmi_mem_list = []
+                nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                t = 0
+                for i in range(len(lines)):
+                    if lines[i].find('gpu') == -1 and lines[i].find('Idx') == -1:
+                        fields = lines[i].split()
+                        if len(fields) < 5:
+                            continue
+                        nvsmi_id = int(fields[0])
+                        nvsmi_sm = float(fields[1]) + 1e-5
+                        nvsmi_mem = float(fields[2]) + 1e-5
 
-                            if cfg.absolute_timestamp: 
-                                t_begin = t + cfg.time_base
-                            else:
-                                t_begin = t
-                            deviceId = cpuid = nvsmi_id
-                            event = -1
-                            copyKind = -1
-                            payload = -1
-                            bandwidth = -1
-                            pkt_src = pkt_dst = -1
-                            pid = tid = -1
-                            nvsmi_info = "GPUID_sm_mem=%d_%lf_%lf" % (
-                                nvsmi_id, nvsmi_sm, nvsmi_mem)
+                        if cfg.absolute_timestamp: 
+                            t_begin = t + cfg.time_base
+                        else:
+                            t_begin = t
+                        deviceId = cpuid = nvsmi_id
+                        event = -1
+                        copyKind = -1
+                        payload = -1
+                        bandwidth = -1
+                        pkt_src = pkt_dst = -1
+                        pid = tid = -1
+                        nvsmi_info = "GPUID_sm_mem=%d_%lf_%lf" % (
+                            nvsmi_id, nvsmi_sm, nvsmi_mem)
 
-                            trace = [
-                                t_begin,
-                                0,
-                                nvsmi_sm,
-                                deviceId,
-                                copyKind,
-                                payload,
-                                bandwidth,
-                                pkt_src,
-                                pkt_dst,
-                                pid,
-                                tid,
-                                nvsmi_info,
-                                cpuid]
-                            if t > 3 :
-                                nvsmi_sm_list.append(trace)
+                        trace = [
+                            t_begin,
+                            0,
+                            nvsmi_sm,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            nvsmi_info,
+                            cpuid]
+                        if t > 3 :
+                            nvsmi_sm_list.append(trace)
 
-                            trace = [
-                                t_begin,
-                                1,
-                                nvsmi_mem,
-                                deviceId,
-                                copyKind,
-                                payload,
-                                bandwidth,
-                                pkt_src,
-                                pkt_dst,
-                                pid,
-                                tid,
-                                nvsmi_info,
-                                cpuid]
-                            if t > 3 :
-                                nvsmi_mem_list.append(trace)
-                            if nvsmi_id == 0:
-                                t = t + 1
-                    if len(nvsmi_sm_list)>1:
-                        nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
-                        nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
-                    else:
-                        print_warning("Program exectution time is fewer than 3 seconds, so nvsmi trace analysis will not be displayed.")
+                        trace = [
+                            t_begin,
+                            1,
+                            nvsmi_mem,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            nvsmi_info,
+                            cpuid]
+                        if t > 3 :
+                            nvsmi_mem_list.append(trace)
+                        if nvsmi_id == 0:
+                            t = t + 1
+                if len(nvsmi_sm_list)>1:
+                    nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
+                    nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
+                else:
+                    print_warning("Program exectution time is fewer than 3 seconds, so nvsmi trace analysis will not be displayed.")
     # ============ Preprocessing Network Trace ==========================
-    def opennet(cfg, logdir):
-        if os.path.isfile('%s/sofa.pcap' % logdir):
-            with open(logdir + 'net.tmp', 'w') as f:
-                subprocess.check_call(
-                    ["tcpdump", "-q", "-n", "-tt", "-r",
-                    "%s/sofa.pcap"%logdir ], stdout=f, stderr=subprocess.DEVNULL)
-            with open(logdir + 'net.tmp') as f:
-                packets = lines = f.readlines()
-                print_info(cfg,"Length of net_traces = %d" % len(packets))
-                if packets:
-                    with mp.Pool(processes=cpu_count) as pool:
-                        res = pool.map(
-                            partial(
-                                net_trace_read,
-                                cfg=cfg,
-                                t_offset=0),
-                            packets)
-                    res_viz = list_downsample(res, cfg.plot_ratio)
-                    net_traces = pd.DataFrame(res_viz)
-                    net_traces.columns = sofa_fieldnames
-                    net_traces.to_csv(
-                        logdir + 'nettrace.csv',
-                        mode='w',
-                        header=True,
-                        index=False,
-                        float_format='%.6f')
+    
+    if os.path.isfile('%s/sofa.pcap' % logdir):
+        with open(logdir + 'net.tmp', 'w') as f:
+            subprocess.check_call(
+                ["tcpdump", "-q", "-n", "-tt", "-r",
+                "%s/sofa.pcap"%logdir ], stdout=f, stderr=subprocess.DEVNULL)
+        with open(logdir + 'net.tmp') as f:
+            packets = lines = f.readlines()
+            print_info(cfg,"Length of net_traces = %d" % len(packets))
+            if packets:
+                with mp.Pool(processes=cpu_count) as pool:
+                    res = pool.map(
+                        partial(
+                            net_trace_read,
+                            cfg=cfg,
+                            t_offset=0),
+                        packets)
+                res_viz = list_downsample(res, cfg.plot_ratio)
+                net_traces = pd.DataFrame(res_viz)
+                net_traces.columns = sofa_fieldnames
+                net_traces.to_csv(
+                    logdir + 'nettrace.csv',
+                    mode='w',
+                    header=True,
+                    index=False,
+                    float_format='%.6f')
 
-                    # ============ Apply for Network filter =====================
-                    if cfg.net_filters:
-                        filtered_net_groups = []
-                        packet_not_zero = net_traces['payload'] > 0
-                        start = (net_traces['pkt_src'] == float(cfg.net_filters[0]))
+                # ============ Apply for Network filter =====================
+                if cfg.net_filters:
+                    filtered_net_groups = []
+                    packet_not_zero = net_traces['payload'] > 0
+                    start = (net_traces['pkt_src'] == float(cfg.net_filters[0]))
+                    for filter in cfg.net_filters[1:]:
+                        end = (net_traces['pkt_dst'] == float(filter))
+                        group = net_traces[packet_not_zero & start & end]
+                        filtered_net_groups.append({'group': group,
+                                                    'color': 'rgba(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
+                                                    'keyword': 'to_%s' %filter})
+
+                        end = (net_traces['pkt_dst'] == float(cfg.net_filters[0]))
                         for filter in cfg.net_filters[1:]:
-                            end = (net_traces['pkt_dst'] == float(filter))
+                            start = (net_traces['pkt_src'] == float(filter))
                             group = net_traces[packet_not_zero & start & end]
                             filtered_net_groups.append({'group': group,
-                                                        'color': 'rgba(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
-                                                        'keyword': 'to_%s' %filter})
-
-                            end = (net_traces['pkt_dst'] == float(cfg.net_filters[0]))
-                            for filter in cfg.net_filters[1:]:
-                                start = (net_traces['pkt_src'] == float(filter))
-                                group = net_traces[packet_not_zero & start & end]
-                                filtered_net_groups.append({'group': group,
-                                                        'color': 'rgba(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
-                                                        'keyword': 'from_%s' %filter})
-        else:
-            print_warning("no network traces were recorded.")
-    
-    if cfg.cluster_ip:
-        cluster = cfg.cluster_ip.split(',')
-        for ip in cluster:
-            logdir_new = logdir[0:-1] + '-' + ip + '/'
-            opennet(cfg, logdir_new)
-            opennvsmi(cfg, logdir_new)
-            openmpstat(cfg, logdir_new)
+                                                    'color': 'rgba(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
+                                                    'keyword': 'from_%s' %filter})
     else:
-        opennet(cfg, logdir)
-        opennvsmi(cfg, logdir)
-        openmpstat(cfg, logdir)
-
+        print_warning("no network traces were recorded.")
+        
     # ============ Preprocessing GPU Trace ==========================
     num_cudaproc = 0
     filtered_gpu_groups = []
@@ -1343,7 +1328,7 @@ def sofa_preprocess(cfg):
     try:
         swarm_groups = []
         swarm_stats = []
-        swarm_groups, swarm_stats = sofa_hsg(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
+        swarm_groups, swarm_stats = sofa_hsg(cfg, logdir, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
     except TypeError:
         print_warning('HSG returned a None object to swarm_groups, check if sofalog/perf.data can be accessed.')
         pass 
@@ -1526,7 +1511,7 @@ def sofa_preprocess(cfg):
     
 
     if len(swarm_groups) > 0 :
-        traces = sofa_hsg_to_sofatrace(cfg, swarm_groups, traces) # append data of hsg function
+        traces = sofa_hsg_to_sofatrace(cfg, logdir, swarm_groups, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_cs'
