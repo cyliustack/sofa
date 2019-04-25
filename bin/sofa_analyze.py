@@ -295,9 +295,7 @@ def net_profile(logdir, cfg, df, features):
     record.sort(key=lambda tup:tup[2], reverse=True)
     
     for src, dst, value in record:
-        if src == dst:
-            pass
-        elif value == 0:
+        if value == 0:
             pass
         else:
             item = [src, dst, int(value)]
@@ -592,7 +590,7 @@ def cluster_analyze(cfg):
         
         node = 'node ' + str(i)
         print('node ' + str(i) + ' is ' + ip)
-        logdir = cfg.logdir[0:-1] + ip +'/'
+        logdir = cfg.logdir[0:-1] + '-' + ip +'/'
         filein_net = logdir + "nettrace.csv"
         filein_mpstat = logdir + "mpstat.csv"
         filein_nvsmi = logdir + "nvsmi_trace.csv"

@@ -922,7 +922,7 @@ def sofa_preprocess(cfg):
     if cfg.cluster_ip:
         cluster = cfg.cluster_ip.split(',')
         for ip in cluster:
-            logdir_new = logdir[0:-1] + ip + '/'
+            logdir_new = logdir[0:-1] + '-' + ip + '/'
             opennet(cfg, logdir_new)
             opennvsmi(cfg, logdir_new)
             openmpstat(cfg, logdir_new)
