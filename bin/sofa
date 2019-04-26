@@ -317,7 +317,11 @@ if __name__ == "__main__":
         sofa_clean(cfg)
     elif command == 'report':
         if cfg.cluster_ip:
-            sofa_preprocess(cfg)
+            cluster = cfg.cluster_ip.split(',')
+            tmp_dir = cfg.logdir
+            for ip in cluster:
+                cfg.logdir = tmp_dir[0:-1] + '-' + ip + '/'
+                sofa_preprocess(cfg)
             cluster_analyze(cfg)
         else:
             sofa_preprocess(cfg)
