@@ -135,6 +135,7 @@ def sofa_record(command, cfg):
     p_pcm_numa = None 
     logdir = cfg.logdir
     p_strace = None
+    p_pystack = None
     print_info(cfg,'SOFA_COMMAND: %s' % command)
     sample_freq = 99
     command_prefix = ''
@@ -285,6 +286,15 @@ def sofa_record(command, cfg):
         print_hint('PID of the target program: %d' % target_pid)
         print_hint('Command: %s' % command)
 
+
+        if cfg.enable_py_stacks:
+            if command.find('python') == -1:
+                print_warning("Not a python program to recorded, skip recording callstacks")
+            elif cfg.enable_strace:
+                print_warning("Only one of --enable_py_stacks or --enable_strace option holds, ignore --enable_py_stack options")
+            else:
+                command_prefix = ' '.join(['py-spy','-n', '-s', '{}/pystacks.txt'.format(logdir), '-d', str(sys.maxsize), '--']) + ' '
+        
 
         if cfg.enable_strace:
             command_prefix = ' '.join(['strace', '-q', '-T', '-t', '-tt', '-f', '-o', '%s/strace.txt'%logdir]) + ' '
