@@ -45,3 +45,4 @@ class SOFA_Config:
     timeout = 30
     columns = ['timestamp', 'duration']
     enable_strace = False
+    enable_py_stacks = False

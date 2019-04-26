@@ -129,11 +129,11 @@ def kmeans_cluster(num_of_cluster, X):
 
     return y_pred
 
-def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
+def sofa_hsg(cfg, logdir, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
     """
     hierarchical swarm generation
     """
-    with open(cfg.logdir + 'perf.script') as f, warnings.catch_warnings():
+    with open(logdir + 'perf.script') as f, warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         samples = f.readlines()
         print_info(cfg, "Length of cpu_traces for HSG = %d" % len(samples))
@@ -152,7 +152,7 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
             sofa_fieldnames_ext = sofa_fieldnames + ["feature_types", "mem_addr"] # mem_addr for swarm-diff
             cpu_traces.columns = sofa_fieldnames_ext
             cpu_traces.to_csv(
-                cfg.logdir + 'hsg_trace.csv',
+                logdir + 'hsg_trace.csv',
                 mode='w',
                 header=True,
                 index=False,
@@ -186,7 +186,7 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
             #swarm_groups = []
             feature_list = ['event']
             if cfg.hsg_multifeatures:
-                with open(cfg.logdir+'perf_events_used.txt','r') as f:
+                with open(logdir+'perf_events_used.txt','r') as f:
                     lines = f.readlines()
                     feature_list.extend(lines[0].split(','))
                 try:
@@ -290,9 +290,9 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
 
             return swarm_groups, swarm_stats
 
-def sofa_hsg_to_sofatrace(cfg, swarm_groups, traces): # record_for_auto_caption = True # temperarily: for auto-caption
+def sofa_hsg_to_sofatrace(cfg, logdir, swarm_groups, traces): # record_for_auto_caption = True # temperarily: for auto-caption
     dummy_i = 0
-    auto_caption_filename_with_path = cfg.logdir + 'auto_caption.csv'
+    auto_caption_filename_with_path = logdir + 'auto_caption.csv'
     with open(auto_caption_filename_with_path,'w') as f:
         f.close()
     for swarm in swarm_groups[:cfg.num_swarms]:
