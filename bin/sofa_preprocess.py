@@ -1328,7 +1328,7 @@ def sofa_preprocess(cfg):
     try:
         swarm_groups = []
         swarm_stats = []
-        swarm_groups, swarm_stats = sofa_hsg(cfg, logdir, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
+        swarm_groups, swarm_stats = sofa_hsg(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
     except TypeError:
         print_warning('HSG returned a None object to swarm_groups, check if sofalog/perf.data can be accessed.')
         pass 
@@ -1511,7 +1511,7 @@ def sofa_preprocess(cfg):
     
 
     if len(swarm_groups) > 0 :
-        traces = sofa_hsg_to_sofatrace(cfg, logdir, swarm_groups, traces) # append data of hsg function
+        traces = sofa_hsg_to_sofatrace(cfg, swarm_groups, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_cs'
