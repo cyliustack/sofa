@@ -590,7 +590,7 @@ def cluster_analyze(cfg):
         
         node = 'node ' + str(i)
         print('node ' + str(i) + ' is ' + ip)
-        logdir = cfg.logdir[0:-1] + '-' + ip +'/'
+        logdir = './sofalog-' + ip +'/'
         filein_net = logdir + "nettrace.csv"
         filein_mpstat = logdir + "mpstat.csv"
         filein_nvsmi = logdir + "nvsmi_trace.csv"

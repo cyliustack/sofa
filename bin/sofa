@@ -289,21 +289,21 @@ if __name__ == "__main__":
 
     if command == 'stat':
         sofa_record(usr_command, cfg)
-        sofa_preprocess(cfg, cfg.logdir)
+        sofa_preprocess(cfg)
         sofa_analyze(cfg)
     elif command == 'record':
         sofa_record(usr_command, cfg)
     elif command == 'preprocess':
-        sofa_preprocess(cfg, cfg.logdir)
+        sofa_preprocess(cfg)
     elif command == 'analyze':
         sofa_analyze(cfg)
     elif command == 'diff': # register a new command here
         return_df = pd.DataFrame() # create an empty dataframe
         if not args.skip_preprocess:
             cfg.logdir = cfg.base_logdir 
-            sofa_preprocess(cfg, cfg.logdir)
+            sofa_preprocess(cfg)
             cfg.logdir = cfg.match_logdir 
-            sofa_preprocess(cfg, cfg.logdir)
+            sofa_preprocess(cfg)
         return_df = sofa_swarm_diff(cfg)
     elif command == 'viz':
         sofa_viz(cfg)
@@ -312,12 +312,13 @@ if __name__ == "__main__":
     elif command == 'report':
         if cfg.cluster_ip:
             cluster = cfg.cluster_ip.split(',')
+            tmp_dir = cfg.logdir
             for ip in cluster:
-                logdir = cfg.logdir[0:-1] + '-' + ip + '/'
-                sofa_preprocess(cfg, logdir)
+                cfg.logdir = tmp_dir[0:-1] + '-' + ip + '/'
+                sofa_preprocess(cfg)
             cluster_analyze(cfg)
         else:
-            sofa_preprocess(cfg, cfg.logdir)
+            sofa_preprocess(cfg)
             sofa_analyze(cfg)
             sofa_viz(cfg)
     else:

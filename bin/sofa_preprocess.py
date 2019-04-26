@@ -354,10 +354,10 @@ def traces_to_json(traces, path, cfg):
         f.write(" ]")
 
 
-def sofa_preprocess(cfg, logdir):
+def sofa_preprocess(cfg):
     cfg.time_base = 0
     t_glb_gpu_base = 0
-    
+    logdir = cfg.logdir
     with open(logdir + 'misc.txt', 'r') as f:
         lines = f.readlines()
         if len(lines) == 4:
