@@ -107,7 +107,7 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, features):
             elapsed_time['gpu'] = df_gpu_interval['duration'].sum()
             elapsed_time['iow'] = mp_iow.max()
             dominator = max(elapsed_time, key=elapsed_time.get)
-            if elapsed_time['gpu'] > 0 :
+            if elapsed_time['gpu'] > 0.1 :
                 dominator = 'gpu'
             total_elapsed_time[dominator] = total_elapsed_time[dominator] + 0.1
 

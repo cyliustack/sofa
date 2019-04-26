@@ -300,7 +300,7 @@ def sofa_record(command, cfg):
                 f.write(cfg.perf_events)
 
             print_hint(profile_command)
-            p_perf = subprocess.Popen(profile_command, shell=True, stderr=DEVNULL, stdout=DEVNULL)
+            p_perf = subprocess.Popen(profile_command, shell=True)
         
         try:
             p_perf.wait()
