@@ -48,6 +48,15 @@ def service_get_diskstat(logdir):
         if time_remained > 0: 
             time.sleep(time_remained)
 
+def service_get_netstat(logdir, interface):
+    next_call = time.time()
+    while True:
+        next_call = next_call + 0.1
+        get_netstat(logdir, interface)
+        time_remained = next_call - time.time()
+        if time_remained > 0:
+            time.sleep(time_remained)
+
 def get_cpuinfo(logdir):
     with open('/proc/cpuinfo','r') as f:
         lines = f.readlines()
@@ -93,6 +102,18 @@ def get_diskstat(logdir):
         df_stat = pd.DataFrame(stat_list)
         df_stat.to_csv("%s/diskstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
 
+def get_netstat(logdir, interface):
+    with open('/sys/class/net/%s/statistics/tx_bytes' %interface, 'r') as f:
+        net_time = time.time()
+        tx_line = f.readline().splitlines()
+        [tx] = tx_line
+    with open('/sys/class/net/%s/statistics/rx_bytes' %interface, 'r') as f:
+        rx_line = f.readline().splitlines()
+        [rx] = rx_line
+    tt = [net_time, tx, rx]
+    content = pd.DataFrame([tt], columns=['timestamp', 'tx_bytes', 'rx_bytes'])
+    content.to_csv("%s/netstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
+
 def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa):
     if p_pcm_pcie != None:
         p_pcm_pcie.terminate()
@@ -125,6 +146,7 @@ def sofa_record(command, cfg):
     p_tcpdump = None
     p_mpstat  = None
     p_diskstat = None
+    p_netstat = None
     p_vmstat  = None
     p_cpuinfo  = None
     p_nvprof  = None
@@ -258,6 +280,15 @@ def sofa_record(command, cfg):
             timerThread = threading.Thread(target=service_get_diskstat, args=[logdir])
             timerThread.daemon = True
             timerThread.start()
+
+        with open('%s/netstat.txt' % logdir, 'w') as logfile:
+            logfile.write('')
+            interface = subprocess.check_output("ip addr | awk '/state UP/{print $2}'", shell=True)
+            interface = str(interface, 'utf-8')
+            interface = interface.split(':')[0]
+            timerThread = threading.Thread(target=service_get_netstat, args=[logdir, interface])
+            timerThread.daemon = True
+            timerThread.start()
             
         with open(os.devnull, 'w') as FNULL:
            p_tcpdump =  subprocess.Popen(["tcpdump",
@@ -351,6 +382,9 @@ def sofa_record(command, cfg):
         if p_diskstat != None:
             p_diskstat.terminate()
             print_info(cfg,"tried terminating diskstat")
+        if p_netstat != None:
+            p_netstat.terminate()
+            print_info(cfg,"tried terminating netstat")
         if p_nvtopo != None:
             p_nvtopo.terminate()
             print_info(cfg,"tried terminating nvidia-smi topo")
@@ -385,6 +419,9 @@ def sofa_record(command, cfg):
         if p_diskstat != None:
             p_diskstat.kill()
             print_info(cfg,"tried killing diskstat")
+        if p_netstat != None:
+            p_netstat.kill()
+            print_info(cfg, "tried killing netstat")
         if p_nvtopo != None:
             p_nvtopo.kill()
             print_info(cfg,"tried killing nvidia-smi topo")

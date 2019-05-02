@@ -410,6 +410,8 @@ def sofa_preprocess(cfg):
     vm_st_traces = []
     mpstat_traces = []
     diskstat_traces = []
+    tx_traces = []
+    rx_traces = []
     strace_traces = []
     nvsmi_sm_traces = []
     nvsmi_mem_traces = []
@@ -915,6 +917,107 @@ def sofa_preprocess(cfg):
                                                     'keyword': 'from_%s' %filter})
     else:
         print_warning("no network traces were recorded.")
+    # ============ Preprocessing Network Bandwidth Trace ============
+    with open('%s/netstat.txt' % logdir) as f:
+        lines = f.readlines()
+        tmp_time = float(lines[0].split(',')[0])
+        tmp_tx = int(lines[0].split(',')[1])
+        tmp_rx = int(lines[0].split(',')[2])
+        all_time = []
+        all_tx = []
+        all_rx = []
+        tx_list = []
+        rx_list = []
+        bandwidth_result = pd.DataFrame([], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
+
+        for line in lines[1:]:
+            time = float(line.split(',')[0])
+            tx = int(line.split(',')[1])
+            rx = int(line.split(',')[2])
+            tx_bandwidth = (tx - tmp_tx) / (time - tmp_time) 
+            rx_bandwidth = (rx - tmp_rx) / (time - tmp_time)
+            
+            #sofa_fieldnames = [
+            #    "timestamp",  # 0
+            #    "event",  # 1
+            #    "duration",  # 2
+            #    "deviceId",  # 3
+            #    "copyKind",  # 4
+            #    "payload",  # 5
+            #    "bandwidth",  # 6
+            #    "pkt_src",  # 7
+            #    "pkt_dst",  # 8
+            #    "pid",  # 9
+            #    "tid",  # 10
+            #    "name",  # 11
+            #    "category"] # 12
+            
+            t_begin = time
+            if not cfg.absolute_timestamp:
+                t_begin = t_begin - cfg.time_base
+
+            trace = [ 
+                t_begin, # timestamp
+                0, # event
+                -1,
+                -1,
+                -1,
+                -1,
+                tx_bandwidth, # tx bandwidth
+                -1,
+                -1,
+                -1,
+                -1,
+                "network_bandwidth_tx(bytes):%d" % tx_bandwidth,
+                0
+                ]
+            tx_list.append(trace)
+
+            trace = [
+                t_begin, # timestamp
+                1, # event
+                -1,
+                -1,
+                -1,
+                -1,
+                rx_bandwidth, # rx bandwidth
+                -1,
+                -1,
+                -1,
+                -1,
+                "network_bandwidth_rx(bytes):%d" % rx_bandwidth,
+                0
+                ]
+            rx_list.append(trace)
+
+            # for visualize
+            all_time.append(time)
+            all_tx.append(tx_bandwidth)
+            all_rx.append(rx_bandwidth)
+            
+            # for pandas
+            result = [time, tx_bandwidth, rx_bandwidth]
+            tmp_bandwidth_result = pd.DataFrame([result], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
+            bandwidth_result = pd.concat([bandwidth_result, tmp_bandwidth_result], ignore_index=True)
+            
+            # prepare for next round loop        
+            tmp_time = time
+            tmp_tx = tx
+            tmp_rx = rx    
+        tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
+        tx_traces.to_csv(
+                    logdir + 'netstat.csv',
+                    mode='w',
+                    header=True,
+                    index=False,
+                    float_format='%.6f')
+        rx_traces = pd.DataFrame(rx_list, columns = sofa_fieldnames)
+        rx_traces.to_csv(
+                    logdir + 'netstat.csv',
+                    mode='a',
+                    header=False,
+                    index=False,
+                    float_format='%.6f')
         
     # ============ Preprocessing GPU Trace ==========================
     num_cudaproc = 0
@@ -1352,7 +1455,7 @@ def sofa_preprocess(cfg):
                         skt = int(fields[1])
                         t_begin = float(fields[0])
 
-                        if not absolute_timestamp:
+                        if not cfg.absolute_timestamp:
                             t_begin = t_begin - cfg.time_base
 
                         deviceId = skt
@@ -1437,7 +1540,7 @@ def sofa_preprocess(cfg):
                         pcm_memory_info = "PCM=memory | skt=%d | RD=%d (MB/s)" % (
                             skt, pcm_memory_rd_count)
 
-                        if not absolute_timestamp:
+                        if not cfg.absolute_timestamp:
                             t_begin = t_begin - cfg.time_base
 
                         bandwidth = pcm_memory_rd_count
@@ -1662,6 +1765,24 @@ def sofa_preprocess(cfg):
             sofatrace.y_field = 'duration'
             sofatrace.data = filtered_net_group['group'].copy()
             traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'tx_bandwidth'
+    sofatrace.title = 'tx Bandwidth'
+    sofatrace.color = 'rgba(135,206,250,0.8)' # LightSkyBlue
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'bandwidth'
+    sofatrace.data = tx_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'rx_bandwidth'
+    sofatrace.title = 'rx Bandwidth'
+    sofatrace.color = 'rgba(25,25,112,0.8)' # MidnightBlue
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'bandwidth'
+    sofatrace.data = rx_traces
+    traces.append(sofatrace)
 
     sofatrace = SOFATrace()
     sofatrace.name = 'gpu_kernel_trace'
