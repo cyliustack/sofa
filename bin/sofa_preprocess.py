@@ -517,9 +517,22 @@ def sofa_preprocess(cfg):
             dev = m[1]
             m_last = diskstats[i-n_dev][:-1]
             m_last = m_last.split(',')
+
+            # get sector size
+            try:
+                f = open('/sys/block/'+dev+'/queue/hw_sector_size')
+                s = f.readline()
+                s = re.match("\d+", s)
+                secsize = int(s.group())
+            except:
+                pass
+
             d_read = int(m[2]) - int(m_last[2])
+            d_read *= secsize
             d_write = int(m[3]) - int(m_last[3])
+            d_write *= secsize
             d_disk_total = d_read + d_write
+            d_disk_total *= secsize
             if not d_disk_total:
                 continue
             t_begin = float(m[0])
@@ -537,7 +550,7 @@ def sofa_preprocess(cfg):
             pkt_dst = -1
             pid = -1
             tid = -1
-            diskstat_info = 'diskstat_dev:%s (read|write): |%3d|%3d|' % (m[1], d_read, d_write)
+            diskstat_info = 'diskstat_dev:%s (read|write): |%3d|%3d| bytes' % (m[1], d_read, d_write)
             trace = [
                 t_begin,
                 event,
