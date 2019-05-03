@@ -138,6 +138,7 @@ def sofa_clean(cfg):
     subprocess.call('rm %s/*.script > /dev/null 2> /dev/null' % logdir, shell=True, stderr=DEVNULL, stdout=DEVNULL)
     subprocess.call('rm %s/*.tmp > /dev/null 2> /dev/null' % logdir, shell=True, stderr=DEVNULL, stdout=DEVNULL)
     subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True, stderr=DEVNULL, stdout=DEVNULL)
+    subprocess.call('rm %s/network_report.pdf > /dev/null 2> /dev/null' % logdir, shell=True, stderr=DEVNULL, stdout=DEVNULL)
 
 
 def sofa_record(command, cfg):
