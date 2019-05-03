@@ -315,18 +315,44 @@ def net_profile(logdir, cfg, df, features):
 
 def netbandwidth_profile(logdir, cfg, df):
     print_title("Network Bandwidth Profiling:")
-    print('Bandwidth Quartile (bytes):')
+    print('Bandwidth Quartile :')
     tx = df['event'] == float(0)
     rx = df['event'] == float(1)
     
-    print('Q1 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.25),
-                                      df[rx]['bandwidth'].quantile(0.25)))
-    print('Q2 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.5),
-                                      df[rx]['bandwidth'].quantile(0.5)))
-    print('Q3 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.75),
-                                      df[rx]['bandwidth'].quantile(0.75)))   
-    print('Avg tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].mean(),
-                                      df[rx]['bandwidth'].mean()))                                                          
+    def convertbytes(B):
+        B = float(B)
+        KB = float(1024)
+        MB = float(KB ** 2) # 1,048,576
+        GB = float(KB ** 3) # 1,073,741,824
+        TB = float(KB ** 4) # 1,099,511,627,776
+
+        if B < KB:
+            return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+        elif KB <= B < MB:
+            return '{0:.2f} KB/s'.format(B/KB)
+        elif MB <= B < GB:
+            return '{0:.2f} MB/s'.format(B/MB)
+        elif GB <= B < TB:
+            return '{0:.2f} GB/s'.format(B/GB)
+        elif TB <= B:
+            return '{0:.2f} TB/s'.format(B/TB)
+        
+    #print('Q1 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.25),
+    #                                  df[rx]['bandwidth'].quantile(0.25)))
+    #print('Q2 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.5),
+    #                                  df[rx]['bandwidth'].quantile(0.5)))
+    #print('Q3 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.75),
+    #                                  df[rx]['bandwidth'].quantile(0.75)))   
+    #print('Avg tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].mean(),
+    #                                  df[rx]['bandwidth'].mean()))
+    print('Q1 tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].quantile(0.25)),
+                                  convertbytes(df[rx]['bandwidth'].quantile(0.25))))
+    print('Q2 tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].quantile(0.5)),
+                                  convertbytes(df[rx]['bandwidth'].quantile(0.5))))
+    print('Q3 tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].quantile(0.75)),
+                                  convertbytes(df[rx]['bandwidth'].quantile(0.75))))   
+    print('Avg tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].mean()),
+                                   convertbytes(df[rx]['bandwidth'].mean())))                                                         
 
     #network chart part
     all_time = df[tx]['timestamp'].tolist()
@@ -340,7 +366,7 @@ def netbandwidth_profile(logdir, cfg, df):
     plt.xlabel('Timestamp (s)', fontsize=16)
     plt.ylabel("Bandwidth (bytes)", fontsize=16)
     fig.savefig("%s/network_report.pdf" % logdir, bbox_inches='tight')
-    print('Network Bandwidth Chart is saved at %s/network_chart.pdf' %logdir)
+    print('Network Bandwidth Chart is saved at %s/network_report.pdf' %logdir)
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
