@@ -78,7 +78,7 @@ function install_python_packages()
     fi
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip"
-    PIP_PACKAGES="numpy pandas matplotlib scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein grpcio grpcio-tools"
+    PIP_PACKAGES="numpy pandas matplotlib scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein grpcio grpcio-tools matplotlib"
     $WITH_SUDO python3.6 -m pip install --upgrade pip
     $WITH_SUDO python3.6 -m pip install --no-cache-dir ${PIP_PACKAGES}
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1

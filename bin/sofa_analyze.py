@@ -19,6 +19,7 @@ from sofa_common import *
 from sofa_config import *
 from sofa_hsg import *
 from sofa_print import *
+from matplotlib import pyplot as plt
 import grpc
 import potato_pb2
 import potato_pb2_grpc
@@ -217,7 +218,7 @@ def net_profile(logdir, cfg, df, features):
             n_packets = n_packets + 1
     #print(("total network time (s) = %.3lf" % net_time))
     #print(("total amount of network packets  = %d" % n_packets))
-    
+    # total network packet
     packet_num_matrix = df.groupby(['pkt_src','pkt_dst','payload']).size().unstack(level=1, fill_value=0)
     
     # total network traffic
@@ -311,6 +312,35 @@ def net_profile(logdir, cfg, df, features):
                        columns=['name','value'])
     features = pd.concat([features, df])
     return features
+
+def netbandwidth_profile(logdir, cfg, df):
+    print_title("Network Bandwidth Profiling:")
+    print('Bandwidth Quartile (bytes):')
+    tx = df['event'] == float(0)
+    rx = df['event'] == float(1)
+    
+    print('Q1 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.25),
+                                      df[rx]['bandwidth'].quantile(0.25)))
+    print('Q2 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.5),
+                                      df[rx]['bandwidth'].quantile(0.5)))
+    print('Q3 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.75),
+                                      df[rx]['bandwidth'].quantile(0.75)))   
+    print('Avg tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].mean(),
+                                      df[rx]['bandwidth'].mean()))                                                          
+
+    #network chart part
+    all_time = df[tx]['timestamp'].tolist()
+    all_tx = df[tx]['bandwidth'].tolist()
+    all_rx = df[rx]['bandwidth'].tolist()
+    fig = plt.figure(dpi=128, figsize=(16, 14))
+    plt.plot(all_time, all_tx, c='red', alpha=0.5, label='tx')
+    plt.plot(all_time, all_rx, c='blue', alpha=0.5, label='rx')
+    plt.legend(loc='upper right')
+    plt.title("Network Report", fontsize=18)
+    plt.xlabel('Timestamp (s)', fontsize=16)
+    plt.ylabel("Bandwidth (bytes)", fontsize=16)
+    fig.savefig("%s/network_report.pdf" % logdir, bbox_inches='tight')
+    print('Network Bandwidth Chart is saved at %s/network_chart.pdf' %logdir)
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
@@ -438,6 +468,7 @@ def sofa_analyze(cfg):
     df_net = pd.DataFrame([], columns=cfg.columns)
     df_mpstat = pd.DataFrame([], columns=cfg.columns)
     df_vmstat = pd.DataFrame([], columns=cfg.columns)
+    df_bandwidth = pd.DataFrame([], columns=cfg.columns)
     iter_summary = None
     logdir = cfg.logdir
 
@@ -454,6 +485,7 @@ def sofa_analyze(cfg):
     filein_mpstat = logdir + "mpstat.csv"
     filein_strace = logdir + "strace.csv"
     filein_nvsmi = logdir + "nvsmi_trace.csv"
+    filein_bandwidth = logdir + "netstat.csv"
 
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
 
@@ -521,6 +553,13 @@ def sofa_analyze(cfg):
     except IOError as e:
         df_net = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_net)
+
+    try:
+        df_bandwidth = pd.read_csv(filein_bandwidth)
+        netbandwidth_profile(logdir, cfg, df_bandwidth)
+    except IOError as e:
+        df_bandwidth = pd.DataFrame([], columns=cfg.columns)
+        print_warning("%s is not found" % filein_bandwidth)
 
     try:
         df_vmstat = pd.read_csv(filein_vmstat)
