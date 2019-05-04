@@ -400,6 +400,8 @@ def sofa_preprocess(cfg):
     net_traces = []
     cpu_traces = []
     cpu_traces_viz = []
+    blk_d_traces = []
+    blk_traces = []
     vm_usr_traces = []
     vm_sys_traces = []
     vm_bi_traces = []
@@ -570,6 +572,97 @@ def sofa_preprocess(cfg):
 
             diskstat_list.append(trace)
         diskstat_traces = list_to_csv_and_traces(logdir, diskstat_list, 'diskstat.csv', 'w')
+
+    
+    #     dev   cpu   sequence  timestamp   pid  event operation start_block+number_of_blocks   process
+    # <mjr,mnr>        number
+    #     8,0    6        1     0.000000000 31479  A   W 691248304 + 1024 <- (8,5) 188175536
+    #     8,0    6        2     0.000001254 31479  Q   W 691248304 + 1024 [dd]
+    #     8,0    6        3     0.000003353 31479  G   W 691248304 + 1024 [dd]
+    #     8,0    6        4     0.000005004 31479  I   W 691248304 + 1024 [dd]
+    #     8,0    6        5     0.000006175 31479  D   W 691248304 + 1024 [dd]
+    #     8,0    2        1     0.001041752     0  C   W 691248304 + 1024 [0]
+    with open('%s/blktrace.txt' % logdir) as f:
+        lines = f.readlines()
+        print_info(cfg,"Length of blktrace = %d" % len(lines))
+        if len(lines) > 0:
+            blktrace_d_list = []
+            blktrace_list = []
+            blktrace_d_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            blktrace_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+
+            t = 0
+            for i in range(len(lines)):
+                # filter some total calculate information in the below of blktrace.txt file
+                if len(lines[i]) > 50 and "Read" not in lines[i] and "CPU" not in lines[i] and "IO unplugs" not in lines[i]:
+                    fields = lines[i].split()
+                    blktrace_dev = fields[0]
+                    blktrace_cpu = fields[1]
+                    blktrace_sequence_number = fields[2]
+                    blktrace_timestamp = float(fields[3])
+                    blktrace_pid = fields[4]
+                    blktrace_event = fields[5]
+                    blktrace_operation = fields[6]
+                    blktrace_start_block = fields[7]
+                    blktrace_block_size = fields[9]
+                    blktrace_process = fields[10]
+
+                    t_begin = blktrace_timestamp
+                    deviceId = cpuid = blktrace_cpu
+                    event = blktrace_event
+                    copyKind = -1
+                    payload = -1
+                    bandwidth = -1
+                    pkt_src = pkt_dst = -1
+                    pid = tid = blktrace_pid
+                    name_info = -1
+                    trace = [
+                        t_begin,
+                        event,
+                        int(blktrace_start_block),
+                        deviceId,
+                        copyKind,
+                        payload,
+                        bandwidth,
+                        pkt_src,
+                        pkt_dst,
+                        pid,
+                        tid,
+                        name_info,
+                        cpuid]
+
+                    if 'D' is event:
+                        blktrace_d_list.append(trace)
+
+                    if 'C' is event:
+                        for i in range(len(blktrace_d_list)):
+                            if i==0:
+                                continue
+                            if int(blktrace_d_list[i][2])==int(blktrace_start_block):
+                                time_consume = float(blktrace_timestamp)-float(blktrace_d_list[i][0])
+                                # print('blktrace_d_list[i]:%s'%blktrace_d_list[i])
+                                # print('int(blktrace_timestamp):%f, int(blktrace_d_list[i][0]:%f, time_consume:%f' % (float(blktrace_timestamp), float(blktrace_d_list[i][0]), time_consume))
+                                trace = [
+                                    blktrace_d_list[i][0],
+                                    event,
+                                    float(time_consume),
+                                    deviceId,
+                                    copyKind,
+                                    payload,
+                                    bandwidth,
+                                    pkt_src,
+                                    pkt_dst,
+                                    pid,
+                                    tid,
+                                    name_info,
+                                    cpuid]
+                                blktrace_list.append(trace)
+
+            blk_d_traces = list_to_csv_and_traces(
+                logdir, blktrace_d_list, 'blktrace.csv', 'w')
+            blk_traces = list_to_csv_and_traces(
+                logdir, blktrace_list, 'blktrace.csv', 'a')
+
 
     # procs -----------------------memory---------------------- ---swap-- -
     #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
@@ -1628,6 +1721,24 @@ def sofa_preprocess(cfg):
 
     if len(swarm_groups) > 0 :
         traces = sofa_hsg_to_sofatrace(cfg, swarm_groups, traces) # append data of hsg function
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'blktrace_position'
+    sofatrace.title = 'BLKTRACE_POSITION'
+    sofatrace.color = 'Green'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = blk_d_traces
+    traces.append(sofatrace)
+
+    sofatrace = SOFATrace()
+    sofatrace.name = 'blktrace_time'
+    sofatrace.title = 'BLKTRACE_TIME'
+    sofatrace.color = 'DodgerBlue'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = blk_traces
+    traces.append(sofatrace)
 
     sofatrace = SOFATrace()
     sofatrace.name = 'vmstat_cs'
