@@ -1,11 +1,12 @@
 [ perf record: Woken up 1 times to write data ]
-[ perf record: Captured and wrote 0.019 MB perf.data (8 samples) ]
-            perf 12873 2086540.877829:          1 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
-            perf 12873 2086540.877831:          1 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
-            perf 12873 2086540.877833:         53 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
-            perf 12873 2086540.877834:       4620 cycles:ppp:  ffffffffb7e0b618 intel_bts_enable_local ([kernel.kallsyms])
-            perf 12873 2086540.877836:     427854 cycles:ppp:  ffffffffb8049af0 __set_task_comm ([kernel.kallsyms])
-              ls 12873 2086540.877941:   31995923 cycles:ppp:  ffffffffb7fef02b vma_compute_subtree_gap ([kernel.kallsyms])
-              ls 12873 2086540.885765:   25283627 cycles:ppp:  ffffffffb805c91d __d_lookup_rcu ([kernel.kallsyms])
-              ls 12873 2086540.891940:   13603598 cycles:ppp:  ffffffffb80ff5b0 selinux_inode_permission ([kernel.kallsyms])
-1556971922.412204 1556971922.412204
+[ perf record: Captured and wrote 0.019 MB perf.data (9 samples) ]
+            perf 14437 2087759.781834:          1 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
+            perf 14437 2087759.781837:          1 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
+            perf 14437 2087759.781838:         50 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
+            perf 14437 2087759.781839:       4395 cycles:ppp:  ffffffffb7e0b618 intel_bts_enable_local ([kernel.kallsyms])
+            perf 14437 2087759.781841:     407609 cycles:ppp:  ffffffffb7faa160 perf_event_exec ([kernel.kallsyms])
+              ls 14437 2087759.781942:   32616068 cycles:ppp:      7f029ace7ffc [unknown] ([unknown])
+              ls 14437 2087759.790037:   26292050 cycles:ppp:  ffffffffb80696c6 xattr_permission ([kernel.kallsyms])
+              ls 14437 2087759.796456:   12810691 cycles:ppp:      7f029a377609 __strcoll_l (/usr/lib64/libc-2.17.so)
+              ls 14437 2087759.799624:    9935106 cycles:ppp:      7f029a3939ae __offtime (/usr/lib64/libc-2.17.so)
+1556973141.300466 1556973141.300466
