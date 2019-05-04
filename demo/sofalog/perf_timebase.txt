@@ -1,12 +1,11 @@
 [ perf record: Woken up 1 times to write data ]
-[ perf record: Captured and wrote 0.016 MB perf.data (9 samples) ]
-              ls  7177 135288.118681:          1 cycles:uppp:  ffffffffa9e00de7 native_irq_return_iret ([kernel.kallsyms])
-              ls  7177 135288.118684:          1 cycles:uppp:  ffffffffa9e00de7 native_irq_return_iret ([kernel.kallsyms])
-              ls  7177 135288.118686:         35 cycles:uppp:  ffffffffa9e00de7 native_irq_return_iret ([kernel.kallsyms])
-              ls  7177 135288.118688:       2676 cycles:uppp:  ffffffffa9e00de7 native_irq_return_iret ([kernel.kallsyms])
-              ls  7177 135288.118692:     212533 cycles:uppp:      7f559e5e0c30 _start (/lib/x86_64-linux-gnu/ld-2.23.so)
-              ls  7177 135288.118962:    6801195 cycles:uppp:      7f559e5ec6d1 _dl_relocate_object (/lib/x86_64-linux-gnu/ld-2.23.so)
-              ls  7177 135288.130196:    6231697 cycles:uppp:      7f559e08c379 __strcoll_l (/lib/x86_64-linux-gnu/libc-2.23.so)
-              ls  7177 135288.132965:    5649256 cycles:uppp:            40fc39 [unknown] (/bin/ls)
-              ls  7177 135288.136436:    4753054 cycles:uppp:            40cfb0 [unknown] (/bin/ls)
-1556843731.361494 1556843731.361494
+[ perf record: Captured and wrote 0.019 MB perf.data (8 samples) ]
+            perf 12873 2086540.877829:          1 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
+            perf 12873 2086540.877831:          1 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
+            perf 12873 2086540.877833:         53 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
+            perf 12873 2086540.877834:       4620 cycles:ppp:  ffffffffb7e0b618 intel_bts_enable_local ([kernel.kallsyms])
+            perf 12873 2086540.877836:     427854 cycles:ppp:  ffffffffb8049af0 __set_task_comm ([kernel.kallsyms])
+              ls 12873 2086540.877941:   31995923 cycles:ppp:  ffffffffb7fef02b vma_compute_subtree_gap ([kernel.kallsyms])
+              ls 12873 2086540.885765:   25283627 cycles:ppp:  ffffffffb805c91d __d_lookup_rcu ([kernel.kallsyms])
+              ls 12873 2086540.891940:   13603598 cycles:ppp:  ffffffffb80ff5b0 selinux_inode_permission ([kernel.kallsyms])
+1556971922.412204 1556971922.412204

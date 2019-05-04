@@ -1723,8 +1723,8 @@ def sofa_preprocess(cfg):
         traces = sofa_hsg_to_sofatrace(cfg, swarm_groups, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
-    sofatrace.name = 'blktrace_position'
-    sofatrace.title = 'BLKTRACE_POSITION'
+    sofatrace.name = 'blktrace_starting_block'
+    sofatrace.title = 'BLKTRACE_STARTING_BLOCK'
     sofatrace.color = 'Green'
     sofatrace.x_field = 'timestamp'
     sofatrace.y_field = 'duration'
