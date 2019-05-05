@@ -70,9 +70,12 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, features):
     
     t = t_begin
     while t < t_end:
+        t = t + 0.1
+        if t < cfg.roi_begin or t > cfg.roi_end:
+            continue
+        
         window_begin = t - 0.1 
         window_end = t
-        t = t + 0.1
         
         if df_cpu.iloc[0].timestamp > window_end:
             continue
