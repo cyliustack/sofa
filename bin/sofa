@@ -141,6 +141,13 @@ if __name__ == "__main__":
         help='IP address of POTATO server')
     parser.add_argument('--absolute_timestamp', dest='absolute_timestamp', action='store_true')
     parser.set_defaults(absolute_timestamp=False)
+    parser.add_argument(
+        '--profile_region',
+        metavar='begin_time,end_time',
+        type=str,
+        required=False,
+        help='time region of interest for profiling. (unit:second)')
+
 
     parser.add_argument(
         '--blktrace_device',
@@ -295,6 +302,15 @@ if __name__ == "__main__":
 
     if args.absolute_timestamp is not None:
         cfg.absolute_timestamp = args.absolute_timestamp
+
+    if args.profile_region is not None:
+        try:
+            cfg.roi_begin = float(args.profile_region.split(',')[0])
+            cfg.roi_end = float(args.profile_region.split(',')[1])
+            print_info(cfg, "profile region is between %.2lf and %.2lf"%(cfg.roi_begin,cfg.roi_end))
+        except:
+            print_error("The usage of profile_region should look like --profile_region='begin_time,end_time'")
+            sys.exit(-1)
 
     print_info(cfg, "Ratio of raw data points to plotting points : %d" % cfg.plot_ratio)
     for filter in cfg.cpu_filters:

@@ -47,3 +47,5 @@ class SOFA_Config:
     enable_strace = False
     enable_py_stacks = False
     blktrace_device = False
+    roi_begin=0
+    roi_end=0
