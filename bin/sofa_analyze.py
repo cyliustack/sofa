@@ -261,7 +261,25 @@ def net_profile(logdir, cfg, df, features):
             i = i[:-9] + '.' + zero(a) + '.' + zero(b) + '.' + zero(c)
             rename_columns_2.append(i)
         return(rename_columns_2)
- 
+    
+    def convertbytes(B):
+        B = float(B)
+        KB = float(1024)
+        MB = float(KB ** 2) # 1,048,576
+        GB = float(KB ** 3) # 1,073,741,824
+        TB = float(KB ** 4) # 1,099,511,627,776
+
+        if B < KB:
+            return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+        elif KB <= B < MB:
+            return '{0:.2f} KB'.format(B/KB)
+        elif MB <= B < GB:
+            return '{0:.2f} MB'.format(B/MB)
+        elif GB <= B < TB:
+            return '{0:.2f} GB'.format(B/GB)
+        elif TB <= B:
+            return '{0:.2f} TB'.format(B/TB)
+
     rename_index_new = check_str(rename_index)
     rename_index_new = dict(zip(rename_index, rename_index_new))
     
@@ -281,7 +299,7 @@ def net_profile(logdir, cfg, df, features):
     packet_sum_matrix = packet_sum_matrix.rename(index=rename_index_new)
     packet_num_matrix.index.set_levels(rename_index2_final , level = 0, inplace = True)
     
-    print("total amount of network traffic : ", df['payload'].sum(), "(Bytes)\n", packet_sum_matrix.to_string(), "\n")
+    print("total amount of network traffic : ", convertbytes(df['payload'].sum()), '\n', packet_sum_matrix.to_string(), "\n")
     if cfg.verbose:
         print("total amount of network packets = %d\n" % packet_num_matrix.sum().sum() ,packet_num_matrix.to_string(), "\n")
     
@@ -302,9 +320,9 @@ def net_profile(logdir, cfg, df, features):
         if value == 0:
             pass
         else:
-            item = [src, dst, int(value)]
+            item = [src, dst, convertbytes(value), round(value / df['payload'].sum(), 2)]
             final.append(item)
-    summary = pd.DataFrame(final, columns=['Source', 'Destination', 'Amount'])
+    summary = pd.DataFrame(final, columns=['Source', 'Destination', 'Amount', 'Percentage of a Node'])
     summary.to_csv(logdir + 'netrank.csv',
                 mode='w',
                 header=True,
@@ -316,20 +334,40 @@ def net_profile(logdir, cfg, df, features):
     features = pd.concat([features, df])
     return features
 
+def convertbytes(B):
+    B = float(B)
+    KB = float(1024)
+    MB = float(KB ** 2) # 1,048,576
+    GB = float(KB ** 3) # 1,073,741,824
+    TB = float(KB ** 4) # 1,099,511,627,776
+
+    if B < KB:
+        return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+    elif KB <= B < MB:
+        return '{0:.2f} KB/s'.format(B/KB)
+    elif MB <= B < GB:
+        return '{0:.2f} MB/s'.format(B/MB)
+    elif GB <= B < TB:
+        return '{0:.2f} GB/s'.format(B/GB)
+    elif TB <= B:
+        return '{0:.2f} TB/s'.format(B/TB)
+
 def netbandwidth_profile(logdir, cfg, df):
-    print_title("Network Bandwidth Profiling:")
-    print('Bandwidth Quartile (bytes):')
+    if not cfg.cluster_ip:
+        print_title("Network Bandwidth Profiling:")
+        print('Bandwidth Quartile :')
     tx = df['event'] == float(0)
     rx = df['event'] == float(1)
-    
-    print('Q1 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.25),
-                                      df[rx]['bandwidth'].quantile(0.25)))
-    print('Q2 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.5),
-                                      df[rx]['bandwidth'].quantile(0.5)))
-    print('Q3 tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].quantile(0.75),
-                                      df[rx]['bandwidth'].quantile(0.75)))   
-    print('Avg tx : %.2f, rx : %.2f' %(df[tx]['bandwidth'].mean(),
-                                      df[rx]['bandwidth'].mean()))                                                          
+  
+    if not cfg.cluster_ip:
+        print('Q1 tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].quantile(0.25)),
+                                    convertbytes(df[rx]['bandwidth'].quantile(0.25))))
+        print('Q2 tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].quantile(0.5)),
+                                    convertbytes(df[rx]['bandwidth'].quantile(0.5))))
+        print('Q3 tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].quantile(0.75)),
+                                    convertbytes(df[rx]['bandwidth'].quantile(0.75))))   
+        print('Avg tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].mean()),
+                                    convertbytes(df[rx]['bandwidth'].mean())))                                                         
 
     #network chart part
     all_time = df[tx]['timestamp'].tolist()
@@ -343,7 +381,8 @@ def netbandwidth_profile(logdir, cfg, df):
     plt.xlabel('Timestamp (s)', fontsize=16)
     plt.ylabel("Bandwidth (bytes)", fontsize=16)
     fig.savefig("%s/network_report.pdf" % logdir, bbox_inches='tight')
-    print('Network Bandwidth Chart is saved at %s/network_chart.pdf' %logdir)
+    if not cfg.cluster_ip:
+        print('Network Bandwidth Chart is saved at %s/network_report.pdf' %logdir)
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
@@ -621,11 +660,11 @@ def sofa_analyze(cfg):
 def cluster_analyze(cfg):
     print_title("Cluster Network Profiling :")
     cluster = cfg.cluster_ip.split(',')
-    summary_net = pd.DataFrame([], columns=['Source', 'Destination', 'Amount'])
+    summary_net = pd.DataFrame([], columns=['Source', 'Destination', 'Amount', 'Percentage of a Node'])
     summary_compute = pd.DataFrame([], columns=['gpu_sm_util','gpu_mem_util','cpu_util'])
-    
-    i = 0
-    for ip in cluster:
+    summary_band = pd.DataFrame([], columns=['Q1', 'Q2', 'Q3', 'Avg'])  
+    all = []
+    for i, ip in enumerate(cluster):
         features = pd.DataFrame({'name':['elapsed_time'],
                                  'value':[cfg.elapsed_time]},
                                  columns=['name','value'])
@@ -636,6 +675,7 @@ def cluster_analyze(cfg):
         filein_net = logdir + "nettrace.csv"
         filein_mpstat = logdir + "mpstat.csv"
         filein_nvsmi = logdir + "nvsmi_trace.csv"
+        filein_bandwidth = logdir + "netstat.csv"
         with open(logdir+'/misc.txt') as f:
             lines = f.readlines()
             elapsed_time = float(lines[0].split()[1])
@@ -658,6 +698,12 @@ def cluster_analyze(cfg):
             features = nvsmi_profile(logdir, cfg, df_nvsmi, features)
         except IOError:
             print_warning("nvsmi_trace.csv is not found")
+        try:
+            df_bandwidth = pd.read_csv(filein_bandwidth)
+            netbandwidth_profile(logdir, cfg, df_bandwidth)
+        except IOError as e:
+            df_bandwidth = pd.DataFrame([], columns=cfg.columns)
+            print_warning("%s is not found" % filein_bandwidth)
 
         sm = int(features[features['name'] == 'gpu_sm_util']['value'])
         mem = int(features[features['name'] == 'gpu_mem_util']['value'])
@@ -668,8 +714,23 @@ def cluster_analyze(cfg):
         summary_compute = pd.concat([summary_compute, pd.concat([compute_tmp], keys=[node])]) 
         net_tmp = pd.read_csv(logdir + "netrank.csv")
         summary_net = pd.concat([summary_net, pd.concat([net_tmp], keys=[node])])
-        
-        i = i + 1
-    print('Ranked Network Traffic : \n', summary_net)
+       
+        # for bandwidth report
+        tx = df_bandwidth['event'] == float(0)
+        rx = df_bandwidth['event'] == float(1)
+        tx_tmp = [convertbytes(df_bandwidth[tx]['bandwidth'].quantile(0.25)),                         
+                    convertbytes(df_bandwidth[tx]['bandwidth'].quantile(0.5)),
+                    convertbytes(df_bandwidth[tx]['bandwidth'].quantile(0.75)),
+                    convertbytes(df_bandwidth[tx]['bandwidth'].mean())]
+        rx_tmp = [convertbytes(df_bandwidth[rx]['bandwidth'].quantile(0.25)),                         
+                    convertbytes(df_bandwidth[rx]['bandwidth'].quantile(0.5)),
+                    convertbytes(df_bandwidth[rx]['bandwidth'].quantile(0.75)),
+                    convertbytes(df_bandwidth[rx]['bandwidth'].mean())]
+        band_tmp = pd.DataFrame([tx_tmp], columns = ['Q1', 'Q2', 'Q3', 'Avg'], index = ['tx'])
+        rx_pd = pd.DataFrame([rx_tmp], columns = ['Q1', 'Q2', 'Q3', 'Avg'], index = ['rx'])
+        band_tmp = pd.concat([band_tmp, rx_pd]) 
+        summary_band = pd.concat([summary_band, pd.concat([band_tmp], keys=[node])]) 
+    print('Ranked Network Traffic : \n', summary_net, '\n')
+    print('Cluster Bandwidth Quartile: \n', summary_band)
     print_title('Cluster Computation Profiling:')
     print(summary_compute)
