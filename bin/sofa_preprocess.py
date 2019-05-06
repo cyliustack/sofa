@@ -603,9 +603,14 @@ def sofa_preprocess(cfg):
                     blktrace_pid = fields[4]
                     blktrace_event = fields[5]
                     blktrace_operation = fields[6]
-                    blktrace_start_block = fields[7]
-                    blktrace_block_size = fields[9]
-                    blktrace_process = fields[10]
+                    try: 
+                        blktrace_start_block = int(fields[7])
+                    except ValueError:
+                        pass
+                    # the two column blktrace_block_size and blktrace_process is for future used
+                    if len(fields) > 10:
+                        blktrace_block_size = fields[9]
+                        blktrace_process = fields[10]
 
                     t_begin = blktrace_timestamp
                     deviceId = cpuid = blktrace_cpu
@@ -619,7 +624,7 @@ def sofa_preprocess(cfg):
                     trace = [
                         t_begin,
                         event,
-                        int(blktrace_start_block),
+                        blktrace_start_block,
                         deviceId,
                         copyKind,
                         payload,
