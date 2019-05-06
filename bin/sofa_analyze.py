@@ -352,7 +352,7 @@ def convertbytes(B):
     elif TB <= B:
         return '{0:.2f} TB/s'.format(B/TB)
 
-def netbandwidth_profile(logdir, cfg, df):
+def netbandwidth_profile(logdir, cfg, df, features):
     if not cfg.cluster_ip:
         print_title("Network Bandwidth Profiling:")
         print('Bandwidth Quartile :')
@@ -360,14 +360,19 @@ def netbandwidth_profile(logdir, cfg, df):
     rx = df['event'] == float(1)
   
     if not cfg.cluster_ip:
-        print('Q1 tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].quantile(0.25)),
-                                    convertbytes(df[rx]['bandwidth'].quantile(0.25))))
-        print('Q2 tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].quantile(0.5)),
-                                    convertbytes(df[rx]['bandwidth'].quantile(0.5))))
-        print('Q3 tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].quantile(0.75)),
-                                    convertbytes(df[rx]['bandwidth'].quantile(0.75))))   
-        print('Avg tx : %s, rx : %s' %(convertbytes(df[tx]['bandwidth'].mean()),
-                                    convertbytes(df[rx]['bandwidth'].mean())))                                                         
+        bw_tx_q1 = df[tx]['bandwidth'].quantile(0.25)
+        bw_tx_q2 = df[tx]['bandwidth'].quantile(0.5)
+        bw_tx_q3 = df[tx]['bandwidth'].quantile(0.75)
+        bw_tx_mean = int(df[tx]['bandwidth'].mean())
+        bw_rx_q1 = df[rx]['bandwidth'].quantile(0.25)
+        bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
+        bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
+        bw_rx_mean = int(df[rx]['bandwidth'].mean())
+
+        print('Q1 tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
+        print('Q2 tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
+        print('Q3 tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
+        print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))                                                         
 
     #network chart part
     all_time = df[tx]['timestamp'].tolist()
@@ -383,6 +388,13 @@ def netbandwidth_profile(logdir, cfg, df):
     fig.savefig("%s/network_report.pdf" % logdir, bbox_inches='tight')
     if not cfg.cluster_ip:
         print('Network Bandwidth Chart is saved at %s/network_report.pdf' %logdir)
+
+    df_feature = pd.DataFrame({ 'name':['bw_tx_q2', 'bw_tx_q3', 'bw_rx_q2', 'bw_rx_q3'], 
+                        'value':[bw_tx_q2, bw_tx_q3, bw_rx_q2, bw_rx_q3] }, 
+                        columns=['name','value'])
+    features = pd.concat([features, df_feature])   
+ 
+    return features
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
@@ -427,10 +439,10 @@ def vmstat_profile(logdir, cfg, df, features):
     vm_bo = vmstat_traces['bo'].mean()
     vm_cs = vmstat_traces['cs'].mean()
     vm_in = vmstat_traces['in'].mean()
-    print('sum of vmstat bi: ', vm_cs)
-    print('sum of vmstat bo: ', vm_in)
-    print('sum of vmstat cs: ', vm_bi)
-    print('sum of vmstat in: ', vm_bo)
+    print('average bi/s: %d' % int(vm_cs))
+    print('average bo/s: %d' % int(vm_in))
+    print('average cs/s: %d' % int(vm_bi))
+    print('average in/s: %d' % int(vm_bo))
 
     df_feature = pd.DataFrame({ 'name':['vm_bi', 'vm_bo', 'vm_cs', 'vm_in' ], 
                         'value':[vm_bi, vm_bo, vm_cs, vm_in] }, 
@@ -598,7 +610,7 @@ def sofa_analyze(cfg):
 
     try:
         df_bandwidth = pd.read_csv(filein_bandwidth)
-        netbandwidth_profile(logdir, cfg, df_bandwidth)
+        features = netbandwidth_profile(logdir, cfg, df_bandwidth, features)
     except IOError as e:
         df_bandwidth = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_bandwidth)
@@ -700,7 +712,7 @@ def cluster_analyze(cfg):
             print_warning("nvsmi_trace.csv is not found")
         try:
             df_bandwidth = pd.read_csv(filein_bandwidth)
-            netbandwidth_profile(logdir, cfg, df_bandwidth)
+            features = netbandwidth_profile(logdir, cfg, df_bandwidth, features)
         except IOError as e:
             df_bandwidth = pd.DataFrame([], columns=cfg.columns)
             print_warning("%s is not found" % filein_bandwidth)
