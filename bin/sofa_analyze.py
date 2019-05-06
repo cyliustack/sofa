@@ -389,10 +389,10 @@ def netbandwidth_profile(logdir, cfg, df, features):
     if not cfg.cluster_ip:
         print('Network Bandwidth Chart is saved at %s/network_report.pdf' %logdir)
 
-    df_feature = pd.DataFrame({ 'name':['bw_tx_q2', 'bw_tx_q3', 'bw_rx_q2', 'bw_rx_q3'], 
+        df_feature = pd.DataFrame({ 'name':['bw_tx_q2', 'bw_tx_q3', 'bw_rx_q2', 'bw_rx_q3'], 
                         'value':[bw_tx_q2, bw_tx_q3, bw_rx_q2, bw_rx_q3] }, 
                         columns=['name','value'])
-    features = pd.concat([features, df_feature])   
+        features = pd.concat([features, df_feature])   
  
     return features
 
