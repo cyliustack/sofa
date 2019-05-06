@@ -149,6 +149,7 @@ def sofa_record(command, cfg):
     p_diskstat = None
     p_netstat = None
     p_vmstat  = None
+    p_blktrace  = None
     p_cpuinfo  = None
     p_nvprof  = None
     p_nvsmi   = None
@@ -264,6 +265,9 @@ def sofa_record(command, cfg):
         with open('%s/vmstat.txt' % logdir, 'w') as logfile:
             p_vmstat = subprocess.Popen(['vmstat', '-w', '1'], stdout=logfile)
 
+        if cfg.blktrace_device is not None:
+            p_blktrace = subprocess.Popen(['blktrace', '-d', '/dev/%s' % cfg.blktrace_device], stdout=DEVNULL)
+
         with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
             logfile.write('')
             timerThread = threading.Thread(target=service_get_cpuinfo, args=[logdir])
@@ -374,6 +378,11 @@ def sofa_record(command, cfg):
         if p_vmstat != None:
             p_vmstat.terminate()
             print_info(cfg,"tried terminating vmstat")
+        if p_blktrace != None:
+            p_blktrace.terminate()
+            os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device,logdir))
+            os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)
+            print_info(cfg,"tried terminating blktrace")
         if p_cpuinfo != None:
             p_cpuinfo.terminate()
             print_info(cfg,"tried terminating cpuinfo")
@@ -411,6 +420,11 @@ def sofa_record(command, cfg):
         if p_vmstat != None:
             p_vmstat.kill()
             print_info(cfg,"tried killing vmstat")
+        if p_blktrace != None:
+            p_blktrace.terminate()
+            os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device,logdir))
+            os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)
+            print_info(cfg,"tried terminating blktrace")
         if p_cpuinfo != None:
             p_cpuinfo.kill()
             print_info(cfg,"tried killing cpuinfo")

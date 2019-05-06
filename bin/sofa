@@ -149,6 +149,13 @@ if __name__ == "__main__":
         help='time region of interest for profiling. (unit:second)')
 
 
+    parser.add_argument(
+        '--blktrace_device',
+        dest='blktrace_device',
+        type=str,
+        required=False,
+        help='trace for specific block device, for example : --blktrace_device sda')
+	
     sofa_exec_path = os.path.abspath( __file__ )
     if Path(sofa_exec_path).is_symlink():
         cfg.script_path = os.path.dirname(os.readlink(sofa_exec_path))
@@ -185,6 +192,10 @@ if __name__ == "__main__":
     
     if args.display_swarms is not None:
         cfg.display_swarms = args.display_swarms
+
+    if args.blktrace_device is not None:
+        cfg.blktrace_device = args.blktrace_device
+	
 
     # swarm_diff related flag
     if command == 'diff': # reject '' and None
