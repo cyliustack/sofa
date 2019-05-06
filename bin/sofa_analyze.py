@@ -322,7 +322,7 @@ def net_profile(logdir, cfg, df, features):
         else:
             item = [src, dst, convertbytes(value), round(value / df['payload'].sum(), 2)]
             final.append(item)
-    summary = pd.DataFrame(final, columns=['Source', 'Destination', 'Amount', 'Percentage'])
+    summary = pd.DataFrame(final, columns=['Source', 'Destination', 'Amount', 'Percentage of a Node'])
     summary.to_csv(logdir + 'netrank.csv',
                 mode='w',
                 header=True,
@@ -660,7 +660,7 @@ def sofa_analyze(cfg):
 def cluster_analyze(cfg):
     print_title("Cluster Network Profiling :")
     cluster = cfg.cluster_ip.split(',')
-    summary_net = pd.DataFrame([], columns=['Source', 'Destination', 'Amount', 'Percentage'])
+    summary_net = pd.DataFrame([], columns=['Source', 'Destination', 'Amount', 'Percentage of a Node'])
     summary_compute = pd.DataFrame([], columns=['gpu_sm_util','gpu_mem_util','cpu_util'])
     summary_band = pd.DataFrame([], columns=['Q1', 'Q2', 'Q3', 'Avg'])  
     all = []
