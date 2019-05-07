@@ -27,7 +27,7 @@ import socket
 
 # input: pfv(performance feature vector), Pandas.DataFrame
 # output: hint, docker_image  
-def get_hint(features):
+def get_hint(potato_server, features):
 
     if len(features) > 0:
         pfv = potato_pb2.PerformanceFeatureVector() 
@@ -40,7 +40,7 @@ def get_hint(features):
 			
         print('Wait for response from POTATO server...')
         myhostname = socket.gethostname()
-        channel = grpc.insecure_channel('localhost:50051')
+        channel = grpc.insecure_channel(potato_server)
         stub = potato_pb2_grpc.HintStub(channel)
         request = potato_pb2.HintRequest( hostname = myhostname,
                                           pfv = pfv) 
@@ -662,7 +662,7 @@ def sofa_analyze(cfg):
 
     if cfg.potato_server:
         print_title('POTATO Feedback')
-        hint, docker_image = get_hint(features)
+        hint, docker_image = get_hint(cfg.potato_server, features)
         print('Optimization hints: ' + hint)
         print('Tag of optimal image recommended from POTATO: ' + highlight(docker_image))
         print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
