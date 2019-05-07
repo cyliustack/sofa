@@ -592,6 +592,7 @@ def sofa_preprocess(cfg):
             blktrace_list = []
             blktrace_d_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             blktrace_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            record_error_flag = 0
 
             t = 0
             for i in range(len(lines)):
@@ -607,7 +608,9 @@ def sofa_preprocess(cfg):
                     blktrace_operation = fields[6]
                     try: 
                         blktrace_start_block = int(fields[7])
-                    except ValueError:
+                    except:
+                        blktrace_start_block = 0
+                        record_error_flag = 1
                         pass
                     # the two column blktrace_block_size and blktrace_process is for future used
                     if len(fields) > 10:
@@ -669,6 +672,9 @@ def sofa_preprocess(cfg):
                 logdir, blktrace_d_list, 'blktrace.csv', 'w')
             blk_traces = list_to_csv_and_traces(
                 logdir, blktrace_list, 'blktrace.csv', 'a')
+
+            if record_error_flag == 1 :
+                print_warning('blktrace maybe record failed!')
 
 
     # procs -----------------------memory---------------------- ---swap-- -
