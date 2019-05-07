@@ -372,8 +372,8 @@ def netbandwidth_profile(logdir, cfg, df, features):
         print('Q1 tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
         print('Q2 tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
         print('Q3 tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
-        print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))                                                         
-
+        print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))
+                                 
     #network chart part
     all_time = df[tx]['timestamp'].tolist()
     all_tx = df[tx]['bandwidth'].tolist()
@@ -395,6 +395,20 @@ def netbandwidth_profile(logdir, cfg, df, features):
         features = pd.concat([features, df_feature])   
  
     return features
+
+def blktrace_latency_profile(logdir, cfg, df, features):
+    print_title("Storage Profiling:")
+    print('Blktracae Latency Quartile :')
+    blktrace_latency = df['event'] == 'C'
+    blktrace_latency_q1 = df[blktrace_latency]['duration'].quantile(0.25)
+    blktrace_latency_q2 = df[blktrace_latency]['duration'].quantile(0.5)
+    blktrace_latency_q3 = df[blktrace_latency]['duration'].quantile(0.75)
+    blktrace_latency_mean = df[blktrace_latency]['duration'].mean()
+
+    print('Q1 blktrace latency : %f' % blktrace_latency_q1)
+    print('Q2 blktrace latency : %f' % blktrace_latency_q2)
+    print('Q3 blktrace latency : %f' % blktrace_latency_q3)
+    print('Avg blktrace latency : %f'% blktrace_latency_mean)
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
@@ -523,6 +537,7 @@ def sofa_analyze(cfg):
     df_mpstat = pd.DataFrame([], columns=cfg.columns)
     df_vmstat = pd.DataFrame([], columns=cfg.columns)
     df_bandwidth = pd.DataFrame([], columns=cfg.columns)
+    df_blktrace = pd.DataFrame([], columns=cfg.columns)
     iter_summary = None
     logdir = cfg.logdir
 
@@ -540,6 +555,7 @@ def sofa_analyze(cfg):
     filein_strace = logdir + "strace.csv"
     filein_nvsmi = logdir + "nvsmi_trace.csv"
     filein_bandwidth = logdir + "netstat.csv"
+    filein_blktrace = logdir + "blktrace.csv"
 
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
 
@@ -614,6 +630,13 @@ def sofa_analyze(cfg):
     except IOError as e:
         df_bandwidth = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_bandwidth)
+
+    try:
+        df_blktrace = pd.read_csv(filein_blktrace)
+        features = blktrace_latency_profile(logdir, cfg, df_blktrace, features)
+    except IOError as e:
+        df_blktrace = pd.DataFrame([], columns=cfg.columns)
+        print_warning("%s is not found" % filein_blktrace)
 
     try:
         df_vmstat = pd.read_csv(filein_vmstat)
