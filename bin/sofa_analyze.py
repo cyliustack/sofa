@@ -398,7 +398,7 @@ def netbandwidth_profile(logdir, cfg, df, features):
 
 def blktrace_latency_profile(logdir, cfg, df, features):
     print_title("Storage Profiling:")
-    print('Blktracae Latency Quartile :')
+    print('Blktracae Latency Quartile (s):')
     blktrace_latency = df['event'] == 'C'
     blktrace_latency_q1 = df[blktrace_latency]['duration'].quantile(0.25)
     blktrace_latency_q2 = df[blktrace_latency]['duration'].quantile(0.5)
@@ -409,6 +409,12 @@ def blktrace_latency_profile(logdir, cfg, df, features):
     print('Q2 blktrace latency : %f' % blktrace_latency_q2)
     print('Q3 blktrace latency : %f' % blktrace_latency_q3)
     print('Avg blktrace latency : %f'% blktrace_latency_mean)
+    df_feature = pd.DataFrame({ 'name':['blktrace_latency_q1','blktrace_latency_q2','blktrace_latency_q3'], 
+                        'value': [blktrace_latency_q1, blktrace_latency_q2, blktrace_latency_q3] }, 
+                        columns=['name','value'])
+    features = pd.concat([features, df_feature])   
+ 
+    return features
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
