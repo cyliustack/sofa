@@ -398,7 +398,7 @@ def netbandwidth_profile(logdir, cfg, df, features):
 
 def blktrace_latency_profile(logdir, cfg, df, features):
     print_title("Storage Profiling:")
-    print('Blktracae Latency Quartile :')
+    print('Blktracae Latency Quartile (s):')
     blktrace_latency = df['event'] == 'C'
     blktrace_latency_q1 = df[blktrace_latency]['duration'].quantile(0.25)
     blktrace_latency_q2 = df[blktrace_latency]['duration'].quantile(0.5)
@@ -409,6 +409,19 @@ def blktrace_latency_profile(logdir, cfg, df, features):
     print('Q2 blktrace latency : %f' % blktrace_latency_q2)
     print('Q3 blktrace latency : %f' % blktrace_latency_q3)
     print('Avg blktrace latency : %f'% blktrace_latency_mean)
+
+def diskstat_profile(logdir, cfg, df, features):
+    print_title("DISKSTAT Profiling:")
+    print('Disk Throughput Quartile :')
+    diskstat_q1 = df['duration'].quantile(0.25)
+    diskstat_q2 = df['duration'].quantile(0.5)
+    diskstat_q3 = df['duration'].quantile(0.75)
+    diskstat_mean = df['duration'].mean()
+
+    print('Q1 disk throughput : %s' % convertbytes(diskstat_q1))
+    print('Q2 disk throughput : %s' % convertbytes(diskstat_q2))
+    print('Q3 disk throughput : %s' % convertbytes(diskstat_q3))
+    print('Avg disk throughput : %s' % convertbytes(diskstat_mean))
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
@@ -538,6 +551,7 @@ def sofa_analyze(cfg):
     df_vmstat = pd.DataFrame([], columns=cfg.columns)
     df_bandwidth = pd.DataFrame([], columns=cfg.columns)
     df_blktrace = pd.DataFrame([], columns=cfg.columns)
+    df_diskstat = pd.DataFrame([], columns=cfg.columns)
     iter_summary = None
     logdir = cfg.logdir
 
@@ -556,6 +570,7 @@ def sofa_analyze(cfg):
     filein_nvsmi = logdir + "nvsmi_trace.csv"
     filein_bandwidth = logdir + "netstat.csv"
     filein_blktrace = logdir + "blktrace.csv"
+    filein_diskstat = logdir + "diskstat.csv"
 
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
 
@@ -637,6 +652,13 @@ def sofa_analyze(cfg):
     except IOError as e:
         df_blktrace = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_blktrace)
+
+    try:
+        df_diskstat = pd.read_csv(filein_diskstat)
+        features = diskstat_profile(logdir, cfg, df_diskstat, features)
+    except IOError as e:
+        df_diskstat = pd.DataFrame([], columns=cfg.columns)
+        print_warning("%s is not found" % filein_diskstat)
 
     try:
         df_vmstat = pd.read_csv(filein_vmstat)
