@@ -418,10 +418,10 @@ def diskstat_profile(logdir, cfg, df, features):
     diskstat_q3 = df['duration'].quantile(0.75)
     diskstat_mean = df['duration'].mean()
 
-    print('Q1 blktrace latency : %s' % convertbytes(diskstat_q1))
-    print('Q2 blktrace latency : %s' % convertbytes(diskstat_q2))
-    print('Q3 blktrace latency : %s' % convertbytes(diskstat_q3))
-    print('Avg blktrace latency : %s' % convertbytes(diskstat_mean))
+    print('Q1 disk throughput : %s' % convertbytes(diskstat_q1))
+    print('Q2 disk throughput : %s' % convertbytes(diskstat_q2))
+    print('Q3 disk throughput : %s' % convertbytes(diskstat_q3))
+    print('Avg disk throughput : %s' % convertbytes(diskstat_mean))
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
