@@ -1533,8 +1533,7 @@ def sofa_preprocess(cfg):
                 bandwidth = -1
                 pkt_src = pkt_dst = -1
                 pid = tid = -1
-                if not cfg.absolute_timestamp:
-                    t_begin = key - cfg.time_base
+                t_begin = key if cfg.absolute_timestamp else key - cfg.time_base
                 trace = [
                     t_begin,
                     event,
