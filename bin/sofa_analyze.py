@@ -416,6 +416,19 @@ def blktrace_latency_profile(logdir, cfg, df, features):
  
     return features
 
+def diskstat_profile(logdir, cfg, df, features):
+    print_title("DISKSTAT Profiling:")
+    print('Disk Throughput Quartile :')
+    diskstat_q1 = df['duration'].quantile(0.25)
+    diskstat_q2 = df['duration'].quantile(0.5)
+    diskstat_q3 = df['duration'].quantile(0.75)
+    diskstat_mean = df['duration'].mean()
+
+    print('Q1 disk throughput : %s' % convertbytes(diskstat_q1))
+    print('Q2 disk throughput : %s' % convertbytes(diskstat_q2))
+    print('Q3 disk throughput : %s' % convertbytes(diskstat_q3))
+    print('Avg disk throughput : %s' % convertbytes(diskstat_mean))
+
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
     print('elapsed_time (s) = %.6lf' % cfg.elapsed_time) 
@@ -544,6 +557,7 @@ def sofa_analyze(cfg):
     df_vmstat = pd.DataFrame([], columns=cfg.columns)
     df_bandwidth = pd.DataFrame([], columns=cfg.columns)
     df_blktrace = pd.DataFrame([], columns=cfg.columns)
+    df_diskstat = pd.DataFrame([], columns=cfg.columns)
     iter_summary = None
     logdir = cfg.logdir
 
@@ -562,6 +576,7 @@ def sofa_analyze(cfg):
     filein_nvsmi = logdir + "nvsmi_trace.csv"
     filein_bandwidth = logdir + "netstat.csv"
     filein_blktrace = logdir + "blktrace.csv"
+    filein_diskstat = logdir + "diskstat.csv"
 
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
 
@@ -643,6 +658,13 @@ def sofa_analyze(cfg):
     except IOError as e:
         df_blktrace = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_blktrace)
+
+    try:
+        df_diskstat = pd.read_csv(filein_diskstat)
+        features = diskstat_profile(logdir, cfg, df_diskstat, features)
+    except IOError as e:
+        df_diskstat = pd.DataFrame([], columns=cfg.columns)
+        print_warning("%s is not found" % filein_diskstat)
 
     try:
         df_vmstat = pd.read_csv(filein_vmstat)

@@ -329,7 +329,8 @@ def sofa_record(command, cfg):
             elif cfg.enable_strace:
                 print_warning("Only one of --enable_py_stacks or --enable_strace option holds, ignore --enable_py_stack options")
             else:
-                command_prefix = ' '.join(['py-spy','-n', '-s', '{}/pystacks.txt'.format(logdir), '-d', str(sys.maxsize), '--']) + ' '
+                # command_prefix = ' '.join(['py-spy','-n', '-s', '{}/pystacks.txt'.format(logdir), '-d', str(sys.maxsize), '--']) + ' '
+                command_prefix  = ' '.join(['pyflame', '--flamechart', '-o', '{}pystacks.txt'.format(logdir), '-t']) + ' '
         
 
         if cfg.enable_strace:

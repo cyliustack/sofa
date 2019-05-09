@@ -1,6 +1,7 @@
 import argparse
 import csv
 import glob
+import itertools
 import json
 import multiprocessing as mp
 import os
@@ -415,6 +416,7 @@ def sofa_preprocess(cfg):
     tx_traces = []
     rx_traces = []
     strace_traces = []
+    pystacks_traces = []
     nvsmi_sm_traces = []
     nvsmi_mem_traces = []
     pcm_pcie_traces = []
@@ -590,6 +592,7 @@ def sofa_preprocess(cfg):
             blktrace_list = []
             blktrace_d_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             blktrace_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            record_error_flag = 0
 
             t = 0
             for i in range(len(lines)):
@@ -605,7 +608,9 @@ def sofa_preprocess(cfg):
                     blktrace_operation = fields[6]
                     try: 
                         blktrace_start_block = int(fields[7])
-                    except ValueError:
+                    except:
+                        blktrace_start_block = 0
+                        record_error_flag = 1
                         pass
                     # the two column blktrace_block_size and blktrace_process is for future used
                     if len(fields) > 10:
@@ -667,6 +672,9 @@ def sofa_preprocess(cfg):
                 logdir, blktrace_d_list, 'blktrace.csv', 'w')
             blk_traces = list_to_csv_and_traces(
                 logdir, blktrace_list, 'blktrace.csv', 'a')
+
+            if record_error_flag == 1 :
+                print_warning('blktrace maybe record failed!')
 
 
     # procs -----------------------memory---------------------- ---swap-- -
@@ -1488,6 +1496,65 @@ def sofa_preprocess(cfg):
                     strace_traces = list_to_csv_and_traces(logdir, strace_list, 'strace.csv', 'w')
     print_info(cfg,'Total strace duration: %.3lf' % total_strace_duration)
 
+
+    # Pystacks Preprocessing
+
+    def parse_pystacks(filepath, ignore_idle=False):
+        ret = {}
+        with open(filepath, 'r') as f:
+            for ts, fs in itertools.zip_longest(*[f] * 2):
+                fs = fs.replace('\n', '').replace(';', '<br>')
+                if ignore_idle:
+                    if fs.find('idle') != -1:
+                        continue
+                    ret[int(ts) / 10 ** 6] = fs
+        duration = {}
+        prev = None
+        for k, val in ret.items():
+            if prev is None:
+                prev = k
+                continue
+            duration[prev] = k - prev
+            prev = k
+        del ret[max(ret.keys())]
+
+        return ret, duration
+
+    if os.path.isfile('{}/pystacks.txt'.format(logdir)):
+        fstack, dur = parse_pystacks('{}/pystacks.txt'.format(logdir), ignore_idle=True)
+        pystacks_list = []
+
+        if fstack:
+            for key, info in fstack.items():
+                deviceId = -1
+                event = -1
+                copyKind = -1
+                payload = -1
+                bandwidth = -1
+                pkt_src = pkt_dst = -1
+                pid = tid = -1
+                t_begin = key if cfg.absolute_timestamp else key - cfg.time_base
+                trace = [
+                    t_begin,
+                    event,
+                    float(dur[key]),
+                    deviceId,
+                    copyKind,
+                    payload,
+                    bandwidth,
+                    pkt_src,
+                    pkt_dst,
+                    pid,
+                    tid,
+                    info,
+                    cpuid
+                ]
+                pystacks_list.append(trace)
+        if pystacks_list:
+            pystacks_traces = list_to_csv_and_traces(logdir, pystacks_list, 'pystacks.csv', 'w')    
+
+    
+    
     # Time synchronization among BIOS Time (e.g. used by perf)  and NTP Time (e.g. NVPROF, tcpdump, etc.)
     if perf_timebase_unix == 0:
         with open(logdir + 'perf_timebase.txt') as f:
@@ -1839,6 +1906,15 @@ def sofa_preprocess(cfg):
     sofatrace.data = strace_traces
     traces.append(sofatrace)
     
+    sofatrace = SOFATrace()
+    sofatrace.name = 'pystacks'
+    sofatrace.title = 'Python-stacks.'
+    sofatrace.color = 'Tomato'
+    sofatrace.x_field = 'timestamp'
+    sofatrace.y_field = 'duration'
+    sofatrace.data = pystacks_traces
+    traces.append(sofatrace)
+
     sofatrace = SOFATrace()
     sofatrace.name = 'nvsmi_mem'
     sofatrace.title = 'GPU_MEM_Util.'
