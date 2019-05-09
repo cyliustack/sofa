@@ -381,8 +381,9 @@ def sofa_record(command, cfg):
             print_info(cfg,"tried terminating vmstat")
         if p_blktrace != None:
             p_blktrace.terminate()
-            os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device,logdir))
-            os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)
+            if cfg.blktrace_device is not None:
+                os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device,logdir))
+                os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)
             print_info(cfg,"tried terminating blktrace")
         if p_cpuinfo != None:
             p_cpuinfo.terminate()
@@ -423,8 +424,9 @@ def sofa_record(command, cfg):
             print_info(cfg,"tried killing vmstat")
         if p_blktrace != None:
             p_blktrace.terminate()
-            os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device,logdir))
-            os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)
+            if cfg.blktrace_device is not None:
+                os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device,logdir))
+                os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)
             print_info(cfg,"tried terminating blktrace")
         if p_cpuinfo != None:
             p_cpuinfo.kill()

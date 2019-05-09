@@ -584,97 +584,98 @@ def sofa_preprocess(cfg):
     #     8,0    6        4     0.000005004 31479  I   W 691248304 + 1024 [dd]
     #     8,0    6        5     0.000006175 31479  D   W 691248304 + 1024 [dd]
     #     8,0    2        1     0.001041752     0  C   W 691248304 + 1024 [0]
-    with open('%s/blktrace.txt' % logdir) as f:
-        lines = f.readlines()
-        print_info(cfg,"Length of blktrace = %d" % len(lines))
-        if len(lines) > 0:
-            blktrace_d_list = []
-            blktrace_list = []
-            blktrace_d_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            blktrace_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            record_error_flag = 0
+    if cfg.blktrace_device is not None:
+        with open('%s/blktrace.txt' % logdir) as f:
+            lines = f.readlines()
+            print_info(cfg,"Length of blktrace = %d" % len(lines))
+            if len(lines) > 0:
+                blktrace_d_list = []
+                blktrace_list = []
+                blktrace_d_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                blktrace_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                record_error_flag = 0
 
-            t = 0
-            for i in range(len(lines)):
-                # filter some total calculate information in the below of blktrace.txt file
-                if len(lines[i]) > 50 and "Read" not in lines[i] and "CPU" not in lines[i] and "IO unplugs" not in lines[i]:
-                    fields = lines[i].split()
-                    blktrace_dev = fields[0]
-                    blktrace_cpu = fields[1]
-                    blktrace_sequence_number = fields[2]
-                    blktrace_timestamp = float(fields[3])
-                    blktrace_pid = fields[4]
-                    blktrace_event = fields[5]
-                    blktrace_operation = fields[6]
-                    try: 
-                        blktrace_start_block = int(fields[7])
-                    except:
-                        blktrace_start_block = 0
-                        record_error_flag = 1
-                        pass
-                    # the two column blktrace_block_size and blktrace_process is for future used
-                    if len(fields) > 10:
-                        blktrace_block_size = fields[9]
-                        blktrace_process = fields[10]
+                t = 0
+                for i in range(len(lines)):
+                    # filter some total calculate information in the below of blktrace.txt file
+                    if len(lines[i]) > 50 and "Read" not in lines[i] and "CPU" not in lines[i] and "IO unplugs" not in lines[i]:
+                        fields = lines[i].split()
+                        blktrace_dev = fields[0]
+                        blktrace_cpu = fields[1]
+                        blktrace_sequence_number = fields[2]
+                        blktrace_timestamp = float(fields[3])
+                        blktrace_pid = fields[4]
+                        blktrace_event = fields[5]
+                        blktrace_operation = fields[6]
+                        try: 
+                            blktrace_start_block = int(fields[7])
+                        except:
+                            blktrace_start_block = 0
+                            record_error_flag = 1
+                            pass
+                        # the two column blktrace_block_size and blktrace_process is for future used
+                        if len(fields) > 10:
+                            blktrace_block_size = fields[9]
+                            blktrace_process = fields[10]
 
-                    t_begin = blktrace_timestamp
-                    deviceId = cpuid = blktrace_cpu
-                    event = blktrace_event
-                    copyKind = -1
-                    payload = -1
-                    bandwidth = -1
-                    pkt_src = pkt_dst = -1
-                    pid = tid = blktrace_pid
-                    name_info = -1
-                    trace = [
-                        t_begin,
-                        event,
-                        blktrace_start_block,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        name_info,
-                        cpuid]
+                        t_begin = blktrace_timestamp
+                        deviceId = cpuid = blktrace_cpu
+                        event = blktrace_event
+                        copyKind = -1
+                        payload = -1
+                        bandwidth = -1
+                        pkt_src = pkt_dst = -1
+                        pid = tid = blktrace_pid
+                        name_info = -1
+                        trace = [
+                            t_begin,
+                            event,
+                            blktrace_start_block,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            name_info,
+                            cpuid]
 
-                    if 'D' is event:
-                        blktrace_d_list.append(trace)
+                        if 'D' is event:
+                            blktrace_d_list.append(trace)
 
-                    if 'C' is event:
-                        for i in range(len(blktrace_d_list)):
-                            if i==0:
-                                continue
-                            if int(blktrace_d_list[i][2])==int(blktrace_start_block):
-                                time_consume = float(blktrace_timestamp)-float(blktrace_d_list[i][0])
-                                # print('blktrace_d_list[i]:%s'%blktrace_d_list[i])
-                                # print('int(blktrace_timestamp):%f, int(blktrace_d_list[i][0]:%f, time_consume:%f' % (float(blktrace_timestamp), float(blktrace_d_list[i][0]), time_consume))
-                                trace = [
-                                    blktrace_d_list[i][0],
-                                    event,
-                                    float(time_consume),
-                                    deviceId,
-                                    copyKind,
-                                    payload,
-                                    bandwidth,
-                                    pkt_src,
-                                    pkt_dst,
-                                    pid,
-                                    tid,
-                                    name_info,
-                                    cpuid]
-                                blktrace_list.append(trace)
+                        if 'C' is event:
+                            for i in range(len(blktrace_d_list)):
+                                if i==0:
+                                    continue
+                                if int(blktrace_d_list[i][2])==int(blktrace_start_block):
+                                    time_consume = float(blktrace_timestamp)-float(blktrace_d_list[i][0])
+                                    # print('blktrace_d_list[i]:%s'%blktrace_d_list[i])
+                                    # print('int(blktrace_timestamp):%f, int(blktrace_d_list[i][0]:%f, time_consume:%f' % (float(blktrace_timestamp), float(blktrace_d_list[i][0]), time_consume))
+                                    trace = [
+                                        blktrace_d_list[i][0],
+                                        event,
+                                        float(time_consume),
+                                        deviceId,
+                                        copyKind,
+                                        payload,
+                                        bandwidth,
+                                        pkt_src,
+                                        pkt_dst,
+                                        pid,
+                                        tid,
+                                        name_info,
+                                        cpuid]
+                                    blktrace_list.append(trace)
 
-            blk_d_traces = list_to_csv_and_traces(
-                logdir, blktrace_d_list, 'blktrace.csv', 'w')
-            blk_traces = list_to_csv_and_traces(
-                logdir, blktrace_list, 'blktrace.csv', 'a')
+                blk_d_traces = list_to_csv_and_traces(
+                    logdir, blktrace_d_list, 'blktrace.csv', 'w')
+                blk_traces = list_to_csv_and_traces(
+                    logdir, blktrace_list, 'blktrace.csv', 'a')
 
-            if record_error_flag == 1 :
-                print_warning('blktrace maybe record failed!')
+                if record_error_flag == 1 :
+                    print_warning('blktrace maybe record failed!')
 
 
     # procs -----------------------memory---------------------- ---swap-- -
