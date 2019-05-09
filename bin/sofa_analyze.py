@@ -270,15 +270,15 @@ def net_profile(logdir, cfg, df, features):
         TB = float(KB ** 4) # 1,099,511,627,776
 
         if B < KB:
-            return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+            return '{0} {1}'.format(B,'B/s' if 0 == B > 1 else 'B/s')
         elif KB <= B < MB:
-            return '{0:.2f} KB'.format(B/KB)
+            return '{0:.2f} KB/s'.format(B/KB)
         elif MB <= B < GB:
-            return '{0:.2f} MB'.format(B/MB)
+            return '{0:.2f} MB/s'.format(B/MB)
         elif GB <= B < TB:
-            return '{0:.2f} GB'.format(B/GB)
+            return '{0:.2f} GB/s'.format(B/GB)
         elif TB <= B:
-            return '{0:.2f} TB'.format(B/TB)
+            return '{0:.2f} TB/s'.format(B/TB)
 
     rename_index_new = check_str(rename_index)
     rename_index_new = dict(zip(rename_index, rename_index_new))
@@ -342,7 +342,7 @@ def convertbytes(B):
     TB = float(KB ** 4) # 1,099,511,627,776
 
     if B < KB:
-        return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+        return '{0} {1}'.format(B,'B/s' if 0 == B > 1 else 'B/s')
     elif KB <= B < MB:
         return '{0:.2f} KB/s'.format(B/KB)
     elif MB <= B < GB:
@@ -369,9 +369,9 @@ def netbandwidth_profile(logdir, cfg, df, features):
         bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
         bw_rx_mean = int(df[rx]['bandwidth'].mean())
 
-        print('Q1 tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
-        print('Q2 tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
-        print('Q3 tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
+        print('Q1  tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
+        print('Q2  tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
+        print('Q3  tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
         print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))
                                  
     #network chart part
