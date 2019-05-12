@@ -626,7 +626,7 @@ def sofa_preprocess(cfg):
                         bandwidth = -1
                         pkt_src = pkt_dst = -1
                         pid = tid = blktrace_pid
-                        name_info = -1
+                        name_info = 'starting_block='+str(blktrace_start_block)
                         trace = [
                             t_begin,
                             event,
@@ -668,6 +668,7 @@ def sofa_preprocess(cfg):
                                         name_info,
                                         cpuid]
                                     blktrace_list.append(trace)
+                                    blktrace_d_list[i][11] = 'latency=' + str(float(time_consume))
 
                 blk_d_traces = list_to_csv_and_traces(
                     logdir, blktrace_d_list, 'blktrace.csv', 'w')
