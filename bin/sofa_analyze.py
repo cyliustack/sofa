@@ -162,9 +162,24 @@ def nvsmi_profile(logdir, cfg, df_nvsmi, features):
         gpu_mem_util = df_nvsmi.groupby(['event'])['duration'].mean()[1]
         gpu_enc_util = df_nvsmi.groupby(['event'])['duration'].mean()[2]
         gpu_dec_util = df_nvsmi.groupby(['event'])['duration'].mean()[3]
-
+        
+        sm = df_nvsmi['event'] == int(0)
+        mem = df_nvsmi['event'] == int(1)
+        enc = df_nvsmi['event'] == int(2)
+        dec = df_nvsmi['event'] == int(3)
+        gpunum = list(set(df_nvsmi['deviceId']))
+        res = pd.DataFrame([], columns=['sm', 'mem', 'enc', 'dec'])
+        for i in gpunum:
+            gpuid = df_nvsmi['deviceId'] == int(i)
+            gpudata = [round(df_nvsmi[sm & gpuid]['duration'].mean(), 2),
+                       round(df_nvsmi[mem & gpuid]['duration'].mean(), 2),
+                       round(df_nvsmi[enc & gpuid]['duration'].mean(), 2),
+                       round(df_nvsmi[dec & gpuid]['duration'].mean(), 2)]
+            gpu_tmp = pd.DataFrame([gpudata], columns=['sm', 'mem', 'enc', 'dec'])
+            res = pd.concat([res, gpu_tmp]) 
+        res.index.name = 'gpu_id'
         if not cfg.cluster_ip:
-            print(result)
+            print(res)
             print('Average SM Utilization (%): ', int(gpu_sm_util))
             print('Average MEM Utilization (%): ', int(gpu_mem_util))
             print('Average ENC Utilization (%): ', int(gpu_enc_util))
