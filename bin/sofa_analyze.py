@@ -149,22 +149,26 @@ class Event:
 
 def nvsmi_profile(logdir, cfg, df_nvsmi, features):
     if not cfg.cluster_ip:
-        print_title("SM & MEM Profiling")
+        print_title("SM & MEM & ENC & DEC Profiling")
     
     if len(df_nvsmi) > 0 :
         sm_start = df_nvsmi.iloc[0].timestamp 
         sm_end = df_nvsmi.iloc[-1].timestamp
         SM_time = sm_end - sm_start
-        result = df_nvsmi.groupby(['deviceId','event'])['duration'].mean() 
+        result = df_nvsmi.groupby(['deviceId','event'])['duration'].mean()
         result = result.astype(int)
         
         gpu_sm_util = df_nvsmi.groupby(['event'])['duration'].mean()[0]
         gpu_mem_util = df_nvsmi.groupby(['event'])['duration'].mean()[1]
-        
+        gpu_enc_util = df_nvsmi.groupby(['event'])['duration'].mean()[2]
+        gpu_dec_util = df_nvsmi.groupby(['event'])['duration'].mean()[3]
+
         if not cfg.cluster_ip:
             print(result)
             print('Average SM Utilization (%): ', int(gpu_sm_util))
             print('Average MEM Utilization (%): ', int(gpu_mem_util))
+            print('Average ENC Utilization (%): ', int(gpu_enc_util))
+            print('Average DEC Utilization (%): ', int(gpu_dec_util))
             print('Active GPU Time (s): %.3lf' % (SM_time * gpu_sm_util/100.0))
         df = pd.DataFrame({'name':['gpu_sm_util', 'gpu_mem_util'], 
                         'value':[gpu_sm_util, gpu_mem_util] }, 
@@ -262,7 +266,7 @@ def net_profile(logdir, cfg, df, features):
             rename_columns_2.append(i)
         return(rename_columns_2)
     
-    def convertbytes(B):
+    def convertbyte(B):
         B = float(B)
         KB = float(1024)
         MB = float(KB ** 2) # 1,048,576
@@ -270,7 +274,7 @@ def net_profile(logdir, cfg, df, features):
         TB = float(KB ** 4) # 1,099,511,627,776
 
         if B < KB:
-            return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+            return '{} Bytes'.format(B)
         elif KB <= B < MB:
             return '{0:.2f} KB'.format(B/KB)
         elif MB <= B < GB:
@@ -299,7 +303,7 @@ def net_profile(logdir, cfg, df, features):
     packet_sum_matrix = packet_sum_matrix.rename(index=rename_index_new)
     packet_num_matrix.index.set_levels(rename_index2_final , level = 0, inplace = True)
     
-    print("total amount of network traffic : ", convertbytes(df['payload'].sum()), '\n', packet_sum_matrix.to_string(), "\n")
+    print("total amount of network traffic : ", convertbyte(df['payload'].sum()), '\n', packet_sum_matrix.to_string(), "\n")
     if cfg.verbose:
         print("total amount of network packets = %d\n" % packet_num_matrix.sum().sum() ,packet_num_matrix.to_string(), "\n")
     
@@ -342,7 +346,7 @@ def convertbytes(B):
     TB = float(KB ** 4) # 1,099,511,627,776
 
     if B < KB:
-        return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+        return '{0:.2f} B/s'.format(B)
     elif KB <= B < MB:
         return '{0:.2f} KB/s'.format(B/KB)
     elif MB <= B < GB:
@@ -358,17 +362,16 @@ def netbandwidth_profile(logdir, cfg, df, features):
         print('Bandwidth Quartile :')
     tx = df['event'] == float(0)
     rx = df['event'] == float(1)
-  
+      
+    bw_tx_q1 = df[tx]['bandwidth'].quantile(0.25)
+    bw_tx_q2 = df[tx]['bandwidth'].quantile(0.5)
+    bw_tx_q3 = df[tx]['bandwidth'].quantile(0.75)
+    bw_tx_mean = int(df[tx]['bandwidth'].mean())
+    bw_rx_q1 = df[rx]['bandwidth'].quantile(0.25)
+    bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
+    bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
+    bw_rx_mean = int(df[rx]['bandwidth'].mean())
     if not cfg.cluster_ip:
-        bw_tx_q1 = df[tx]['bandwidth'].quantile(0.25)
-        bw_tx_q2 = df[tx]['bandwidth'].quantile(0.5)
-        bw_tx_q3 = df[tx]['bandwidth'].quantile(0.75)
-        bw_tx_mean = int(df[tx]['bandwidth'].mean())
-        bw_rx_q1 = df[rx]['bandwidth'].quantile(0.25)
-        bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
-        bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
-        bw_rx_mean = int(df[rx]['bandwidth'].mean())
-
         print('Q1 tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
         print('Q2 tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
         print('Q3 tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
