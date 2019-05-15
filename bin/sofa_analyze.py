@@ -175,7 +175,7 @@ def nvsmi_profile(logdir, cfg, df_nvsmi, features):
                        round(df_nvsmi[mem & gpuid]['duration'].mean(), 2),
                        round(df_nvsmi[enc & gpuid]['duration'].mean(), 2),
                        round(df_nvsmi[dec & gpuid]['duration'].mean(), 2)]
-            gpu_tmp = pd.DataFrame([gpudata], columns=['sm', 'mem', 'enc', 'dec'])
+            gpu_tmp = pd.DataFrame([gpudata], columns=['sm', 'mem', 'enc', 'dec'], index=[i])
             res = pd.concat([res, gpu_tmp]) 
         res.index.name = 'gpu_id'
         if not cfg.cluster_ip:
@@ -282,7 +282,7 @@ def net_profile(logdir, cfg, df, features):
         return(rename_columns_2)
     
     def convertbyte(B):
-        B = float(B)
+        B = int(B)
         KB = float(1024)
         MB = float(KB ** 2) # 1,048,576
         GB = float(KB ** 3) # 1,073,741,824
