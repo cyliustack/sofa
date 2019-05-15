@@ -179,6 +179,7 @@ def nvsmi_profile(logdir, cfg, df_nvsmi, features):
             res = pd.concat([res, gpu_tmp]) 
         res.index.name = 'gpu_id'
         if not cfg.cluster_ip:
+            print('GPU Utilization (%):')
             print(res)
             print('Average SM Utilization (%): ', int(gpu_sm_util))
             print('Average MEM Utilization (%): ', int(gpu_mem_util))
@@ -389,13 +390,6 @@ def netbandwidth_profile(logdir, cfg, df, features):
     bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
     bw_rx_mean = int(df[rx]['bandwidth'].mean())
     if not cfg.cluster_ip:
-
-        print('Q1 tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
-        print('Q2 tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
-        print('Q3 tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
-        print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))                                                         
-
-
         bw_tx_q1 = df[tx]['bandwidth'].quantile(0.25)
         bw_tx_q2 = df[tx]['bandwidth'].quantile(0.5)
         bw_tx_q3 = df[tx]['bandwidth'].quantile(0.75)
@@ -404,12 +398,11 @@ def netbandwidth_profile(logdir, cfg, df, features):
         bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
         bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
         bw_rx_mean = int(df[rx]['bandwidth'].mean())
-
+        
         print('Q1  tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
         print('Q2  tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
         print('Q3  tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
         print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))
-                                 
 
     #network chart part
     all_time = df[tx]['timestamp'].tolist()
