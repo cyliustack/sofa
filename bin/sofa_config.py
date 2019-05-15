@@ -46,6 +46,6 @@ class SOFA_Config:
     columns = ['timestamp', 'duration']
     enable_strace = False
     enable_py_stacks = False
-    blktrace_device = False
+    blktrace_device = None
     roi_begin=0
     roi_end=0

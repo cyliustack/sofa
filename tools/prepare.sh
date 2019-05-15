@@ -100,9 +100,13 @@ function install_packages()
     if [[ $(which apt) ]] ; then
         $WITH_SUDO apt-get update
         $WITH_SUDO apt-get update --fix-missing
+        $WITH_SUDO apt-add-repository ppa:trevorjay/pyflame -y
+        $WITH_SUDO apt-get update 
+        $WITH_SUDO apt-get install -y pyflame
 	    $WITH_SUDO apt-get install -y curl wget make gcc g++ cmake \
             linux-tools-common tcpdump sysstat strace \
-            linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic 
+            linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic \
+            autoconf automake autotools-dev pkg-config libtool
 	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install -y epel-release 

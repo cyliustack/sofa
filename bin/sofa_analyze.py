@@ -27,7 +27,7 @@ import socket
 
 # input: pfv(performance feature vector), Pandas.DataFrame
 # output: hint, docker_image  
-def get_hint(features):
+def get_hint(potato_server, features):
 
     if len(features) > 0:
         pfv = potato_pb2.PerformanceFeatureVector() 
@@ -40,7 +40,7 @@ def get_hint(features):
 			
         print('Wait for response from POTATO server...')
         myhostname = socket.gethostname()
-        channel = grpc.insecure_channel('localhost:50051')
+        channel = grpc.insecure_channel(potato_server)
         stub = potato_pb2_grpc.HintStub(channel)
         request = potato_pb2.HintRequest( hostname = myhostname,
                                           pfv = pfv) 
@@ -289,15 +289,19 @@ def net_profile(logdir, cfg, df, features):
         TB = float(KB ** 4) # 1,099,511,627,776
 
         if B < KB:
+<<<<<<< HEAD
             return '{} Bytes'.format(B)
+=======
+            return '{0} {1}'.format(B,'B/s' if 0 == B > 1 else 'B/s')
+>>>>>>> fa876e998d4290de6499e54524f96a6f77832b40
         elif KB <= B < MB:
-            return '{0:.2f} KB'.format(B/KB)
+            return '{0:.2f} KB/s'.format(B/KB)
         elif MB <= B < GB:
-            return '{0:.2f} MB'.format(B/MB)
+            return '{0:.2f} MB/s'.format(B/MB)
         elif GB <= B < TB:
-            return '{0:.2f} GB'.format(B/GB)
+            return '{0:.2f} GB/s'.format(B/GB)
         elif TB <= B:
-            return '{0:.2f} TB'.format(B/TB)
+            return '{0:.2f} TB/s'.format(B/TB)
 
     rename_index_new = check_str(rename_index)
     rename_index_new = dict(zip(rename_index, rename_index_new))
@@ -361,7 +365,11 @@ def convertbytes(B):
     TB = float(KB ** 4) # 1,099,511,627,776
 
     if B < KB:
+<<<<<<< HEAD
         return '{0:.2f} B/s'.format(B)
+=======
+        return '{0} {1}'.format(B,'B/s' if 0 == B > 1 else 'B/s')
+>>>>>>> fa876e998d4290de6499e54524f96a6f77832b40
     elif KB <= B < MB:
         return '{0:.2f} KB/s'.format(B/KB)
     elif MB <= B < GB:
@@ -387,11 +395,28 @@ def netbandwidth_profile(logdir, cfg, df, features):
     bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
     bw_rx_mean = int(df[rx]['bandwidth'].mean())
     if not cfg.cluster_ip:
+<<<<<<< HEAD
         print('Q1 tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
         print('Q2 tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
         print('Q3 tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
         print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))                                                         
 
+=======
+        bw_tx_q1 = df[tx]['bandwidth'].quantile(0.25)
+        bw_tx_q2 = df[tx]['bandwidth'].quantile(0.5)
+        bw_tx_q3 = df[tx]['bandwidth'].quantile(0.75)
+        bw_tx_mean = int(df[tx]['bandwidth'].mean())
+        bw_rx_q1 = df[rx]['bandwidth'].quantile(0.25)
+        bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
+        bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
+        bw_rx_mean = int(df[rx]['bandwidth'].mean())
+
+        print('Q1  tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
+        print('Q2  tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
+        print('Q3  tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
+        print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))
+                                 
+>>>>>>> fa876e998d4290de6499e54524f96a6f77832b40
     #network chart part
     all_time = df[tx]['timestamp'].tolist()
     all_tx = df[tx]['bandwidth'].tolist()
@@ -407,12 +432,45 @@ def netbandwidth_profile(logdir, cfg, df, features):
     if not cfg.cluster_ip:
         print('Network Bandwidth Chart is saved at %s/network_report.pdf' %logdir)
 
-    df_feature = pd.DataFrame({ 'name':['bw_tx_q2', 'bw_tx_q3', 'bw_rx_q2', 'bw_rx_q3'], 
+        df_feature = pd.DataFrame({ 'name':['bw_tx_q2', 'bw_tx_q3', 'bw_rx_q2', 'bw_rx_q3'], 
                         'value':[bw_tx_q2, bw_tx_q3, bw_rx_q2, bw_rx_q3] }, 
+                        columns=['name','value'])
+        features = pd.concat([features, df_feature])   
+ 
+    return features
+
+def blktrace_latency_profile(logdir, cfg, df, features):
+    print_title("Storage Profiling:")
+    print('Blktracae Latency Quartile (s):')
+    blktrace_latency = df['event'] == 'C'
+    blktrace_latency_q1 = df[blktrace_latency]['duration'].quantile(0.25)
+    blktrace_latency_q2 = df[blktrace_latency]['duration'].quantile(0.5)
+    blktrace_latency_q3 = df[blktrace_latency]['duration'].quantile(0.75)
+    blktrace_latency_mean = df[blktrace_latency]['duration'].mean()
+
+    print('Q1 blktrace latency : %f' % blktrace_latency_q1)
+    print('Q2 blktrace latency : %f' % blktrace_latency_q2)
+    print('Q3 blktrace latency : %f' % blktrace_latency_q3)
+    print('Avg blktrace latency : %f'% blktrace_latency_mean)
+    df_feature = pd.DataFrame({ 'name':['blktrace_latency_q1','blktrace_latency_q2','blktrace_latency_q3'], 
+                        'value': [blktrace_latency_q1, blktrace_latency_q2, blktrace_latency_q3] }, 
                         columns=['name','value'])
     features = pd.concat([features, df_feature])   
  
     return features
+
+def diskstat_profile(logdir, cfg, df, features):
+    print_title("DISKSTAT Profiling:")
+    print('Disk Throughput Quartile :')
+    diskstat_q1 = df['duration'].quantile(0.25)
+    diskstat_q2 = df['duration'].quantile(0.5)
+    diskstat_q3 = df['duration'].quantile(0.75)
+    diskstat_mean = df['duration'].mean()
+
+    print('Q1 disk throughput : %s' % convertbytes(diskstat_q1))
+    print('Q2 disk throughput : %s' % convertbytes(diskstat_q2))
+    print('Q3 disk throughput : %s' % convertbytes(diskstat_q3))
+    print('Avg disk throughput : %s' % convertbytes(diskstat_mean))
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
@@ -541,6 +599,8 @@ def sofa_analyze(cfg):
     df_mpstat = pd.DataFrame([], columns=cfg.columns)
     df_vmstat = pd.DataFrame([], columns=cfg.columns)
     df_bandwidth = pd.DataFrame([], columns=cfg.columns)
+    df_blktrace = pd.DataFrame([], columns=cfg.columns)
+    df_diskstat = pd.DataFrame([], columns=cfg.columns)
     iter_summary = None
     logdir = cfg.logdir
 
@@ -558,6 +618,8 @@ def sofa_analyze(cfg):
     filein_strace = logdir + "strace.csv"
     filein_nvsmi = logdir + "nvsmi_trace.csv"
     filein_bandwidth = logdir + "netstat.csv"
+    filein_blktrace = logdir + "blktrace.csv"
+    filein_diskstat = logdir + "diskstat.csv"
 
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
 
@@ -634,6 +696,20 @@ def sofa_analyze(cfg):
         print_warning("%s is not found" % filein_bandwidth)
 
     try:
+        df_blktrace = pd.read_csv(filein_blktrace)
+        features = blktrace_latency_profile(logdir, cfg, df_blktrace, features)
+    except IOError as e:
+        df_blktrace = pd.DataFrame([], columns=cfg.columns)
+        print_warning("%s is not found" % filein_blktrace)
+
+    try:
+        df_diskstat = pd.read_csv(filein_diskstat)
+        features = diskstat_profile(logdir, cfg, df_diskstat, features)
+    except IOError as e:
+        df_diskstat = pd.DataFrame([], columns=cfg.columns)
+        print_warning("%s is not found" % filein_diskstat)
+
+    try:
         df_vmstat = pd.read_csv(filein_vmstat)
         features = vmstat_profile(logdir, cfg, df_vmstat, features)
     except IOError as e:
@@ -680,7 +756,7 @@ def sofa_analyze(cfg):
 
     if cfg.potato_server:
         print_title('POTATO Feedback')
-        hint, docker_image = get_hint(features)
+        hint, docker_image = get_hint(cfg.potato_server, features)
         print('Optimization hints: ' + hint)
         print('Tag of optimal image recommended from POTATO: ' + highlight(docker_image))
         print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
