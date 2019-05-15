@@ -149,7 +149,7 @@ class Event:
 
 def nvsmi_profile(logdir, cfg, df_nvsmi, features):
     if not cfg.cluster_ip:
-        print_title("SM & MEM & ENC & DEC Profiling")
+        print_title("SM & MEM & ENCODE/DECODE Profiling")
     
     if len(df_nvsmi) > 0 :
         sm_start = df_nvsmi.iloc[0].timestamp 
