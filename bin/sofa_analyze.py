@@ -58,25 +58,6 @@ def get_hint(potato_server, features):
 def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features):
     print_title("Dynamic Top-Down Analysis")
 
-    if cfg.spotlight_gpu:
-        state = 0 
-        sm_high = 0
-        trigger = 2
-        for i in range(len(df_nvsmi)):
-            if df_nvsmi.iloc[i].event == 0 and df_nvsmi.iloc[i].deviceId == 0 :
-                if df_nvsmi.iloc[i].duration >= 50:
-                    sm_high = min(trigger, sm_high + 1)
-                if df_nvsmi.iloc[i].duration < 10:
-                    sm_high = max(0, sm_high - 1)
-                if state == 0 and sm_high == trigger:
-                    state = 1 
-                    cfg.roi_begin = df_nvsmi.iloc[i].timestamp
-                elif state == 1 and sm_high == 0:
-                    state = 0 
-                    cfg.roi_end = df_nvsmi.iloc[i].timestamp
-                #print('sm_high=%d state=%d' % (sm_high, state))
-
-
     total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
     elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
    
@@ -663,7 +644,29 @@ def sofa_analyze(cfg):
                                 break
     # Construct Performance Features
     features = pd.DataFrame({'name':['elapsed_time'], 'value':[cfg.elapsed_time]}, columns=['name','value'])
-    
+
+    try:
+        df_nvsmi = pd.read_csv(filein_nvsmi) 
+        if not df_nvsmi.empty and cfg.spotlight_gpu:
+            state = 0 
+            sm_high = 0
+            trigger = 2
+            for i in range(len(df_nvsmi)):
+                if df_nvsmi.iloc[i].event == 0 and df_nvsmi.iloc[i].deviceId == 0 :
+                    if df_nvsmi.iloc[i].duration >= 50:
+                        sm_high = min(trigger, sm_high + 1)
+                    if df_nvsmi.iloc[i].duration < 10:
+                        sm_high = max(0, sm_high - 1)
+                    if state == 0 and sm_high == trigger:
+                        state = 1 
+                        cfg.roi_begin = df_nvsmi.iloc[i].timestamp
+                    elif state == 1 and sm_high == 0:
+                        state = 0 
+                        cfg.roi_end = df_nvsmi.iloc[i].timestamp
+                    #print('sm_high=%d state=%d' % (sm_high, state))
+    except IOError:
+        print_warning("nvsmi_trace.csv is not found")
+
     try:
         df_cpu = pd.read_csv(filein_cpu)
         if not df_cpu.empty: 
