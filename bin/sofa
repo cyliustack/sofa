@@ -80,28 +80,18 @@ if __name__ == "__main__":
         required=False,
         help='Specify port of web server for browsing visualization results')
     parser.add_argument('--profile_all_cpus', dest='profile_all_cpus', action='store_true')
-    parser.set_defaults(profile_all_cpus=False)
     parser.add_argument('--verbose', dest='verbose', action='store_true')
-    parser.set_defaults(verbose=False)
     parser.add_argument('--enable_aisi', dest='enable_aisi', action='store_true')
-    parser.set_defaults(enable_aisi=False)
     parser.add_argument('--enable_strace', dest='enable_strace', action='store_true')
-    parser.set_defaults(enable_strace=False)
     parser.add_argument('--aisi_via_strace', dest='aisi_via_strace', action='store_true')
-    parser.set_defaults(aisi_via_strace=False)
     parser.add_argument('--display_swarms', dest='display_swarms', action='store_true')
-    parser.set_defaults(display_swarms=False)
     parser.add_argument('--enable_py_stacks', dest='enable_py_stacks', action='store_true', required=False, 
                             help='Record the callstack of python program via py-spy')
-    parser.set_defaults(enable_py_stacks=False)
     parser.add_argument('--base_logdir', dest='base_logdir', default='')
     parser.add_argument('--match_logdir', dest='match_logdir', default='')
     parser.add_argument('--hsg_multifeatures', dest='hsg_multifeatures', action='store_true')
-    parser.set_defaults(hsg_multifeatures=False)
     parser.add_argument('--enable_vmstat', dest='enable_vmstat', action='store_true')
-    parser.set_defaults(enable_aisi=False)
     parser.add_argument('--skip_preprocess', dest='skip_preprocess', action='store_true')
-    parser.set_defaults(skip_preprocess=False)
     parser.add_argument('--pid', metavar='PID', type=int, required=False,
                         help='Specify the PID of the process you want to trace')
     parser.add_argument('--timeout', metavar='T', type=int, required=False,
@@ -124,9 +114,7 @@ if __name__ == "__main__":
         required=False,
         help='filters for network, put your ip into it, eg.192.168.0.100 is 192168000100, and first ip must be your localhost')
     parser.add_argument('--enable_pcm', dest='enable_pcm', action='store_true')
-    parser.set_defaults(enable_pcm=False)
     parser.add_argument('--cuda_api_tracing', dest='cuda_api_tracing', action='store_true')
-    parser.set_defaults(cuda_api_tracing=False)
     parser.add_argument(
         '--perf_events',
         metavar='"cycles,instructions,cache-misses"',
@@ -139,16 +127,14 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help='IP address of POTATO server')
-    parser.add_argument('--absolute_timestamp', dest='absolute_timestamp', action='store_true')
-    parser.set_defaults(absolute_timestamp=False)
+    parser.add_argument('--absolute_timestamp', action='store_true')
     parser.add_argument(
         '--profile_region',
         metavar='begin_time,end_time',
         type=str,
         required=False,
         help='time region of interest for profiling. (unit:second)')
-
-
+    parser.add_argument('--spotlight_gpu', help='start profiling when GPU SM utilization is high.', action='store_true')
     parser.add_argument(
         '--blktrace_device',
         dest='blktrace_device',
@@ -226,6 +212,9 @@ if __name__ == "__main__":
 
     if args.enable_pcm is not None:
         cfg.enable_pcm = args.enable_pcm
+
+    if args.spotlight_gpu is not None:
+        cfg.spotlight_gpu = args.spotlight_gpu
 
     if args.cuda_api_tracing is not None:
         cfg.cuda_api_tracing = args.cuda_api_tracing

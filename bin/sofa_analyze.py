@@ -55,8 +55,27 @@ def get_hint(potato_server, features):
     print(docker_image) 
     return hint, docker_image 
 
-def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, features):
+def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features):
     print_title("Dynamic Top-Down Analysis")
+
+    if cfg.spotlight_gpu:
+        state = 0 
+        sm_high = 0
+        trigger = 2
+        for i in range(len(df_nvsmi)):
+            if df_nvsmi.iloc[i].event == 0 and df_nvsmi.iloc[i].deviceId == 0 :
+                if df_nvsmi.iloc[i].duration >= 50:
+                    sm_high = min(trigger, sm_high + 1)
+                if df_nvsmi.iloc[i].duration < 10:
+                    sm_high = max(0, sm_high - 1)
+                if state == 0 and sm_high == trigger:
+                    state = 1 
+                    cfg.roi_begin = df_nvsmi.iloc[i].timestamp
+                elif state == 1 and sm_high == 0:
+                    state = 0 
+                    cfg.roi_end = df_nvsmi.iloc[i].timestamp
+                #print('sm_high=%d state=%d' % (sm_high, state))
+
 
     total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
     elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
@@ -111,8 +130,8 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, features):
             elapsed_time['gpu'] = df_gpu_interval['duration'].sum()
             elapsed_time['iow'] = mp_iow.max()
             dominator = max(elapsed_time, key=elapsed_time.get)
-            if elapsed_time['gpu'] > 0.1 :
-                dominator = 'gpu'
+            #if elapsed_time['gpu'] > 0.1 :
+            #    dominator = 'gpu'
             total_elapsed_time[dominator] = total_elapsed_time[dominator] + 0.1
 
     total_all_elapsed_time = sum(total_elapsed_time.values())
@@ -126,9 +145,16 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, features):
         print('SYS = %.1lf %%' % elapsed_time_ratio['sys'])
         print('GPU = %.1lf %%' % elapsed_time_ratio['gpu'])
         print('IOW = %.1lf %%' % elapsed_time_ratio['iow'])
-        df = pd.DataFrame({'name':['elapsed_usr_time_ratio', 'elapsed_sys_time_ratio', 'elapsed_gpu_time_ratio', 'elapsed_iow_time_ratio'], 
-                        'value':[elapsed_time_ratio['usr'],elapsed_time_ratio['sys'],elapsed_time_ratio['gpu'],elapsed_time_ratio['iow'] ] }, 
+        if cfg.spotlight_gpu:
+            elapsed_spotlight_time = cfg.roi_end - cfg.roi_begin 
+
+        else:
+            elapsed_spotlight_time = 0 
+        
+        df = pd.DataFrame({'name':['elapsed_usr_time_ratio', 'elapsed_sys_time_ratio', 'elapsed_gpu_time_ratio', 'elapsed_iow_time_ratio', 'elapsed_spotlight_time'], 
+                        'value':[elapsed_time_ratio['usr'], elapsed_time_ratio['sys'], elapsed_time_ratio['gpu'], elapsed_time_ratio['iow'], elapsed_spotlight_time ] }, 
                         columns=['name','value'])
+
         features = pd.concat([features, df])
 
     return features
@@ -208,6 +234,12 @@ def gpu_profile(logdir, cfg, df_gpu, features):
     features = pd.concat([features, df])
     return features
 
+def strace_profile(logdir, cfg, df, features):
+    print_title("STRACE Profiling:")
+
+    return features
+
+ 
 def net_profile(logdir, cfg, df, features):
     if not cfg.cluster_ip:
         print_title("Network Profiling:")
@@ -428,6 +460,13 @@ def diskstat_profile(logdir, cfg, df, features):
     print('Q2 disk throughput : %s' % convertbytes(diskstat_q2))
     print('Q3 disk throughput : %s' % convertbytes(diskstat_q3))
     print('Avg disk throughput : %s' % convertbytes(diskstat_mean))
+    
+    df_feature = pd.DataFrame({ 'name':['diskstat_q1','diskstat_q2','diskstat_q3'], 
+                        'value': [diskstat_q1, diskstat_q2,  diskstat_q3] }, 
+                        columns=['name','value'])
+    features = pd.concat([features, df_feature])   
+ 
+    return features
 
 def cpu_profile(logdir, cfg, df):
     print_title("CPU Profiling:")
@@ -627,74 +666,86 @@ def sofa_analyze(cfg):
     
     try:
         df_cpu = pd.read_csv(filein_cpu)
-        cpu_profile(logdir, cfg, df_cpu)
+        if not df_cpu.empty: 
+            cpu_profile(logdir, cfg, df_cpu)
     except IOError as e:
         df_cpu = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_cpu)
 
     try:
         df_strace = pd.read_csv(filein_strace)
+        if not df_strace.empty: 
+            features = strace_profile(logdir, cfg, df_strace, features)
     except IOError as e:
         df_strace = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_strace)
 
     try:
         df_net = pd.read_csv(filein_net)
-        features = net_profile(logdir, cfg, df_net, features)
+        if not df_net.empty: 
+            features = net_profile(logdir, cfg, df_net, features)
     except IOError as e:
         df_net = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_net)
 
     try:
         df_bandwidth = pd.read_csv(filein_bandwidth)
-        features = netbandwidth_profile(logdir, cfg, df_bandwidth, features)
+        if not df_bandwidth.empty: 
+            features = netbandwidth_profile(logdir, cfg, df_bandwidth, features)
     except IOError as e:
         df_bandwidth = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_bandwidth)
 
     try:
         df_blktrace = pd.read_csv(filein_blktrace)
-        features = blktrace_latency_profile(logdir, cfg, df_blktrace, features)
+        if not df_blktrace.empty: 
+            print(df_blktrace)
+            features = blktrace_latency_profile(logdir, cfg, df_blktrace, features)
     except IOError as e:
         df_blktrace = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_blktrace)
 
     try:
         df_diskstat = pd.read_csv(filein_diskstat)
-        features = diskstat_profile(logdir, cfg, df_diskstat, features)
+        if not df_diskstat.empty:
+            features = diskstat_profile(logdir, cfg, df_diskstat, features)
     except IOError as e:
         df_diskstat = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_diskstat)
 
     try:
         df_vmstat = pd.read_csv(filein_vmstat)
-        features = vmstat_profile(logdir, cfg, df_vmstat, features)
+        if not df_vmstat.empty: 
+            features = vmstat_profile(logdir, cfg, df_vmstat, features)
     except IOError as e:
         df_vmstat = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_vmstat)
 
     try:
         df_mpstat = pd.read_csv(filein_mpstat)
-        features = mpstat_profile(logdir, cfg, df_mpstat, features)
+        if not df_mpstat.empty: 
+            features = mpstat_profile(logdir, cfg, df_mpstat, features)
     except IOError as e:
         df_mpstat = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_mpstat)
 
     try:
         df_nvsmi = pd.read_csv(filein_nvsmi) 
-        features = nvsmi_profile(logdir, cfg, df_nvsmi, features)
+        if not df_nvsmi.empty: 
+            features = nvsmi_profile(logdir, cfg, df_nvsmi, features)
     except IOError:
         print_warning("nvsmi_trace.csv is not found")
 
     try:
         df_gpu = pd.read_csv(filein_gpu)
-        features = gpu_profile(logdir, cfg, df_gpu, features)
+        if not df_gpu.empty: 
+            features = gpu_profile(logdir, cfg, df_gpu, features)
     except IOError:
         df_gpu = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found. If there is no need to profile GPU, just ignore it." % filein_gpu)
 
     try:
-        features = dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, features)
+        features = dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features)
     except IOError as e:
         print_warning("Some files are not found, which are needed for dynamic_top_down analysis")
 

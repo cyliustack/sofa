@@ -11,7 +11,7 @@ class SOFA_Config:
     cpu_filters = []
     gpu_filters = []
     net_filters = []
-    cluster_ip = []
+    cluster_ip = None
     perf_events = 'cycles'
     verbose = False
     num_iterations = 20
@@ -46,6 +46,7 @@ class SOFA_Config:
     columns = ['timestamp', 'duration']
     enable_strace = False
     enable_py_stacks = False
+    spotlight_gpu = False
     blktrace_device = None
     roi_begin=0
     roi_end=0
