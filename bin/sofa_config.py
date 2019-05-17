@@ -48,5 +48,6 @@ class SOFA_Config:
     enable_py_stacks = False
     spotlight_gpu = False
     blktrace_device = None
+    nvsmi_data = False
     roi_begin=0
     roi_end=0

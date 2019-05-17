@@ -167,8 +167,12 @@ def nvsmi_profile(logdir, cfg, df_nvsmi, features):
         
         gpu_sm_util = df_nvsmi.groupby(['event'])['duration'].mean()[0]
         gpu_mem_util = df_nvsmi.groupby(['event'])['duration'].mean()[1]
-        gpu_enc_util = df_nvsmi.groupby(['event'])['duration'].mean()[2]
-        gpu_dec_util = df_nvsmi.groupby(['event'])['duration'].mean()[3]
+        if cfg.nvsmi_data:
+            gpu_enc_util = df_nvsmi.groupby(['event'])['duration'].mean()[2]
+            gpu_dec_util = df_nvsmi.groupby(['event'])['duration'].mean()[3]
+        else:
+            gpu_enc_util = 0
+            gpu_dec_util = 0
         
         sm = df_nvsmi['event'] == int(0)
         mem = df_nvsmi['event'] == int(1)

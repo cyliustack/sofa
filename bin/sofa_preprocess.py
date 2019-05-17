@@ -1077,6 +1077,7 @@ def sofa_preprocess(cfg):
                         if nvsmi_id == 0:
                             t = t + 1
                 if len(nvsmi_enc_list)>1:
+                    cfg.nvsmi_data = True
                     nvsmi_enc_traces = list_to_csv_and_traces(logdir, nvsmi_enc_list, 'nvsmi_trace.csv', 'a')
                     nvsmi_dec_traces = list_to_csv_and_traces(logdir, nvsmi_dec_list, 'nvsmi_trace.csv', 'a')
                 else:
