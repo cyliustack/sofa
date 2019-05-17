@@ -28,7 +28,7 @@ import socket
 # input: pfv(performance feature vector), Pandas.DataFrame
 # output: hint, docker_image  
 def get_hint(potato_server, features):
-
+    
     if len(features) > 0:
         pfv = potato_pb2.PerformanceFeatureVector() 
         for i in range(len(features)):
@@ -156,22 +156,42 @@ class Event:
 
 def nvsmi_profile(logdir, cfg, df_nvsmi, features):
     if not cfg.cluster_ip:
-        print_title("SM & MEM Profiling")
+        print_title("SM & MEM & ENCODE/DECODE Profiling")
     
     if len(df_nvsmi) > 0 :
         sm_start = df_nvsmi.iloc[0].timestamp 
         sm_end = df_nvsmi.iloc[-1].timestamp
         SM_time = sm_end - sm_start
-        result = df_nvsmi.groupby(['deviceId','event'])['duration'].mean() 
+        result = df_nvsmi.groupby(['deviceId','event'])['duration'].mean()
         result = result.astype(int)
         
         gpu_sm_util = df_nvsmi.groupby(['event'])['duration'].mean()[0]
         gpu_mem_util = df_nvsmi.groupby(['event'])['duration'].mean()[1]
+        gpu_enc_util = df_nvsmi.groupby(['event'])['duration'].mean()[2]
+        gpu_dec_util = df_nvsmi.groupby(['event'])['duration'].mean()[3]
         
+        sm = df_nvsmi['event'] == int(0)
+        mem = df_nvsmi['event'] == int(1)
+        enc = df_nvsmi['event'] == int(2)
+        dec = df_nvsmi['event'] == int(3)
+        gpunum = list(set(df_nvsmi['deviceId']))
+        res = pd.DataFrame([], columns=['sm', 'mem', 'enc', 'dec'])
+        for i in gpunum:
+            gpuid = df_nvsmi['deviceId'] == int(i)
+            gpudata = [round(df_nvsmi[sm & gpuid]['duration'].mean(), 2),
+                       round(df_nvsmi[mem & gpuid]['duration'].mean(), 2),
+                       round(df_nvsmi[enc & gpuid]['duration'].mean(), 2),
+                       round(df_nvsmi[dec & gpuid]['duration'].mean(), 2)]
+            gpu_tmp = pd.DataFrame([gpudata], columns=['sm', 'mem', 'enc', 'dec'], index=[i])
+            res = pd.concat([res, gpu_tmp]) 
+        res.index.name = 'gpu_id'
         if not cfg.cluster_ip:
-            print(result)
+            print('GPU Utilization (%):')
+            print(res)
             print('Average SM Utilization (%): ', int(gpu_sm_util))
             print('Average MEM Utilization (%): ', int(gpu_mem_util))
+            print('Average ENC Utilization (%): ', int(gpu_enc_util))
+            print('Average DEC Utilization (%): ', int(gpu_dec_util))
             print('Active GPU Time (s): %.3lf' % (SM_time * gpu_sm_util/100.0))
         df = pd.DataFrame({'name':['gpu_sm_util', 'gpu_mem_util'], 
                         'value':[gpu_sm_util, gpu_mem_util] }, 
@@ -275,23 +295,23 @@ def net_profile(logdir, cfg, df, features):
             rename_columns_2.append(i)
         return(rename_columns_2)
     
-    def convertbytes(B):
-        B = float(B)
+    def convertbyte(B):
+        B = int(B)
         KB = float(1024)
         MB = float(KB ** 2) # 1,048,576
         GB = float(KB ** 3) # 1,073,741,824
         TB = float(KB ** 4) # 1,099,511,627,776
 
         if B < KB:
-            return '{0} {1}'.format(B,'B/s' if 0 == B > 1 else 'B/s')
+            return '{} Bytes'.format(B)
         elif KB <= B < MB:
-            return '{0:.2f} KB/s'.format(B/KB)
+            return '{0:.2f} KB'.format(B/KB)
         elif MB <= B < GB:
-            return '{0:.2f} MB/s'.format(B/MB)
+            return '{0:.2f} MB'.format(B/MB)
         elif GB <= B < TB:
-            return '{0:.2f} GB/s'.format(B/GB)
+            return '{0:.2f} GB'.format(B/GB)
         elif TB <= B:
-            return '{0:.2f} TB/s'.format(B/TB)
+            return '{0:.2f} TB'.format(B/TB)
 
     rename_index_new = check_str(rename_index)
     rename_index_new = dict(zip(rename_index, rename_index_new))
@@ -312,7 +332,7 @@ def net_profile(logdir, cfg, df, features):
     packet_sum_matrix = packet_sum_matrix.rename(index=rename_index_new)
     packet_num_matrix.index.set_levels(rename_index2_final , level = 0, inplace = True)
     
-    print("total amount of network traffic : ", convertbytes(df['payload'].sum()), '\n', packet_sum_matrix.to_string(), "\n")
+    print("total amount of network traffic : ", convertbyte(df['payload'].sum()), '\n', packet_sum_matrix.to_string(), "\n")
     if cfg.verbose:
         print("total amount of network packets = %d\n" % packet_num_matrix.sum().sum() ,packet_num_matrix.to_string(), "\n")
     
@@ -333,7 +353,7 @@ def net_profile(logdir, cfg, df, features):
         if value == 0:
             pass
         else:
-            item = [src, dst, convertbytes(value), round(value / df['payload'].sum(), 2)]
+            item = [src, dst, convertbyte(value), round(value / df['payload'].sum(), 2)]
             final.append(item)
     summary = pd.DataFrame(final, columns=['Source', 'Destination', 'Amount', 'Percentage of a Node'])
     summary.to_csv(logdir + 'netrank.csv',
@@ -355,7 +375,9 @@ def convertbytes(B):
     TB = float(KB ** 4) # 1,099,511,627,776
 
     if B < KB:
-        return '{0} {1}'.format(B,'B/s' if 0 == B > 1 else 'B/s')
+
+        return '{0:.2f} B/s'.format(B)
+
     elif KB <= B < MB:
         return '{0:.2f} KB/s'.format(B/KB)
     elif MB <= B < GB:
@@ -371,7 +393,15 @@ def netbandwidth_profile(logdir, cfg, df, features):
         print('Bandwidth Quartile :')
     tx = df['event'] == float(0)
     rx = df['event'] == float(1)
-  
+      
+    bw_tx_q1 = df[tx]['bandwidth'].quantile(0.25)
+    bw_tx_q2 = df[tx]['bandwidth'].quantile(0.5)
+    bw_tx_q3 = df[tx]['bandwidth'].quantile(0.75)
+    bw_tx_mean = int(df[tx]['bandwidth'].mean())
+    bw_rx_q1 = df[rx]['bandwidth'].quantile(0.25)
+    bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
+    bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
+    bw_rx_mean = int(df[rx]['bandwidth'].mean())
     if not cfg.cluster_ip:
         bw_tx_q1 = df[tx]['bandwidth'].quantile(0.25)
         bw_tx_q2 = df[tx]['bandwidth'].quantile(0.5)
@@ -381,12 +411,12 @@ def netbandwidth_profile(logdir, cfg, df, features):
         bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
         bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
         bw_rx_mean = int(df[rx]['bandwidth'].mean())
-
+        
         print('Q1  tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
         print('Q2  tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
         print('Q3  tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
         print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))
-                                 
+
     #network chart part
     all_time = df[tx]['timestamp'].tolist()
     all_tx = df[tx]['bandwidth'].tolist()
