@@ -176,25 +176,49 @@ def nvsmi_profile(logdir, cfg, df_nvsmi, features):
         dec = df_nvsmi['event'] == int(3)
         gpunum = list(set(df_nvsmi['deviceId']))
         res = pd.DataFrame([], columns=['sm', 'mem', 'enc', 'dec'])
+        sm_q = pd.DataFrame([], columns=['Q1', 'Q2', 'Q3', 'Avg'])
+        mem_q = pd.DataFrame([], columns=['Q1', 'Q2', 'Q3', 'Avg'])
         for i in gpunum:
             gpuid = df_nvsmi['deviceId'] == int(i)
             gpudata = [round(df_nvsmi[sm & gpuid]['duration'].mean(), 2),
                        round(df_nvsmi[mem & gpuid]['duration'].mean(), 2),
                        round(df_nvsmi[enc & gpuid]['duration'].mean(), 2),
                        round(df_nvsmi[dec & gpuid]['duration'].mean(), 2)]
+            smdata = [round(df_nvsmi[sm & gpuid]['duration'].quantile(0.25), 2),
+                      round(df_nvsmi[sm & gpuid]['duration'].quantile(0.5), 2),
+                      round(df_nvsmi[sm & gpuid]['duration'].quantile(0.75), 2),
+                      round(df_nvsmi[sm & gpuid]['duration'].mean(), 2)]
+            memdata = [round(df_nvsmi[mem & gpuid]['duration'].quantile(0.25), 2),
+                       round(df_nvsmi[mem & gpuid]['duration'].quantile(0.5), 2),
+                       round(df_nvsmi[mem & gpuid]['duration'].quantile(0.75), 2),
+                       round(df_nvsmi[mem & gpuid]['duration'].mean(), 2)]
             gpu_tmp = pd.DataFrame([gpudata], columns=['sm', 'mem', 'enc', 'dec'], index=[i])
-            res = pd.concat([res, gpu_tmp]) 
+            sm_tmp = pd.DataFrame([smdata], columns=['Q1', 'Q2', 'Q3', 'Avg'], index=[i])
+            mem_tmp = pd.DataFrame([memdata], columns=['Q1', 'Q2', 'Q3', 'Avg'], index=[i])
+            res = pd.concat([res, gpu_tmp])
+            sm_q = pd.concat([sm_q, sm_tmp]) 
+            mem_q = pd.concat([mem_q, mem_tmp])
         res.index.name = 'gpu_id'
+        sm_q.index.name = 'gpu_id'
+        mem_q.index.name = 'gpu_id'
+
         if not cfg.cluster_ip:
             print('GPU Utilization (%):')
             print(res)
-            print('Average SM Utilization (%): ', int(gpu_sm_util))
-            print('Average MEM Utilization (%): ', int(gpu_mem_util))
-            print('Average ENC Utilization (%): ', int(gpu_enc_util))
-            print('Average DEC Utilization (%): ', int(gpu_dec_util))
-            print('Active GPU Time (s): %.3lf' % (SM_time * gpu_sm_util/100.0))
-        df = pd.DataFrame({'name':['gpu_sm_util', 'gpu_mem_util'], 
-                        'value':[gpu_sm_util, gpu_mem_util] }, 
+            print('\nGPU SM Quartile (%):')
+            print(sm_q)
+            print('\nGPU MEM Quartile (%):')
+            print(mem_q)
+            print('Overall Average SM Utilization (%): ', int(gpu_sm_util))
+            print('Overall Average MEM Utilization (%): ', int(gpu_mem_util))
+            print('Overall Average ENC Utilization (%): ', int(gpu_enc_util))
+            print('Overall Average DEC Utilization (%): ', int(gpu_dec_util))
+            print('Overall Active GPU Time (s): %.3lf' % (SM_time * gpu_sm_util/100.0))
+        df = pd.DataFrame({'name':['gpu_sm_util_q2', 'gpu_sm_util_q3', 'gpu_mem_util_q2', 'gpu_mem_util_q3'], 
+                        'value':[df_nvsmi[sm & gpuid]['duration'].quantile(0.5),
+                                 df_nvsmi[sm & gpuid]['duration'].quantile(0.75),
+                                 df_nvsmi[mem & gpuid]['duration'].quantile(0.5),
+                                 df_nvsmi[mem & gpuid]['duration'].quantile(0.75)] }, 
                         columns=['name','value'])
         features = pd.concat([features, df])
 
