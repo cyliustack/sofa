@@ -6,6 +6,7 @@ import json
 import multiprocessing as mp
 import os
 import re
+import datetime
 
 import subprocess
 import sys
@@ -419,6 +420,8 @@ def sofa_preprocess(cfg):
     pystacks_traces = []
     nvsmi_sm_traces = []
     nvsmi_mem_traces = []
+    nvsmi_enc_traces = []
+    nvsmi_dec_traces = []
     pcm_pcie_traces = []
     pcm_core_traces = []
     pcm_memory_traces = []
@@ -905,6 +908,88 @@ def sofa_preprocess(cfg):
             vm_sys_traces = list_to_csv_and_traces(
                 logdir, vm_sys_list, 'vmstat.csv', 'a')
 
+    
+    # timestamp, name, index, utilization.gpu [%], utilization.memory [%]
+    # 2019/05/16 16:49:04.650, GeForce 940MX, 0, 0 %, 0 %
+    if os.path.isfile('%s/nvsmi_query.txt' % logdir):
+        with open('%s/nvsmi_query.txt' % logdir) as f:
+            next(f)
+            lines = f.readlines()
+            nvsmi_query_has_data = True
+            for line in lines:
+                if line.find('failed') != -1 or line.find('Failed') != -1:
+                    nvsmi_query_has_data = False
+                    print_warning('No nvsmi query data.')
+                    break
+            if nvsmi_query_has_data:
+                print_info(cfg,"Length of nvsmi_query_traces = %d" % len(lines))
+                nvsmi_sm_list = []
+                nvsmi_mem_list = []
+                nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+
+                for i in range(len(lines)):                 
+                    fields = lines[i].split(',')
+                    nv_time = fields[0]
+                    nv_time = datetime.datetime.strptime(nv_time, '%Y/%m/%d %H:%M:%S.%f').timestamp()
+                    nvsmi_id = int(fields[2])
+                    nvsmi_sm = int(fields[3][:-2])
+                    nvsmi_mem = int(fields[4][:-2])
+                    
+                    # nvtime 
+                    t_begin = nv_time
+                    if not cfg.absolute_timestamp:
+                        t_begin = t_begin - cfg.time_base
+     
+                    deviceId = cpuid = nvsmi_id
+                    event = -1
+                    copyKind = -1
+                    payload = -1
+                    bandwidth = -1
+                    pkt_src = pkt_dst = -1
+                    pid = tid = -1
+                    sm_info = "GPUID_sm=%d_%d" % (nvsmi_id, nvsmi_sm)
+                    mem_info = "GPUID_mem=%d_%d" % (nvsmi_id, nvsmi_mem)
+
+                    trace = [
+                        t_begin,
+                        0,
+                        nvsmi_sm,
+                        deviceId,
+                        copyKind,
+                        payload,
+                        bandwidth,
+                        pkt_src,
+                        pkt_dst,
+                        pid,
+                        tid,
+                        sm_info,
+                        cpuid]
+                
+                    nvsmi_sm_list.append(trace)
+
+                    trace = [
+                        t_begin,
+                        1,
+                        nvsmi_mem,
+                        deviceId,
+                        copyKind,
+                        payload,
+                        bandwidth,
+                        pkt_src,
+                        pkt_dst,
+                        pid,
+                        tid,
+                        mem_info,
+                        cpuid]
+                    
+                    nvsmi_mem_list.append(trace)
+                    
+                if len(nvsmi_sm_list)>1:
+                    nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
+                    nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
+
+
     # gpu    sm   mem   enc   dec
     # Idx     %     %     %     %
     #        0     0     0     0     0
@@ -921,10 +1006,10 @@ def sofa_preprocess(cfg):
                     break
             if nvsmi_has_data:
                 print_info(cfg,"Length of nvsmi_traces = %d" % len(lines))
-                nvsmi_sm_list = []
-                nvsmi_mem_list = []
-                nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-                nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                nvsmi_enc_list = []
+                nvsmi_dec_list = []
+                nvsmi_enc_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                nvsmi_dec_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
                 t = 0
                 for i in range(len(lines)):
                     if lines[i].find('gpu') == -1 and lines[i].find('Idx') == -1:
@@ -932,8 +1017,14 @@ def sofa_preprocess(cfg):
                         if len(fields) < 5:
                             continue
                         nvsmi_id = int(fields[0])
-                        nvsmi_sm = float(fields[1]) + 1e-5
-                        nvsmi_mem = float(fields[2]) + 1e-5
+                        if fields[3] == '-':
+                            nvsmi_enc = int(0) 
+                        else:
+                            nvsmi_enc = int(fields[3])
+                        if fields[4] == '-':
+                            nvsmi_dec = int(0) 
+                        else:
+                            nvsmi_dec = int(fields[4]) 
 
                         if cfg.absolute_timestamp: 
                             t_begin = t + cfg.time_base
@@ -946,13 +1037,13 @@ def sofa_preprocess(cfg):
                         bandwidth = -1
                         pkt_src = pkt_dst = -1
                         pid = tid = -1
-                        nvsmi_info = "GPUID_sm_mem=%d_%lf_%lf" % (
-                            nvsmi_id, nvsmi_sm, nvsmi_mem)
+                        enc_info = "GPUID_enc=%d_%d" % (nvsmi_id, nvsmi_enc)
+                        dec_info = "GPUID_dec=%d_%d" % (nvsmi_id, nvsmi_dec)
 
                         trace = [
                             t_begin,
-                            0,
-                            nvsmi_sm,
+                            2,
+                            nvsmi_enc,
                             deviceId,
                             copyKind,
                             payload,
@@ -961,15 +1052,15 @@ def sofa_preprocess(cfg):
                             pkt_dst,
                             pid,
                             tid,
-                            nvsmi_info,
+                            enc_info,
                             cpuid]
                         if t > 3 :
-                            nvsmi_sm_list.append(trace)
+                            nvsmi_enc_list.append(trace)
 
                         trace = [
                             t_begin,
-                            1,
-                            nvsmi_mem,
+                            3,
+                            nvsmi_dec,
                             deviceId,
                             copyKind,
                             payload,
@@ -978,17 +1069,20 @@ def sofa_preprocess(cfg):
                             pkt_dst,
                             pid,
                             tid,
-                            nvsmi_info,
+                            dec_info,
                             cpuid]
                         if t > 3 :
-                            nvsmi_mem_list.append(trace)
+                            nvsmi_dec_list.append(trace)
+                        
                         if nvsmi_id == 0:
                             t = t + 1
-                if len(nvsmi_sm_list)>1:
-                    nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
-                    nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
+                if len(nvsmi_enc_list)>1:
+                    cfg.nvsmi_data = True
+                    nvsmi_enc_traces = list_to_csv_and_traces(logdir, nvsmi_enc_list, 'nvsmi_trace.csv', 'a')
+                    nvsmi_dec_traces = list_to_csv_and_traces(logdir, nvsmi_dec_list, 'nvsmi_trace.csv', 'a')
                 else:
                     print_warning("Program exectution time is fewer than 3 seconds, so nvsmi trace analysis will not be displayed.")
+
     # ============ Preprocessing Network Trace ==========================
     
     if os.path.isfile('%s/sofa.pcap' % logdir):
@@ -1934,6 +2028,25 @@ def sofa_preprocess(cfg):
     sofatrace.y_field = 'duration'
     sofatrace.data = nvsmi_sm_traces
     traces.append(sofatrace)
+
+    if cfg.enable_encode_decode:
+        sofatrace = SOFATrace()
+        sofatrace.name = 'nvsmi_enc'
+        sofatrace.title = 'GPU_ENC_Util.'
+        sofatrace.color = 'rgba(255, 215, 0, 0.8)' #Gold
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = nvsmi_enc_traces
+        traces.append(sofatrace)
+
+        sofatrace = SOFATrace()
+        sofatrace.name = 'nvsmi_dec'
+        sofatrace.title = 'GPU_DEC_Util.'
+        sofatrace.color = 'rgba(218, 165, 32, 0.8)' #GoldenRod
+        sofatrace.x_field = 'timestamp'
+        sofatrace.y_field = 'duration'
+        sofatrace.data = nvsmi_dec_traces
+        traces.append(sofatrace)
 
     sofatrace = SOFATrace()
     sofatrace.name = 'pcm_pcie'

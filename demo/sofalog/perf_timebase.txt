@@ -1,12 +1,17 @@
 [ perf record: Woken up 1 times to write data ]
-[ perf record: Captured and wrote 0.019 MB perf.data (9 samples) ]
-            perf 14437 2087759.781834:          1 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
-            perf 14437 2087759.781837:          1 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
-            perf 14437 2087759.781838:         50 cycles:ppp:  ffffffffb7e6a358 native_write_msr_safe ([kernel.kallsyms])
-            perf 14437 2087759.781839:       4395 cycles:ppp:  ffffffffb7e0b618 intel_bts_enable_local ([kernel.kallsyms])
-            perf 14437 2087759.781841:     407609 cycles:ppp:  ffffffffb7faa160 perf_event_exec ([kernel.kallsyms])
-              ls 14437 2087759.781942:   32616068 cycles:ppp:      7f029ace7ffc [unknown] ([unknown])
-              ls 14437 2087759.790037:   26292050 cycles:ppp:  ffffffffb80696c6 xattr_permission ([kernel.kallsyms])
-              ls 14437 2087759.796456:   12810691 cycles:ppp:      7f029a377609 __strcoll_l (/usr/lib64/libc-2.17.so)
-              ls 14437 2087759.799624:    9935106 cycles:ppp:      7f029a3939ae __offtime (/usr/lib64/libc-2.17.so)
-1556973141.300466 1556973141.300466
+[ perf record: Captured and wrote 0.016 MB perf.data (14 samples) ]
+              ls 22285 378130.808619:          1 cycles:uppp:  ffffffff8ca00de7 native_irq_return_iret ([kernel.kallsyms])
+              ls 22285 378130.808622:          1 cycles:uppp:  ffffffff8ca00de7 native_irq_return_iret ([kernel.kallsyms])
+              ls 22285 378130.808624:         30 cycles:uppp:  ffffffff8ca00de7 native_irq_return_iret ([kernel.kallsyms])
+              ls 22285 378130.808626:       1886 cycles:uppp:  ffffffff8ca00de7 native_irq_return_iret ([kernel.kallsyms])
+              ls 22285 378130.808631:     121806 cycles:uppp:      7fd923cdbc30 _start (/lib/x86_64-linux-gnu/ld-2.23.so)
+              ls 22285 378130.808905:    3317915 cycles:uppp:      7fd923cf7f6a strlen (/lib/x86_64-linux-gnu/ld-2.23.so)
+              ls 22285 378130.815371:    3468241 cycles:uppp:      7fd9237f50bc getxattr (/lib/x86_64-linux-gnu/libc-2.23.so)
+              ls 22285 378130.821696:    2493630 cycles:uppp:      7fd923787603 __strcoll_l (/lib/x86_64-linux-gnu/libc-2.23.so)
+              ls 22285 378130.822663:    2231263 cycles:uppp:      7fd9237875ae __strcoll_l (/lib/x86_64-linux-gnu/libc-2.23.so)
+              ls 22285 378130.823677:    2240499 cycles:uppp:      7fd92373c5af vfprintf (/lib/x86_64-linux-gnu/libc-2.23.so)
+              ls 22285 378130.825314:    2237195 cycles:uppp:      7fd92373dcc2 vfprintf (/lib/x86_64-linux-gnu/libc-2.23.so)
+              ls 22285 378130.826909:    2097871 cycles:uppp:            407380 [unknown] (/bin/ls)
+              ls 22285 378130.828436:    2000183 cycles:uppp:      7fd92373dcc0 vfprintf (/lib/x86_64-linux-gnu/libc-2.23.so)
+              ls 22285 378130.829943:    1847436 cycles:uppp:      7fd92376c058 _IO_str_init_static_internal (/lib/x86_64-linux-gnu/libc-2.23.so)
+1558060703.724313 1558060703.724313

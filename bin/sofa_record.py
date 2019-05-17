@@ -153,6 +153,7 @@ def sofa_record(command, cfg):
     p_cpuinfo  = None
     p_nvprof  = None
     p_nvsmi   = None
+    p_nvsmi_query = None
     p_nvtopo  = None
     p_pcm_pcie = None
     p_pcm_memory = None
@@ -308,6 +309,9 @@ def sofa_record(command, cfg):
         if int(os.system('command -v nvidia-smi 1>/dev/null')) == 0:
             with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
                 p_nvsmi = subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
+            with open('%s/nvsmi_query.txt' % logdir, 'w') as logfile:                                                                                                                                           
+                p_nvsmi_query = subprocess.Popen(['nvidia-smi', '--query-gpu=timestamp,gpu_name,index,utilization.gpu,utilization.memory',
+                                            '-lms', '100', '--format=csv'], stdout=logfile)
             with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
                 p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)
 
@@ -406,6 +410,12 @@ def sofa_record(command, cfg):
                 print_info(cfg,"tried terminating nvidia-smi dmon")
             else:
                 open('%s/nvsmi.txt' % logdir, 'a').write('\nFailed\n')
+        if p_nvsmi_query != None:
+            if p_nvsmi_query.poll() is None:
+                p_nvsmi_query.terminate()
+                print_info(cfg,"tried terminating nvidia-smi query")
+            else:
+                open('%s/nvsmi_query.txt' % logdir, 'a').write('\nFailed\n')
         if p_nvprof != None:
             p_nvprof.terminate()
             print_info(cfg,"tried terminating nvprof")
@@ -446,6 +456,9 @@ def sofa_record(command, cfg):
         if p_nvsmi != None:
             p_nvsmi.kill()
             print_info(cfg,"tried killing nvidia-smi dmon")
+        if p_nvsmi_query != None:
+            p_nvsmi_query.kill()
+            print_info(cfg,"tried killing nvidia-smi query")
         if p_nvprof != None:
             p_nvprof.kill()
             print_info(cfg,"tried killing nvprof")
