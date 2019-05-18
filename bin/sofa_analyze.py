@@ -60,7 +60,9 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features)
 
     total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
     elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
-   
+  
+    
+ 
     if len(df_mpstat) == 0 or len(df_cpu) == 0:
         print_warning('no mpstat and perf traces!')
         return features
@@ -83,9 +85,14 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features)
         cond2 = (df_cpu['timestamp'] <= window_end)
         df_cpu_interval = df_cpu[ cond1 & cond2 ]
         
+        num_gpus = len( df_gpu.groupby("deviceId")["duration"] )
         cond1 = (df_gpu['timestamp'] > window_begin)
         cond2 = (df_gpu['timestamp'] <= window_end)
         df_gpu_interval = df_gpu[ cond1 & cond2 ]
+ 
+        cond1 = (df_nvsmi['timestamp'] > window_begin)
+        cond2 = (df_nvsmi['timestamp'] <= window_end)
+        df_nvsmi_interval = df_nvsmi[ cond1 & cond2 ]
         
         cond1 = (df_mpstat['timestamp'] > window_begin)
         cond2 = (df_mpstat['timestamp'] <= window_end)
@@ -108,7 +115,7 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features)
         if len(df_mpstat_interval) > 0:
             elapsed_time['usr'] = mp_usr.max()
             elapsed_time['sys'] = mp_sys.max()
-            elapsed_time['gpu'] = df_gpu_interval['duration'].sum()
+            elapsed_time['gpu'] = df_nvsmi_interval['duration'].sum() * 0.01 * 0.1 / num_gpus
             elapsed_time['iow'] = mp_iow.max()
             dominator = max(elapsed_time, key=elapsed_time.get)
             #if elapsed_time['gpu'] > 0.1 :
@@ -157,74 +164,81 @@ class Event:
 def nvsmi_profile(logdir, cfg, df_nvsmi, features):
     if not cfg.cluster_ip:
         print_title("SM & MEM & ENCODE/DECODE Profiling")
-    
-    if len(df_nvsmi) > 0 :
-        sm_start = df_nvsmi.iloc[0].timestamp 
-        sm_end = df_nvsmi.iloc[-1].timestamp
-        SM_time = sm_end - sm_start
-        result = df_nvsmi.groupby(['deviceId','event'])['duration'].mean()
-        result = result.astype(int)
-        
-        gpu_sm_util = df_nvsmi.groupby(['event'])['duration'].mean()[0]
-        gpu_mem_util = df_nvsmi.groupby(['event'])['duration'].mean()[1]
-        if cfg.nvsmi_data:
-            gpu_enc_util = df_nvsmi.groupby(['event'])['duration'].mean()[2]
-            gpu_dec_util = df_nvsmi.groupby(['event'])['duration'].mean()[3]
-        else:
-            gpu_enc_util = 0
-            gpu_dec_util = 0
-        
-        sm = df_nvsmi['event'] == int(0)
-        mem = df_nvsmi['event'] == int(1)
-        enc = df_nvsmi['event'] == int(2)
-        dec = df_nvsmi['event'] == int(3)
-        gpunum = list(set(df_nvsmi['deviceId']))
-        res = pd.DataFrame([], columns=['sm', 'mem', 'enc', 'dec'])
-        sm_q = pd.DataFrame([], columns=['Q1', 'Q2', 'Q3', 'Avg'])
-        mem_q = pd.DataFrame([], columns=['Q1', 'Q2', 'Q3', 'Avg'])
-        for i in gpunum:
-            gpuid = df_nvsmi['deviceId'] == int(i)
-            gpudata = [round(df_nvsmi[sm & gpuid]['duration'].mean(), 2),
-                       round(df_nvsmi[mem & gpuid]['duration'].mean(), 2),
-                       round(df_nvsmi[enc & gpuid]['duration'].mean(), 2),
-                       round(df_nvsmi[dec & gpuid]['duration'].mean(), 2)]
-            smdata = [round(df_nvsmi[sm & gpuid]['duration'].quantile(0.25), 2),
-                      round(df_nvsmi[sm & gpuid]['duration'].quantile(0.5), 2),
-                      round(df_nvsmi[sm & gpuid]['duration'].quantile(0.75), 2),
-                      round(df_nvsmi[sm & gpuid]['duration'].mean(), 2)]
-            memdata = [round(df_nvsmi[mem & gpuid]['duration'].quantile(0.25), 2),
-                       round(df_nvsmi[mem & gpuid]['duration'].quantile(0.5), 2),
-                       round(df_nvsmi[mem & gpuid]['duration'].quantile(0.75), 2),
-                       round(df_nvsmi[mem & gpuid]['duration'].mean(), 2)]
-            gpu_tmp = pd.DataFrame([gpudata], columns=['sm', 'mem', 'enc', 'dec'], index=[i])
-            sm_tmp = pd.DataFrame([smdata], columns=['Q1', 'Q2', 'Q3', 'Avg'], index=[i])
-            mem_tmp = pd.DataFrame([memdata], columns=['Q1', 'Q2', 'Q3', 'Avg'], index=[i])
-            res = pd.concat([res, gpu_tmp])
-            sm_q = pd.concat([sm_q, sm_tmp]) 
-            mem_q = pd.concat([mem_q, mem_tmp])
-        res.index.name = 'gpu_id'
-        sm_q.index.name = 'gpu_id'
-        mem_q.index.name = 'gpu_id'
+   
+    if cfg.spotlight_gpu: 
+        cond1 = (df_nvsmi['timestamp'] > cfg.roi_begin)
+        cond2 = (df_nvsmi['timestamp'] <= cfg.roi_end)
+        df_nvsmi = df_nvsmi[ cond1 & cond2 ]
 
-        if not cfg.cluster_ip:
-            print('GPU Utilization (%):')
-            print(res)
-            print('\nGPU SM Quartile (%):')
-            print(sm_q)
-            print('\nGPU MEM Quartile (%):')
-            print(mem_q)
-            print('Overall Average SM Utilization (%): ', int(gpu_sm_util))
-            print('Overall Average MEM Utilization (%): ', int(gpu_mem_util))
-            print('Overall Average ENC Utilization (%): ', int(gpu_enc_util))
-            print('Overall Average DEC Utilization (%): ', int(gpu_dec_util))
-            print('Overall Active GPU Time (s): %.3lf' % (SM_time * gpu_sm_util/100.0))
-        df = pd.DataFrame({'name':['gpu_sm_util_q2', 'gpu_sm_util_q3', 'gpu_mem_util_q2', 'gpu_mem_util_q3'], 
-                        'value':[df_nvsmi[sm & gpuid]['duration'].quantile(0.5),
-                                 df_nvsmi[sm & gpuid]['duration'].quantile(0.75),
-                                 df_nvsmi[mem & gpuid]['duration'].quantile(0.5),
-                                 df_nvsmi[mem & gpuid]['duration'].quantile(0.75)] }, 
-                        columns=['name','value'])
-        features = pd.concat([features, df])
+    sm_start = df_nvsmi.iloc[0].timestamp 
+    sm_end = df_nvsmi.iloc[-1].timestamp
+    SM_time = sm_end - sm_start
+    result = df_nvsmi.groupby(['deviceId','event'])['duration'].mean()
+    result = result.astype(int)
+    
+    gpu_sm_util = df_nvsmi.groupby(['event'])['duration'].mean()[0]
+    gpu_mem_util = df_nvsmi.groupby(['event'])['duration'].mean()[1]
+    if cfg.nvsmi_data:
+        gpu_enc_util = df_nvsmi.groupby(['event'])['duration'].mean()[2]
+        gpu_dec_util = df_nvsmi.groupby(['event'])['duration'].mean()[3]
+    else:
+        gpu_enc_util = 0
+        gpu_dec_util = 0
+    
+    sm = df_nvsmi['event'] == int(0)
+    mem = df_nvsmi['event'] == int(1)
+    enc = df_nvsmi['event'] == int(2)
+    dec = df_nvsmi['event'] == int(3)
+    gpunum = list(set(df_nvsmi['deviceId']))
+    res = pd.DataFrame([], columns=['sm', 'mem', 'enc', 'dec'])
+    sm_q = pd.DataFrame([], columns=['Q1', 'Q2', 'Q3', 'Avg'])
+    mem_q = pd.DataFrame([], columns=['Q1', 'Q2', 'Q3', 'Avg'])
+    for i in gpunum:
+        gpuid = df_nvsmi['deviceId'] == int(i)
+        gpudata = [round(df_nvsmi[sm & gpuid]['duration'].mean(), 2),
+                   round(df_nvsmi[mem & gpuid]['duration'].mean(), 2),
+                   round(df_nvsmi[enc & gpuid]['duration'].mean(), 2),
+                   round(df_nvsmi[dec & gpuid]['duration'].mean(), 2)]
+        smdata = [round(df_nvsmi[sm & gpuid]['duration'].quantile(0.25), 2),
+                  round(df_nvsmi[sm & gpuid]['duration'].quantile(0.5), 2),
+                  round(df_nvsmi[sm & gpuid]['duration'].quantile(0.75), 2),
+                  round(df_nvsmi[sm & gpuid]['duration'].mean(), 2)]
+        memdata = [round(df_nvsmi[mem & gpuid]['duration'].quantile(0.25), 2),
+                   round(df_nvsmi[mem & gpuid]['duration'].quantile(0.5), 2),
+                   round(df_nvsmi[mem & gpuid]['duration'].quantile(0.75), 2),
+                   round(df_nvsmi[mem & gpuid]['duration'].mean(), 2)]
+        gpu_tmp = pd.DataFrame([gpudata], columns=['sm', 'mem', 'enc', 'dec'], index=[i])
+        sm_tmp = pd.DataFrame([smdata], columns=['Q1', 'Q2', 'Q3', 'Avg'], index=[i])
+        mem_tmp = pd.DataFrame([memdata], columns=['Q1', 'Q2', 'Q3', 'Avg'], index=[i])
+        res = pd.concat([res, gpu_tmp])
+        sm_q = pd.concat([sm_q, sm_tmp]) 
+        mem_q = pd.concat([mem_q, mem_tmp])
+    res.index.name = 'gpu_id'
+    sm_q.index.name = 'gpu_id'
+    mem_q.index.name = 'gpu_id'
+
+    if not cfg.cluster_ip:
+        print('GPU Utilization (%):')
+        print(res)
+        print('\nGPU SM Quartile (%):')
+        print(sm_q)
+        print('\nGPU MEM Quartile (%):')
+        print(mem_q)
+        print('Overall Average SM Utilization (%): ', int(gpu_sm_util))
+        print('Overall Average MEM Utilization (%): ', int(gpu_mem_util))
+        print('Overall Average ENC Utilization (%): ', int(gpu_enc_util))
+        print('Overall Average DEC Utilization (%): ', int(gpu_dec_util))
+        print('Overall Active GPU Time (s): %.3lf' % (SM_time * gpu_sm_util/100.0))
+    df = pd.DataFrame({'name':['gpu_sm_util_q2', 'gpu_sm_util_q3', 'gpu_sm_util', 'gpu_mem_util_q2', 'gpu_mem_util_q3', 'gpu_mem_util'], 
+                    'value':[df_nvsmi[sm & gpuid]['duration'].quantile(0.5),
+                             df_nvsmi[sm & gpuid]['duration'].quantile(0.75),
+                             int(gpu_sm_util),
+                             df_nvsmi[mem & gpuid]['duration'].quantile(0.5),
+                             df_nvsmi[mem & gpuid]['duration'].quantile(0.75),
+                             int(gpu_mem_util),
+                            ]}, 
+                    columns=['name','value'])
+    features = pd.concat([features, df])
 
     return features
 
@@ -238,7 +252,7 @@ def gpu_profile(logdir, cfg, df_gpu, features):
         per_gpu_time = groups.get_group(key).sum()
         print("[%d]: %lf" % (gpuid, per_gpu_time))
         gpu_time = gpu_time + per_gpu_time 
-    n_gpus = len(groups)
+    num_gpus = len(groups)
     print(("Total GPU time of all GPUs (s) = %.3lf" % gpu_time))
    
     kernel_time = 0
@@ -258,7 +272,7 @@ def gpu_profile(logdir, cfg, df_gpu, features):
 
     get_top_k_events(df_gpu, 10)
     df = pd.DataFrame({'name':['gpu_time', 'num_gpus', 'kernel_time', 'nccl_time'], 
-                        'value':[gpu_time, n_gpus, kernel_time, nccl_time] }, 
+                        'value':[gpu_time, num_gpus, kernel_time, nccl_time] }, 
                         columns=['name','value'])
     features = pd.concat([features, df])
     return features
@@ -708,7 +722,7 @@ def sofa_analyze(cfg):
         if not df_nvsmi.empty and cfg.spotlight_gpu:
             state = 0 
             sm_high = 0
-            trigger = 2
+            trigger = 3
             for i in range(len(df_nvsmi)):
                 if df_nvsmi.iloc[i].event == 0 and df_nvsmi.iloc[i].deviceId == 0 :
                     if df_nvsmi.iloc[i].duration >= 50:
