@@ -142,6 +142,11 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help='trace for specific block device, for example : --blktrace_device sda')
+    parser.add_argument(
+        '--netstat_interface',
+        type=str,
+        required=False,
+        help='interface to monitor by netstat: like eth0 or ib0')
 	
     sofa_exec_path = os.path.abspath( __file__ )
     if Path(sofa_exec_path).is_symlink():
@@ -186,7 +191,9 @@ if __name__ == "__main__":
     if args.blktrace_device is not None:
         cfg.blktrace_device = args.blktrace_device
 	
-
+    if args.netstat_interface is not None:
+        cfg.netstat_interface = args.netstat_interface
+	
     # swarm_diff related flag
     if command == 'diff': # reject '' and None
         if args.base_logdir and args.match_logdir: 

@@ -291,7 +291,10 @@ def sofa_record(command, cfg):
             logfile.write('')
             interface = subprocess.check_output("ip addr | awk '/state UP/{print $2}'", shell=True)
             interface = str(interface, 'utf-8')
-            interface = interface.split(':')[0]
+            if cfg.netstat_interface is not None:
+                interface = cfg.netstat_interface
+            else:
+                interface = interface.split(':')[0]
             timerThread = threading.Thread(target=service_get_netstat, args=[logdir, interface])
             timerThread.daemon = True
             timerThread.start()

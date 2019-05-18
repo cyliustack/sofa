@@ -51,3 +51,4 @@ class SOFA_Config:
     nvsmi_data = False
     roi_begin=0
     roi_end=0
+    netstat_interface=None
