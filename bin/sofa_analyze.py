@@ -24,7 +24,6 @@ import grpc
 import potato_pb2
 import potato_pb2_grpc
 import socket
-
 # input: pfv(performance feature vector), Pandas.DataFrame
 # output: hint, docker_image  
 def get_hint(potato_server, features):
@@ -34,7 +33,7 @@ def get_hint(potato_server, features):
         for i in range(len(features)):
             name = features.iloc[i]['name']
             value = features.iloc[i]['value']
-            print('%s%s%s' % (str(i).ljust(10), name.ljust(30), ('%.3lf'%value).ljust(20)))
+            #print('%s%s%s' % (str(i).ljust(10), name.ljust(30), ('%.3lf'%value).ljust(20)))
             pfv.name.append(name)
             pfv.value.append(value)
 			
@@ -51,8 +50,7 @@ def get_hint(potato_server, features):
         hint = 'There is no pfv to get hints.' 
         docker_image = 'NA' 
 
-    print(hint)
-    print(docker_image) 
+    print('docker_image: ', docker_image) 
     return hint, docker_image 
 
 def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features):
@@ -840,7 +838,16 @@ def sofa_analyze(cfg):
     if cfg.potato_server:
         print_title('POTATO Feedback')
         hint, docker_image = get_hint(cfg.potato_server, features)
-        print('Optimization hints: ' + hint)
+        print('Optimization hints: \n' + hint)
+        df_report = pd.read_json(hint, orient='table')
+        print(df_report)
+        file_potato_report = cfg.logdir + 'potato_report.html'
+        df_report.to_html(file_potato_report )
+        with open(file_potato_report, "a") as f:
+            f.write("<style>")
+            f.write("table{border-collapse: collapse;}") 
+            f.write("table, th, td {border: 1px solid black;}")
+            f.write("</style>")
         print('Tag of optimal image recommended from POTATO: ' + highlight(docker_image))
         print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
     
