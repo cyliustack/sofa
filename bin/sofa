@@ -147,6 +147,7 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help='interface to monitor by netstat: like eth0 or ib0')
+    parser.add_argument('--nvsmi_time_zone', metavar='8', type=int, help='time zone for nvsmi_query.txt')
 	
     sofa_exec_path = os.path.abspath( __file__ )
     if Path(sofa_exec_path).is_symlink():
@@ -194,6 +195,9 @@ if __name__ == "__main__":
     if args.netstat_interface is not None:
         cfg.netstat_interface = args.netstat_interface
 	
+    if args.nvsmi_time_zone is not None:
+        cfg.nvsmi_time_zone = args.nvsmi_time_zone
+
     # swarm_diff related flag
     if command == 'diff': # reject '' and None
         if args.base_logdir and args.match_logdir: 

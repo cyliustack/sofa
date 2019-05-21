@@ -155,8 +155,9 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
     
     vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'gpu', 'net_tx', 'net_rx'])
     print('Correlation Table :')
-    pearson = vector_table.corr(method ='pearson').round(1)
+    pearson = vector_table.corr(method ='pearson').round(2)
     print(pearson)
+
     return features
 
 def payload_sum(df):
