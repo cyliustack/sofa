@@ -35,6 +35,7 @@ SOFABOARD_FILES=(sofaboard/index.html
                  sofaboard/comm-report.html
                  sofaboard/overhead.html
                  sofaboard/timeline.js
+                 sofaboard/potato_report.css
                  )
 
 print_help(){

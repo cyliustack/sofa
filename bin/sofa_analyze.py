@@ -37,7 +37,7 @@ def get_hint(potato_server, features):
             pfv.name.append(name)
             pfv.value.append(value)
 			
-        print('Wait for response from POTATO server...')
+        #print('Wait for response from POTATO server...')
         myhostname = socket.gethostname()
         channel = grpc.insecure_channel(potato_server)
         stub = potato_pb2_grpc.HintStub(channel)
@@ -50,7 +50,6 @@ def get_hint(potato_server, features):
         hint = 'There is no pfv to get hints.' 
         docker_image = 'NA' 
 
-    print('docker_image: ', docker_image) 
     return hint, docker_image 
 
 def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features):
@@ -838,16 +837,13 @@ def sofa_analyze(cfg):
     if cfg.potato_server:
         print_title('POTATO Feedback')
         hint, docker_image = get_hint(cfg.potato_server, features)
-        print('Optimization hints: \n' + hint)
+        print('Optimization hints: \n')
         df_report = pd.read_json(hint, orient='table')
         print(df_report)
         file_potato_report = cfg.logdir + 'potato_report.html'
         df_report.to_html(file_potato_report )
-        with open(file_potato_report, "a") as f:
-            f.write("<style>")
-            f.write("table{border-collapse: collapse;}") 
-            f.write("table, th, td {border: 1px solid black;}")
-            f.write("</style>")
+        with open(file_potato_report, 'a') as f:
+            f.write('<head><link rel=stylesheet type="text/css" href="potato_report.css"></head>')
         print('Tag of optimal image recommended from POTATO: ' + highlight(docker_image))
         print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
     
