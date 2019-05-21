@@ -52,12 +52,12 @@ def get_hint(potato_server, features):
 
     return hint, docker_image 
 
-def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features):
+def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features):
     print_title("Dynamic Top-Down Analysis")
 
     total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
-    elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
-  
+    elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}  
+    total_interval_vector = []
     
  
     if len(df_mpstat) == 0 or len(df_cpu) == 0:
@@ -66,7 +66,6 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features)
 
     t_begin = df_mpstat.iloc[0]['timestamp']
     t_end = df_mpstat.iloc[-1]['timestamp']
-    
     t = t_begin
     while t < t_end:
         t = t + 0.1
@@ -82,11 +81,7 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features)
         cond2 = (df_cpu['timestamp'] <= window_end)
         df_cpu_interval = df_cpu[ cond1 & cond2 ]
         
-        num_gpus = len( df_gpu.groupby("deviceId")["duration"] )
-        cond1 = (df_gpu['timestamp'] > window_begin)
-        cond2 = (df_gpu['timestamp'] <= window_end)
-        df_gpu_interval = df_gpu[ cond1 & cond2 ]
- 
+        num_gpus = len(list(set(df_nvsmi['deviceId'])))
         cond1 = (df_nvsmi['timestamp'] > window_begin)
         cond2 = (df_nvsmi['timestamp'] <= window_end)
         df_nvsmi_interval = df_nvsmi[ cond1 & cond2 ]
@@ -94,6 +89,14 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features)
         cond1 = (df_mpstat['timestamp'] > window_begin)
         cond2 = (df_mpstat['timestamp'] <= window_end)
         df_mpstat_interval = df_mpstat[ cond1 & cond2 ]
+         
+        cond1 = (df_bandwidth['timestamp'] > window_begin)
+        cond2 = (df_bandwidth['timestamp'] <= window_end)
+        tx = df_bandwidth['event'] == float(0)
+        rx = df_bandwidth['event'] == float(1)
+        df_tx_interval = df_bandwidth[ cond1 & cond2 & tx ]
+        df_rx_interval = df_bandwidth[ cond1 & cond2 & rx ]
+
         mp_usr = []
         mp_sys = []
         mp_iow = []
@@ -119,6 +122,14 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features)
             #    dominator = 'gpu'
             total_elapsed_time[dominator] = total_elapsed_time[dominator] + 0.1
 
+            interval_vector = [mp_usr.max(),
+                               mp_sys.max(),
+                               mp_iow.max(),
+                               df_nvsmi_interval['duration'].sum() * 0.01 * 0.1 / num_gpus,
+                               df_tx_interval['bandwidth'].sum(),
+                               df_rx_interval['bandwidth'].sum()]                             
+            total_interval_vector.append(tuple(interval_vector)) 
+
     total_all_elapsed_time = sum(total_elapsed_time.values())
     if total_all_elapsed_time > 0 :
         elapsed_time_ratio['usr'] = 100 * total_elapsed_time['usr'] / total_all_elapsed_time 
@@ -141,7 +152,11 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features)
                         columns=['name','value'])
 
         features = pd.concat([features, df])
-
+    
+    vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'gpu', 'net_tx', 'net_rx'])
+    print('Correlation Table :')
+    pearson = vector_table.corr(method ='pearson').round(1)
+    print(pearson)
     return features
 
 def payload_sum(df):
@@ -817,7 +832,7 @@ def sofa_analyze(cfg):
         print_warning("%s is not found. If there is no need to profile GPU, just ignore it." % filein_gpu)
 
     try:
-        features = dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, features)
+        features = dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features)
     except IOError as e:
         print_warning("Some files are not found, which are needed for dynamic_top_down analysis")
 
