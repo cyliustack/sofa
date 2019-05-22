@@ -95,8 +95,6 @@ if __name__ == "__main__":
     parser.add_argument('--skip_preprocess', dest='skip_preprocess', action='store_true')
     parser.add_argument('--pid', metavar='PID', type=int, required=False,
                         help='Specify the PID of the process you want to trace')
-    parser.add_argument('--timeout', metavar='T', type=int, required=False,
-                        help='Timeout of SOFA recording')
 
     parser.add_argument(
         'command',
@@ -239,9 +237,6 @@ if __name__ == "__main__":
 
     if args.pid is not None:
         cfg.pid = args.pid
-
-    if args.timeout is not None:
-        cfg.timeout = args.timeout
 
     if args.num_swarms is not None:
         cfg.num_swarms = args.num_swarms
