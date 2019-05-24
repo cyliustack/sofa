@@ -171,9 +171,11 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
         else:
             elapsed_spotlight_time = 0 
         
-        df = pd.DataFrame({'name':['elapsed_usr_time_ratio', 'elapsed_sys_time_ratio', 'elapsed_gpu_time_ratio', 'elapsed_iow_time_ratio', 'elapsed_spotlight_time'], 
-                        'value':[elapsed_time_ratio['usr'], elapsed_time_ratio['sys'], elapsed_time_ratio['gpu'], elapsed_time_ratio['iow'], elapsed_spotlight_time ] }, 
-                        columns=['name','value'])
+        df = pd.DataFrame({ 'name':['elapsed_usr_time_ratio', 'elapsed_sys_time_ratio', 'elapsed_gpu_time_ratio', 
+                            'elapsed_iow_time_ratio', 'elapsed_spotlight_time'], 
+                            'value':[elapsed_time_ratio['usr'], elapsed_time_ratio['sys'], elapsed_time_ratio['gpu'], 
+                            elapsed_time_ratio['iow'], elapsed_spotlight_time ] }, 
+                            columns=['name','value'])
 
         features = pd.concat([features, df])
     performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util'])
@@ -182,7 +184,10 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
     print('Correlation Table :')
     pearson = vector_table.corr(method ='pearson').round(2)
     print(pearson)
-
+    df = pd.DataFrame({ 'name':['corr_gpu_usr', 'corr_gpu_sys', 'corr_gpu_iow', 'corr_gpu_ntx', 'corr_gpu_nrx'],
+                        'value':[pearson['gpu'].usr, pearson['gpu'].sys, pearson['gpu'].iow, pearson['gpu'].net_tx, pearson['gpu'].net_rx]}, 
+                            columns=['name','value'])
+    features = pd.concat([features, df])
     return features
 
 def payload_sum(df):
