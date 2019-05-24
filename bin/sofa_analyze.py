@@ -58,6 +58,7 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
     total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
     elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}  
     total_interval_vector = []
+    total_performace_vector = []
     
  
     if len(df_mpstat) == 0 or len(df_cpu) == 0:
@@ -84,7 +85,8 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
         num_gpus = len(list(set(df_nvsmi['deviceId'])))
         cond1 = (df_nvsmi['timestamp'] > window_begin)
         cond2 = (df_nvsmi['timestamp'] <= window_end)
-        df_nvsmi_interval = df_nvsmi[ cond1 & cond2 ]
+        sm = df_nvsmi['event'] == int(0)
+        df_nvsmi_interval = df_nvsmi[ cond1 & cond2 & sm ]
         
         cond1 = (df_mpstat['timestamp'] > window_begin)
         cond2 = (df_mpstat['timestamp'] <= window_end)
@@ -100,15 +102,29 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
         mp_usr = []
         mp_sys = []
         mp_iow = []
+
+        usr = []
+        sys = []
+        irq = []
+  
         for i in range(len(df_mpstat_interval)):
             ratios = df_mpstat_interval.iloc[i]['name'].split(':')[1].split('|') 
             #print(ratios)
             mp_usr.append(0.1*int(ratios[1])/100.0)
             mp_sys.append(0.1*int(ratios[2])/100.0)
             mp_iow.append(0.1*int(ratios[4])/100.0)
+
+            usr.append(int(ratios[1]))
+            sys.append(int(ratios[2]))
+            irq.append(int(ratios[5]))
+
         mp_usr = np.asarray(mp_usr)
         mp_sys = np.asarray(mp_sys)
         mp_iow = np.asarray(mp_iow)
+
+        usr = np.asarray(usr)
+        sys = np.asarray(sys)
+        irq = np.asarray(irq)
 
         elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
 
@@ -130,6 +146,14 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
                                df_rx_interval['bandwidth'].sum()]                             
             total_interval_vector.append(tuple(interval_vector)) 
 
+            performace_vector = [window_end,
+                                 df_nvsmi_interval['duration'].max(), 
+                                 round(df_nvsmi_interval['duration'].sum() / len(list(set(df_nvsmi_interval['deviceId']))), 0), 
+                                 df_nvsmi_interval['duration'].min(), 
+                                 round((usr.mean() + sys.mean() + irq.mean()), 0)
+                                ]
+            total_performace_vector.append(tuple(performace_vector))
+                                 
     total_all_elapsed_time = sum(total_elapsed_time.values())
     if total_all_elapsed_time > 0 :
         elapsed_time_ratio['usr'] = 100 * total_elapsed_time['usr'] / total_all_elapsed_time 
@@ -152,7 +176,8 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
                         columns=['name','value'])
 
         features = pd.concat([features, df])
-    
+    performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util'])
+    performance_table.to_csv('%s/performance.csv' % logdir)
     vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'gpu', 'net_tx', 'net_rx'])
     print('Correlation Table :')
     pearson = vector_table.corr(method ='pearson').round(2)
@@ -642,6 +667,7 @@ def mpstat_profile(logdir, cfg, df, features):
                                                     df_summary.iloc[i]['IRQ'] ))
 
     total_cpu_time = df_summary[['USR','SYS','IRQ']].sum().sum()
+    df_summary.to_csv('cpusum.csv')
     cpu_util = int(100*total_cpu_time / (num_cores*cfg.elapsed_time))
     if not cfg.cluster_ip:
         print('Active CPU Time (s): %.3lf' % total_cpu_time)
