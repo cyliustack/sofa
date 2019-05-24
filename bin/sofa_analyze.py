@@ -672,7 +672,6 @@ def mpstat_profile(logdir, cfg, df, features):
                                                     df_summary.iloc[i]['IRQ'] ))
 
     total_cpu_time = df_summary[['USR','SYS','IRQ']].sum().sum()
-    df_summary.to_csv('cpusum.csv')
     cpu_util = int(100*total_cpu_time / (num_cores*cfg.elapsed_time))
     if not cfg.cluster_ip:
         print('Active CPU Time (s): %.3lf' % total_cpu_time)
