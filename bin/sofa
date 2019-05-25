@@ -347,10 +347,12 @@ if __name__ == "__main__":
             tmp_dir = cfg.logdir
             for ip in cluster:
                 cfg.logdir = tmp_dir[0:-1] + '-' + ip + '/'
-                sofa_preprocess(cfg)
+                if not args.skip_preprocess:
+                    sofa_preprocess(cfg)
             cluster_analyze(cfg)
         else:
-            sofa_preprocess(cfg)
+            if not args.skip_preprocess:
+                sofa_preprocess(cfg)
             sofa_analyze(cfg)
             sofa_viz(cfg)
     else:
