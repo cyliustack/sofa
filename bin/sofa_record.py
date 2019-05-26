@@ -298,16 +298,16 @@ def sofa_record(command, cfg):
             timerThread = threading.Thread(target=service_get_netstat, args=[logdir, interface])
             timerThread.daemon = True
             timerThread.start()
-            
-        with open(os.devnull, 'w') as FNULL:
-           p_tcpdump =  subprocess.Popen(["tcpdump",
-                              '-i',
-                              'any',
-                              '-v',
-                              'tcp',
-                              '-w',
-                              '%s/sofa.pcap' % logdir],
-                             stderr=FNULL)
+        if cfg.enable_tcpdump:    
+            with open(os.devnull, 'w') as FNULL:
+               p_tcpdump =  subprocess.Popen(["tcpdump",
+                                  '-i',
+                                  'any',
+                                  '-v',
+                                  'tcp',
+                                  '-w',
+                                  '%s/sofa.pcap' % logdir],
+                                 stderr=FNULL)
 
         if int(os.system('command -v nvidia-smi 1>/dev/null')) == 0:
             with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
