@@ -52,8 +52,8 @@ def get_hint(potato_server, features):
 
     return hint, docker_image 
 
-def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features):
-    print_title("Dynamic Top-Down Analysis")
+def dynamic_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features):
+    print_title("Dynamic Breakdown Analysis")
 
     total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
     elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
@@ -840,9 +840,9 @@ def sofa_analyze(cfg):
         print_warning("%s is not found. If there is no need to profile GPU, just ignore it." % filein_gpu)
 
     try:
-        features = dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features)
+        features = dynamic_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features)
     except IOError as e:
-        print_warning("Some files are not found, which are needed for dynamic_top_down analysis")
+        print_warning("Some files are not found, which are needed for dynamic_breakdown analysis")
 
 
 
