@@ -53,10 +53,10 @@ def get_hint(potato_server, features):
     return hint, docker_image 
 
 def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features):
-    print_title("Dynamic Top-Down Analysis")
+    print_title("Dynamic Top-down Analysis")
 
-    total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
-    elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}  
+    total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
+    elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
     total_interval_vector = []
     total_performace_vector = []
     
@@ -131,8 +131,9 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
         if len(df_mpstat_interval) > 0:
             elapsed_time['usr'] = mp_usr.max()
             elapsed_time['sys'] = mp_sys.max()
-            elapsed_time['gpu'] = df_nvsmi_interval['duration'].sum() * 0.01 * 0.1 / num_gpus
+            elapsed_time['gpu'] = df_nvsmi_interval['duration'].sum() * 0.01 * 0.1 
             elapsed_time['iow'] = mp_iow.max()
+            #print('gput,usrt = ', elapsed_time['gpu'], elapsed_time['usr']) 
             dominator = max(elapsed_time, key=elapsed_time.get)
             #if elapsed_time['gpu'] > 0.1 :
             #    dominator = 'gpu'

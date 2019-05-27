@@ -83,6 +83,7 @@ if __name__ == "__main__":
     parser.add_argument('--verbose', dest='verbose', action='store_true')
     parser.add_argument('--enable_aisi', dest='enable_aisi', action='store_true')
     parser.add_argument('--enable_strace', dest='enable_strace', action='store_true')
+    parser.add_argument('--enable_tcpdump', dest='enable_tcpdump', action='store_true')
     parser.add_argument('--enable_encode_decode', dest='enable_encode_decode', action='store_true')
     parser.add_argument('--aisi_via_strace', dest='aisi_via_strace', action='store_true')
     parser.add_argument('--display_swarms', dest='display_swarms', action='store_true')
@@ -171,6 +172,9 @@ if __name__ == "__main__":
 
     if args.enable_strace is not None:
         cfg.enable_strace = args.enable_strace
+
+    if args.enable_tcpdump is not None:
+        cfg.enable_tcpdump = args.enable_tcpdump
 
     if args.enable_encode_decode is not None:
         cfg.enable_encode_decode = args.enable_encode_decode
@@ -347,10 +351,12 @@ if __name__ == "__main__":
             tmp_dir = cfg.logdir
             for ip in cluster:
                 cfg.logdir = tmp_dir[0:-1] + '-' + ip + '/'
-                sofa_preprocess(cfg)
+                if not args.skip_preprocess:
+                    sofa_preprocess(cfg)
             cluster_analyze(cfg)
         else:
-            sofa_preprocess(cfg)
+            if not args.skip_preprocess:
+                sofa_preprocess(cfg)
             sofa_analyze(cfg)
             sofa_viz(cfg)
     else:
