@@ -380,23 +380,7 @@ def net_profile(logdir, cfg, df, features):
             rename_columns_2.append(i)
         return(rename_columns_2)
     
-    def convertbyte(B):
-        B = int(B)
-        KB = float(1024)
-        MB = float(KB ** 2) # 1,048,576
-        GB = float(KB ** 3) # 1,073,741,824
-        TB = float(KB ** 4) # 1,099,511,627,776
 
-        if B < KB:
-            return '{} Bytes'.format(B)
-        elif KB <= B < MB:
-            return '{0:.2f} KB'.format(B/KB)
-        elif MB <= B < GB:
-            return '{0:.2f} MB'.format(B/MB)
-        elif GB <= B < TB:
-            return '{0:.2f} GB'.format(B/GB)
-        elif TB <= B:
-            return '{0:.2f} TB'.format(B/TB)
 
     rename_index_new = check_str(rename_index)
     rename_index_new = dict(zip(rename_index, rename_index_new))
@@ -452,6 +436,24 @@ def net_profile(logdir, cfg, df, features):
     features = pd.concat([features, df])
     return features
 
+def convertbyte(B):
+    B = int(B)
+    KB = float(1024)
+    MB = float(KB ** 2) # 1,048,576
+    GB = float(KB ** 3) # 1,073,741,824
+    TB = float(KB ** 4) # 1,099,511,627,776
+
+    if B < KB:
+        return '{} Bytes'.format(B)
+    elif KB <= B < MB:
+        return '{0:.2f} KB'.format(B/KB)
+    elif MB <= B < GB:
+        return '{0:.2f} MB'.format(B/MB)
+    elif GB <= B < TB:
+        return '{0:.2f} GB'.format(B/GB)
+    elif TB <= B:
+        return '{0:.2f} TB'.format(B/TB)
+
 def convertbytes(B):
     B = float(B)
     KB = float(1024)
@@ -460,9 +462,7 @@ def convertbytes(B):
     TB = float(KB ** 4) # 1,099,511,627,776
 
     if B < KB:
-
         return '{0:.2f} B/s'.format(B)
-
     elif KB <= B < MB:
         return '{0:.2f} KB/s'.format(B/KB)
     elif MB <= B < GB:
@@ -475,7 +475,6 @@ def convertbytes(B):
 def netbandwidth_profile(logdir, cfg, df, features):
     if not cfg.cluster_ip:
         print_title("Network Bandwidth Profiling:")
-        print('Bandwidth Quartile :')
     tx = df['event'] == float(0)
     rx = df['event'] == float(1)
       
@@ -487,6 +486,16 @@ def netbandwidth_profile(logdir, cfg, df, features):
     bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
     bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
     bw_rx_mean = int(df[rx]['bandwidth'].mean())
+    with open('%s/netstat.txt' % logdir) as f:
+        lines = f.readlines()  
+        first_line = lines[0]  
+        last_line = lines[-1]
+        tx_begin = first_line.split(',')[1]
+        rx_begin = first_line.split(',')[2]
+        tx_end = last_line.split(',')[1]
+        rx_end = last_line.split(',')[2]
+        tx_amount = int(last_line.split(',')[1]) - int(first_line.split(',')[1])
+        rx_amount = int(last_line.split(',')[2]) - int(first_line.split(',')[2])
     if not cfg.cluster_ip:
         bw_tx_q1 = df[tx]['bandwidth'].quantile(0.25)
         bw_tx_q2 = df[tx]['bandwidth'].quantile(0.5)
@@ -496,7 +505,10 @@ def netbandwidth_profile(logdir, cfg, df, features):
         bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
         bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
         bw_rx_mean = int(df[rx]['bandwidth'].mean())
-        
+        print('Amount of Network Traffic : %s' % (convertbyte(tx_amount + rx_amount)))
+        print('Amount of tx : %s' % convertbyte(tx_amount))
+        print('Amount of rx : %s' % convertbyte(rx_amount))
+        print('Bandwidth Quartile :')
         print('Q1  tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
         print('Q2  tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
         print('Q3  tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
@@ -968,7 +980,7 @@ def cluster_analyze(cfg):
         rx_pd = pd.DataFrame([rx_tmp], columns = ['Q1', 'Q2', 'Q3', 'Avg'], index = ['rx'])
         band_tmp = pd.concat([band_tmp, rx_pd]) 
         summary_band = pd.concat([summary_band, pd.concat([band_tmp], keys=[node])]) 
-    print('Ranked Network Traffic : \n', summary_net, '\n')
-    print('Cluster Bandwidth Quartile: \n', summary_band)
+    print('Ranked Network Traffic : \n', summary_net.to_string, '\n')
+    print('Cluster Bandwidth Quartile: \n', summary_band.to_string)
     print_title('Cluster Computation Profiling:')
     print(summary_compute)
