@@ -110,7 +110,16 @@
     line: {color: '#2E86C1'}
     }
 
-    var data = [trace1,trace2,trace3,trace4,trace5];
+    var trace6 = {
+    type: "scatter",
+    mode: "lines",
+    name: 'min cpu util',
+    x: unpack(rows, 'time'),
+    y: unpack(rows, 'cpu_min'),
+    line: {color: '#D6EAF8'} 
+    }
+
+    var data = [trace1,trace2,trace3,trace4,trace5,trace6];
     
     var layout = {
     title: 'Time Series with Computation Utilization', 

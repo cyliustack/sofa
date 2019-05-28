@@ -108,8 +108,10 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
         irq = []     
         
         cpu_max = 0
+        cpu_min = 100
         for i in range(len(df_mpstat_interval)):
-            ratios = df_mpstat_interval.iloc[i]['name'].split(':')[1].split('|') 
+            ratios = df_mpstat_interval.iloc[i]['name'].split(':')[1].split('|')
+            
             #print(ratios)
             mp_usr.append(0.1*int(ratios[1])/100.0)
             mp_sys.append(0.1*int(ratios[2])/100.0)
@@ -122,7 +124,8 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
             cpu_tmp = int(ratios[1]) + int(ratios[2]) + int(ratios[5])
             if cpu_tmp > cpu_max:
                 cpu_max = cpu_tmp
-
+            if cpu_tmp < cpu_min:
+                cpu_min = cpu_tmp
         mp_usr = np.asarray(mp_usr)
         mp_sys = np.asarray(mp_sys)
         mp_iow = np.asarray(mp_iow)
@@ -159,7 +162,8 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
                                  summ / g_num, 
                                  df_nvsmi_interval['duration'].min(), 
                                  round((usr.mean() + sys.mean() + irq.mean()), 0),
-                                 cpu_max]
+                                 cpu_max,
+                                 cpu_min]
             total_performace_vector.append(tuple(performace_vector))
                                  
     total_all_elapsed_time = sum(total_elapsed_time.values())
@@ -186,7 +190,7 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
                             columns=['name','value'])
 
         features = pd.concat([features, df])
-    performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util', 'cpu_max'])
+    performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util', 'cpu_max', 'cpu_min'])
     performance_table.to_csv('%s/performance.csv' % logdir)
     vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'gpu', 'net_tx', 'net_rx'])
     print('Correlation Table :')
