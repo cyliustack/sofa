@@ -105,8 +105,9 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
 
         usr = []
         sys = []
-        irq = []
-  
+        irq = []     
+        
+        cpu_max = 0
         for i in range(len(df_mpstat_interval)):
             ratios = df_mpstat_interval.iloc[i]['name'].split(':')[1].split('|') 
             #print(ratios)
@@ -117,6 +118,10 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
             usr.append(int(ratios[1]))
             sys.append(int(ratios[2]))
             irq.append(int(ratios[5]))
+                     
+            cpu_tmp = int(ratios[1]) + int(ratios[2]) + int(ratios[5])
+            if cpu_tmp > cpu_max:
+                cpu_max = cpu_tmp
 
         mp_usr = np.asarray(mp_usr)
         mp_sys = np.asarray(mp_sys)
@@ -146,13 +151,15 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
                                df_tx_interval['bandwidth'].sum(),
                                df_rx_interval['bandwidth'].sum()]                             
             total_interval_vector.append(tuple(interval_vector)) 
-
+            
+            summ = df_nvsmi_interval['duration'].sum()
+            g_num = int(len(list(set(df_nvsmi_interval['deviceId']))))
             performace_vector = [window_end,
                                  df_nvsmi_interval['duration'].max(), 
-                                 round(df_nvsmi_interval['duration'].sum() / len(list(set(df_nvsmi_interval['deviceId']))), 0), 
+                                 summ / g_num, 
                                  df_nvsmi_interval['duration'].min(), 
-                                 round((usr.mean() + sys.mean() + irq.mean()), 0)
-                                ]
+                                 round((usr.mean() + sys.mean() + irq.mean()), 0),
+                                 cpu_max]
             total_performace_vector.append(tuple(performace_vector))
                                  
     total_all_elapsed_time = sum(total_elapsed_time.values())
@@ -179,7 +186,7 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
                             columns=['name','value'])
 
         features = pd.concat([features, df])
-    performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util'])
+    performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util', 'cpu_max'])
     performance_table.to_csv('%s/performance.csv' % logdir)
     vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'gpu', 'net_tx', 'net_rx'])
     print('Correlation Table :')
