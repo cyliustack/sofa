@@ -97,6 +97,7 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
     total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
     elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
     total_interval_vector = []
+    total_performace_vector = []
     
  
     if len(df_mpstat) == 0 or len(df_cpu) == 0:
@@ -123,8 +124,8 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
         num_gpus = len(list(set(df_nvsmi['deviceId'])))
         cond1 = (df_nvsmi['timestamp'] > window_begin)
         cond2 = (df_nvsmi['timestamp'] <= window_end)
-        df_nvsmi_interval = df_nvsmi[ cond1 & cond2 ]
-        df_nvsmi_interval = df_nvsmi_interval[ df_nvsmi_interval.event == 0 ]
+        sm = df_nvsmi['event'] == int(0)
+        df_nvsmi_interval = df_nvsmi[ cond1 & cond2 & sm ]
         
         cond1 = (df_mpstat['timestamp'] > window_begin)
         cond2 = (df_mpstat['timestamp'] <= window_end)
@@ -140,15 +141,37 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
         mp_usr = []
         mp_sys = []
         mp_iow = []
+
+        usr = []
+        sys = []
+        irq = []     
+        
+        cpu_max = 0
+        cpu_min = 100
         for i in range(len(df_mpstat_interval)):
-            ratios = df_mpstat_interval.iloc[i]['name'].split(':')[1].split('|') 
+            ratios = df_mpstat_interval.iloc[i]['name'].split(':')[1].split('|')
+            
             #print(ratios)
             mp_usr.append(0.1*int(ratios[1])/100.0)
             mp_sys.append(0.1*int(ratios[2])/100.0)
             mp_iow.append(0.1*int(ratios[4])/100.0)
+
+            usr.append(int(ratios[1]))
+            sys.append(int(ratios[2]))
+            irq.append(int(ratios[5]))
+                     
+            cpu_tmp = int(ratios[1]) + int(ratios[2]) + int(ratios[5])
+            if cpu_tmp > cpu_max:
+                cpu_max = cpu_tmp
+            if cpu_tmp < cpu_min:
+                cpu_min = cpu_tmp
         mp_usr = np.asarray(mp_usr)
         mp_sys = np.asarray(mp_sys)
         mp_iow = np.asarray(mp_iow)
+
+        usr = np.asarray(usr)
+        sys = np.asarray(sys)
+        irq = np.asarray(irq)
 
         elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
 
@@ -170,7 +193,18 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
                                df_tx_interval['bandwidth'].sum(),
                                df_rx_interval['bandwidth'].sum()]                             
             total_interval_vector.append(tuple(interval_vector)) 
-
+            
+            summ = df_nvsmi_interval['duration'].sum()
+            g_num = int(len(list(set(df_nvsmi_interval['deviceId']))))
+            performace_vector = [window_end,
+                                 df_nvsmi_interval['duration'].max(), 
+                                 summ / g_num, 
+                                 df_nvsmi_interval['duration'].min(), 
+                                 round((usr.mean() + sys.mean() + irq.mean()), 0),
+                                 cpu_max,
+                                 cpu_min]
+            total_performace_vector.append(tuple(performace_vector))
+                                 
     total_all_elapsed_time = sum(total_elapsed_time.values())
     if total_all_elapsed_time > 0 :
         elapsed_time_ratio['usr'] = 100 * total_elapsed_time['usr'] / total_all_elapsed_time 
@@ -195,7 +229,8 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
                             columns=['name','value'])
 
         features = pd.concat([features, df])
-    
+    performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util', 'cpu_max', 'cpu_min'])
+    performance_table.to_csv('%s/performance.csv' % logdir)
     vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'gpu', 'net_tx', 'net_rx'])
     print('Correlation Table :')
     pearson = vector_table.corr(method ='pearson').round(2)
@@ -396,23 +431,7 @@ def net_profile(logdir, cfg, df, features):
             rename_columns_2.append(i)
         return(rename_columns_2)
     
-    def convertbyte(B):
-        B = int(B)
-        KB = float(1024)
-        MB = float(KB ** 2) # 1,048,576
-        GB = float(KB ** 3) # 1,073,741,824
-        TB = float(KB ** 4) # 1,099,511,627,776
 
-        if B < KB:
-            return '{} Bytes'.format(B)
-        elif KB <= B < MB:
-            return '{0:.2f} KB'.format(B/KB)
-        elif MB <= B < GB:
-            return '{0:.2f} MB'.format(B/MB)
-        elif GB <= B < TB:
-            return '{0:.2f} GB'.format(B/GB)
-        elif TB <= B:
-            return '{0:.2f} TB'.format(B/TB)
 
     rename_index_new = check_str(rename_index)
     rename_index_new = dict(zip(rename_index, rename_index_new))
@@ -468,6 +487,24 @@ def net_profile(logdir, cfg, df, features):
     features = pd.concat([features, df])
     return features
 
+def convertbyte(B):
+    B = int(B)
+    KB = float(1024)
+    MB = float(KB ** 2) # 1,048,576
+    GB = float(KB ** 3) # 1,073,741,824
+    TB = float(KB ** 4) # 1,099,511,627,776
+
+    if B < KB:
+        return '{} Bytes'.format(B)
+    elif KB <= B < MB:
+        return '{0:.2f} KB'.format(B/KB)
+    elif MB <= B < GB:
+        return '{0:.2f} MB'.format(B/MB)
+    elif GB <= B < TB:
+        return '{0:.2f} GB'.format(B/GB)
+    elif TB <= B:
+        return '{0:.2f} TB'.format(B/TB)
+
 def convertbytes(B):
     B = float(B)
     KB = float(1024)
@@ -476,9 +513,7 @@ def convertbytes(B):
     TB = float(KB ** 4) # 1,099,511,627,776
 
     if B < KB:
-
         return '{0:.2f} B/s'.format(B)
-
     elif KB <= B < MB:
         return '{0:.2f} KB/s'.format(B/KB)
     elif MB <= B < GB:
@@ -491,7 +526,6 @@ def convertbytes(B):
 def netbandwidth_profile(logdir, cfg, df, features):
     if not cfg.cluster_ip:
         print_title("Network Bandwidth Profiling:")
-        print('Bandwidth Quartile :')
     tx = df['event'] == float(0)
     rx = df['event'] == float(1)
       
@@ -503,6 +537,16 @@ def netbandwidth_profile(logdir, cfg, df, features):
     bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
     bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
     bw_rx_mean = int(df[rx]['bandwidth'].mean())
+    with open('%s/netstat.txt' % logdir) as f:
+        lines = f.readlines()  
+        first_line = lines[0]  
+        last_line = lines[-1]
+        tx_begin = first_line.split(',')[1]
+        rx_begin = first_line.split(',')[2]
+        tx_end = last_line.split(',')[1]
+        rx_end = last_line.split(',')[2]
+        tx_amount = int(last_line.split(',')[1]) - int(first_line.split(',')[1])
+        rx_amount = int(last_line.split(',')[2]) - int(first_line.split(',')[2])
     if not cfg.cluster_ip:
         bw_tx_q1 = df[tx]['bandwidth'].quantile(0.25)
         bw_tx_q2 = df[tx]['bandwidth'].quantile(0.5)
@@ -512,7 +556,10 @@ def netbandwidth_profile(logdir, cfg, df, features):
         bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
         bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
         bw_rx_mean = int(df[rx]['bandwidth'].mean())
-        
+        print('Amount of Network Traffic : %s' % (convertbyte(tx_amount + rx_amount)))
+        print('Amount of tx : %s' % convertbyte(tx_amount))
+        print('Amount of rx : %s' % convertbyte(rx_amount))
+        print('Bandwidth Quartile :')
         print('Q1  tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
         print('Q2  tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
         print('Q3  tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
@@ -985,7 +1032,7 @@ def cluster_analyze(cfg):
         rx_pd = pd.DataFrame([rx_tmp], columns = ['Q1', 'Q2', 'Q3', 'Avg'], index = ['rx'])
         band_tmp = pd.concat([band_tmp, rx_pd]) 
         summary_band = pd.concat([summary_band, pd.concat([band_tmp], keys=[node])]) 
-    print('Ranked Network Traffic : \n', summary_net, '\n')
-    print('Cluster Bandwidth Quartile: \n', summary_band)
+    print('Ranked Network Traffic : \n', summary_net.to_string, '\n')
+    print('Cluster Bandwidth Quartile: \n', summary_band.to_string)
     print_title('Cluster Computation Profiling:')
     print(summary_compute)
