@@ -1,0 +1,146 @@
+<head>
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  </head>
+  <body>
+  <!-- Plotly chart will be drawn inside this DIV -->
+  <div id="myDiv"></div>
+    <script>
+    Plotly.d3.csv("netbandwidth.csv", function(err, rows){
+    function unpack(rows, key) {
+    return rows.map(function(row) { return row[key]; });
+    }
+
+
+    var trace1 = {
+    type: "scatter",
+    mode: "lines",
+    name: 'tx bandwidth',
+    //x: unpack(rows, 'Date'),
+    x: unpack(rows, 'time'),
+    //y: unpack(rows, 'AAPL.High'),
+    y: unpack(rows, 'tx_bandwidth'),
+    line: {color: '#17BECF'}
+    }
+
+    var trace2 = {
+    type: "scatter",
+    mode: "lines",
+    name: 'rx bandwidth',
+    x: unpack(rows, 'time'),
+    y: unpack(rows, 'rx_bandwidth'),
+    line: {color: '#7F7F7F'}
+    }
+
+    var data = [trace1,trace2];
+    
+    var layout = {
+    title: 'Time Series with Network Bandwidth', 
+    xaxis: {
+    autorange: true, 
+    //range: ['0', '999999999'], 
+
+    rangeslider: {range: []}, 
+    type: 'time'
+    }, 
+    yaxis: {
+    autorange: true, 
+    //range: [86.8700008333, 138.870004167], 
+    type: 'linear'
+    }
+    };
+
+    Plotly.newPlot('myDiv', data, layout, {showSendToCloud: true});
+    })
+    </script>
+  
+
+  <div id="myDiv2"></div>
+    <script>
+    Plotly.d3.csv("performance.csv", function(err, rows){
+    function unpack(rows, key) {
+    return rows.map(function(row) { return row[key]; });
+    }
+
+
+    var trace1 = {
+    type: "scatter",
+    mode: "lines",
+    name: 'max gpu util',
+    //x: unpack(rows, 'Date'),
+    x: unpack(rows, 'time'),
+    //y: unpack(rows, 'AAPL.High'),
+    y: unpack(rows, 'max_gpu_util'),
+    line: {color: '#17BECF'}
+    }
+
+    var trace2 = {
+    type: "scatter",
+    mode: "lines",
+    name: 'avg gpu util',
+    x: unpack(rows, 'time'),
+    y: unpack(rows, 'avg_gpu_util'),
+    line: {color: '#7F7F7F'}
+    }
+
+    var trace3 = {
+    type: "scatter",
+    mode: "lines",
+    name: 'min gpu util',
+    x: unpack(rows, 'time'),
+    y: unpack(rows, 'min_gpu_util'),
+    line: {color: '#CCD1D1'}
+    }
+    
+    var trace4 = {
+    type: "scatter",
+    mode: "lines",
+    name: 'max cpu util',
+    x: unpack(rows, 'time'),
+    y: unpack(rows, 'cpu_max'),
+    line: {color: '#34495E'}
+    }
+
+    var trace5 = {
+    type: "scatter",
+    mode: "lines",
+    name: 'avg cpu util',
+    x: unpack(rows, 'time'),
+    y: unpack(rows, 'cpu_util'),
+    line: {color: '#2E86C1'}
+    }
+
+    var trace6 = {
+    type: "scatter",
+    mode: "lines",
+    name: 'min cpu util',
+    x: unpack(rows, 'time'),
+    y: unpack(rows, 'cpu_min'),
+    line: {color: '#D6EAF8'} 
+    }
+
+    var data = [trace1,trace2,trace3,trace4,trace5,trace6];
+    
+    var layout = {
+    title: 'Time Series with Computation Utilization', 
+    xaxis: {
+    autorange: true, 
+    //range: ['0', '999999999'], 
+
+    rangeslider: {range: []}, 
+    type: 'time'
+    }, 
+    yaxis: {
+    autorange: true, 
+    //range: [86.8700008333, 138.870004167], 
+    type: 'linear'
+    }
+    };
+
+    Plotly.newPlot('myDiv2', data, layout, {showSendToCloud: true});
+    })
+    </script>
+
+
+  </body>
+  </html>

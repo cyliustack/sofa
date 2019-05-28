@@ -927,10 +927,11 @@ def sofa_preprocess(cfg):
                 nvsmi_mem_list = []
                 nvsmi_sm_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
                 nvsmi_mem_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+
                 for i in range(len(lines)):                 
                     fields = lines[i].split(',')
                     nv_time = fields[0]
-                    nv_time = datetime.datetime.strptime(nv_time, '%Y/%m/%d %H:%M:%S.%f').timestamp() + cfg.nvsmi_time_zone * 3600 
+                    nv_time = datetime.datetime.strptime(nv_time, '%Y/%m/%d %H:%M:%S.%f').timestamp() + cfg.nvsmi_time_zone * 3600
                     nvsmi_id = int(fields[2])
                     nvsmi_sm = int(fields[3][:-2])
                     nvsmi_mem = int(fields[4][:-2])
@@ -1210,10 +1211,10 @@ def sofa_preprocess(cfg):
             all_rx.append(rx_bandwidth)
             
             # for pandas
-            result = [time, tx_bandwidth, rx_bandwidth]
+            result = [t_begin, tx_bandwidth, rx_bandwidth]
             tmp_bandwidth_result = pd.DataFrame([result], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
             bandwidth_result = pd.concat([bandwidth_result, tmp_bandwidth_result], ignore_index=True)
-            
+            bandwidth_result.to_csv('%s/netbandwidth.csv' %logdir, header=True)
             # prepare for next round loop        
             tmp_time = time
             tmp_tx = tx
@@ -1358,7 +1359,7 @@ def sofa_preprocess(cfg):
 
             #Automatically retrieve the timestamp of the first CUDA activity(e.g. kernel, memory op, etc..)
             engine = create_engine("sqlite:///"+nvvp_filename)
-            t_glb_gpu_bases = []
+            t_glb_gpu_bases = []    
             first_corid = 1
             try:
                 t_glb_gpu_bases.append((pd.read_sql_table('CUPTI_ACTIVITY_KIND_RUNTIME',engine)).iloc[0]['start'])
