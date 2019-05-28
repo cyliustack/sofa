@@ -8,13 +8,11 @@ import warnings
 from functools import partial
 from operator import itemgetter
 from random import randint
-
 import cxxfilt
 import numpy as np
 import pandas as pd
 from fuzzywuzzy import fuzz
 from sklearn.cluster import KMeans
-
 from sofa_common import *
 from sofa_config import *
 from sofa_models import SOFATrace
@@ -128,6 +126,7 @@ def kmeans_cluster(num_of_cluster, X):
         y_pred = KMeans(n_clusters=num_of_cluster, random_state=random_state).fit_predict(X)
 
     return y_pred
+
 
 def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
     """

@@ -1690,6 +1690,7 @@ def sofa_preprocess(cfg):
             cpu_traces_viz['name'] = cpu_traces_viz['name'].apply(
                 lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
             )
+ 
         ###  Apply filters for cpu traces
         filtered_groups = []
         if len(cpu_traces) > 0:
@@ -1700,18 +1701,15 @@ def sofa_preprocess(cfg):
                 filtered_groups.append({'group': group,
                                         'color': filter.color,
                                         'keyword': filter.keyword})
-    # ### hierarchical swarm generation
-    try:
-        swarm_groups = []
-        swarm_stats = []
-        swarm_groups, swarm_stats = sofa_hsg(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp)
-    except TypeError:
-        print_warning('HSG returned a None object to swarm_groups, check if sofalog/perf.data can be accessed.')
-        pass 
+        try:
+            swarm_groups = []
+            swarm_stats = []
+            swarm_groups, swarm_stats = sofa_hsg(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp) 
+        except TypeError:
+            print_warning('HSG returned a None object to swarm_groups, check if sofalog/perf.data can be accessed.')
+            pass 
+             
     #=== Intel PCM Trace =======#
-    ### Skt,PCIeRdCur,RFO,CRd,DRd,ItoM,PRd,WiL,PCIe Rd (B),PCIe Wr (B)
-    ### 0,0,852,0,0,48,0,0,54528,57600
-    ### 1,0,600,0,0,0,0,0,38400,38400
     if cfg.enable_pcm and os.path.isfile('%s/pcm_pcie.csv' % logdir):
         with open( logdir + '/pcm_pcie.csv' ) as f:
             lines = f.readlines()
