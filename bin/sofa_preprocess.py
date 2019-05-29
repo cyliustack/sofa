@@ -21,7 +21,7 @@ from sklearn.cluster import KMeans
 from sqlalchemy import create_engine
 
 from sofa_config import *
-from sofa_ml import hsg_v2, swarms_to_sofatrace_v2
+from sofa_ml import hsg_v1, hsg_v2, swarms_to_sofatrace
 from sofa_models import SOFATrace
 from sofa_print import *
 
@@ -1709,10 +1709,9 @@ def sofa_preprocess(cfg):
                                         'color': filter.color,
                                         'keyword': filter.keyword})
         try:
-            #swarm_groups = []
-            #swarm_stats = []
+            swarm_stats = []
             swarms = []
-            #swarm_groups, swarm_stats = hsg_v1(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp) 
+            #swarms, swarm_stats = hsg_v1(cfg, cpu_traces, swarms, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp) 
             cpu_traces, swarms = hsg_v2(cfg, cpu_traces, export_file=cfg.logdir+'/swarms_report.txt') 
         except TypeError:
             print_warning('HSG returned a None object to swarms, check if sofalog/perf.data can be accessed.')
@@ -1893,7 +1892,7 @@ def sofa_preprocess(cfg):
         traces.append(sofatrace)
  
     if len(swarms) > 0 :
-        traces = swarms_to_sofatrace_v2(cfg, swarms, traces) # append data of hsg function
+        traces = swarms_to_sofatrace(cfg, swarms, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
     sofatrace.name = 'blktrace_starting_block'

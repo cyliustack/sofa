@@ -200,30 +200,6 @@ if __name__ == "__main__":
     if args.nvsmi_time_zone is not None:
         cfg.nvsmi_time_zone = args.nvsmi_time_zone
 
-    # swarm_diff related flag
-    if command == 'diff': # reject '' and None
-        if args.base_logdir and args.match_logdir: 
-        #if args.base_logdir and args.match_logdir and os.path.isfile( os.path.join(args.base_logdir, 'auto_caption.csv')) and \
-        #os.path.isfile( os.path.join(args.match_logdir, 'auto_caption.csv')):
-            # for item in args.swarm_diff: # type of args.swarm_diff: list
-            #     if 'base_logdir' in item:
-            #         base_logdir = item
-            #     elif 'match_logdir' in item:
-            #         match_logdir = item
-            #     else:
-            #         pass # do nothing
-            # base_logdir = base_logdir.split("=")
-            # cfg.base_logdir = base_logdir[1] # path is the rear
-            cfg.base_logdir = args.base_logdir + '/'
-            print(cfg.base_logdir)
-            # match_logdir = match_logdir.split("=") # path is the rear
-            # cfg.match_logdir = match_logdir[1]
-            cfg.match_logdir = args.match_logdir + '/'
-            print(cfg.match_logdir)
-        else:
-            print_error("{base_logdir,match_logdir}/auto_caption.csv must exist!")
-            sys.exit(1)
-
     if args.enable_vmstat is not None:
         cfg.enable_vmstat = args.enable_vmstat
 
@@ -333,14 +309,19 @@ if __name__ == "__main__":
         sofa_preprocess(cfg)
     elif command == 'analyze':
         sofa_analyze(cfg)
-    elif command == 'diff': # register a new command here
-        return_df = pd.DataFrame() # create an empty dataframe
-        if not args.skip_preprocess:
-            cfg.logdir = cfg.base_logdir 
-            sofa_preprocess(cfg)
-            cfg.logdir = cfg.match_logdir 
-            sofa_preprocess(cfg)
-        return_df = sofa_swarm_diff(cfg)
+    elif command == 'diff': # register a new command here 
+        if args.base_logdir and args.match_logdir: 
+            cfg.base_logdir = args.base_logdir 
+            cfg.match_logdir = args.match_logdir 
+            if not args.skip_preprocess:
+                cfg.logdir = cfg.base_logdir 
+                sofa_preprocess(cfg)
+                cfg.logdir = cfg.match_logdir 
+                sofa_preprocess(cfg)
+            return_df = sofa_swarm_diff(cfg)
+        else:
+            print_error("{base_logdir,match_logdir}/auto_caption.csv must exist!")
+            sys.exit(1)
     elif command == 'viz':
         sofa_viz(cfg)
     elif command == 'clean':

@@ -135,174 +135,114 @@ def kmeans_cluster(num_of_cluster, X):
     return y_pred
 
 
-def hsg_v1(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
-    """
-    hierarchical swarm generation
-    """
-    with open(cfg.logdir + 'perf.script') as f, warnings.catch_warnings():
-        warnings.filterwarnings("ignore")
-        samples = f.readlines()
-        print_info(cfg, "Length of cpu_traces for HSG = %d" % len(samples))
-        if len(samples) > 0:
-            with mp.Pool() as pool:
-                res = pool.map(
-                    partial(
-                        cpu_trace_read_hsg,
-                        t_offset = t_offset,
-                        cfg = cfg,
-                        cpu_mhz_xp = cpu_mhz_xp,
-                        cpu_mhz_fp = cpu_mhz_fp
-                        ),
-                    samples)
-            cpu_traces = pd.DataFrame(res)
-            sofa_fieldnames_ext = sofa_fieldnames + ["feature_types", "mem_addr"] # mem_addr for swarm-diff
-            cpu_traces.columns = sofa_fieldnames_ext
-            cpu_traces.to_csv(
-                cfg.logdir + 'hsg_trace.csv',
-                mode='w',
-                header=True,
-                index=False,
-                float_format='%.6f')
-            res_viz = list_downsample(res, cfg.plot_ratio)
-            swarm_cpu_traces_viz = pd.DataFrame(res_viz)
-            swarm_cpu_traces_viz.columns = sofa_fieldnames_ext
+def hsg_v1(cfg, cpu_traces, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
+    cpu_traces['feature_types'] = 1
+    cpu_traces['mem_addr'] = 1
+    cpu_traces.to_csv(
+        cfg.logdir + 'hsg_trace.csv',
+        mode='w',
+        header=True,
+        index=False,
+        float_format='%.6f')
+    cpu_traces = cpu_traces
+    
+    char1 = ']'
+    char2 = '+'
+    # demangle c++ symbol, little dirty work here...
+    cpu_traces['name'] = cpu_traces['name'].apply(
+        lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
+    )
 
-            char1 = ']'
-            char2 = '+'
-            # demangle c++ symbol, little dirty work here...
-            swarm_cpu_traces_viz['name'] = swarm_cpu_traces_viz['name'].apply(
-                lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
-            )
+    ### N features ###
+    ## In order to merge, give unique id of each data within 10 msec by time quotient
+    cpu_traces['quotient'] = cpu_traces['timestamp'].apply(lambda x: int( x * 1000 // 10)) # //: quotient
 
-            ### N features ###
-            ## In order to merge, give unique id of each data within 10 msec by time quotient
-            swarm_cpu_traces_viz['quotient'] = swarm_cpu_traces_viz['timestamp'].apply(lambda x: int( x * 1000 // 10)) # //: quotient
+    # count feature_types in each 10 msec groups, and create a dictionary for mapping
+    df2s = {}
+    for quotient, dataframe in cpu_traces.groupby(['quotient','event']):
+        # api value_counts(): return pandas series
+        df2s[quotient] = dataframe.feature_types.value_counts()
+    df2 = pd.DataFrame.from_dict(df2s, orient='index').fillna(0).astype(np.int64)
 
-            # count feature_types in each 10 msec groups, and create a dictionary for mapping
-            df2s = {}
-            for quotient, dataframe in swarm_cpu_traces_viz.groupby(['quotient','event']):
-                # api value_counts(): return pandas series
-                df2s[quotient] = dataframe.feature_types.value_counts()
-            df2 = pd.DataFrame.from_dict(df2s, orient='index').fillna(0).astype(np.int64)
+    df = cpu_traces.copy()
+    cpu_traces = pd.merge(df, df2, left_on=['quotient','event'], right_index=True).copy()
 
-            df = swarm_cpu_traces_viz.copy()
-            swarm_cpu_traces_viz = pd.merge(df, df2, left_on=['quotient','event'], right_index=True).copy()
+    ### swarm seperation by memory location
+    #swarm_groups = []
+    feature_list = ['event']
+    if cfg.hsg_multifeatures:
+        with open(cfg.logdir+'perf_events_used.txt','r') as f:
+            lines = f.readlines()
+            feature_list.extend(lines[0].split(','))
+        try:
+            feature_list.remove('cycles')
+            feature_list.remove('event')
+        except:
+            pass
 
-            ### swarm seperation by memory location
-            #swarm_groups = []
-            feature_list = ['event']
-            if cfg.hsg_multifeatures:
-                with open(cfg.logdir+'perf_events_used.txt','r') as f:
-                    lines = f.readlines()
-                    feature_list.extend(lines[0].split(','))
-                try:
-                    feature_list.remove('cycles')
-                    feature_list.remove('event')
-                except:
-                    pass
+    print_info(cfg, 'HSG features: '+','.join(feature_list))
 
-            print_info(cfg, 'HSG features: '+','.join(feature_list))
+    idx = 0
+    showing_idx = 0
+    T = df[['timestamp']].values
+    X = df[['event', 'duration']].values
+    cluster = AgglomerativeClustering(n_clusters=cfg.num_swarms, affinity='euclidean', linkage='ward')  
+    cluster.fit_predict(X) 
+   
+    plt.figure(figsize=(10, 7))  
+    plt.scatter(T, cluster.labels_, c=cluster.labels_, cmap='rainbow') 
+    plt.savefig(cfg.logdir+'/hsg_v1.png')
+    df['category'] = cluster.labels_
 
-            idx = 0
-            showing_idx = 0
+    groups = df.groupby('category')[['duration','name','category']]
+    swarms = []
+            
+    for key, group in groups:
+        # duration time
+        total_duration = group.duration.sum()
+        mean_duration = group.duration.mean()
+        count = len(group)
+        # swarm diff
+        # caption: assign mode of function name
+        mode = str(group['name'].mode()[0]) # api pd.Series.mode() returns a pandas series
+        mode = mode.replace('::', '@') # str.replace(old, new[, max])
+        # print('mode of this cluster: {}'.format(str(mode[:35]))) # uncomment this line of code when you need to check the mode of cluster
+        caption = group['name'].mode()[0].replace('::', '@')[:50]
+        swarm_stats.append({'keyword': 'SWARM_' + '["' + caption + ']' +  ('_' * showing_idx),
+                            'duration_sum': total_duration,
+                            'duration_mean': mean_duration,
+                            'example':group.head(1)['name'].to_string().split('  ')[2],
+                            'count':count})
 
-            if len(cpu_traces) > 0:
-                # get memory index by cheange float to integer
-                swarm_cpu_traces_viz['event_int'] = swarm_cpu_traces_viz.event.apply(lambda x: int(x)) # add new column 'event_int'
-                # swarm seperate
-                event_groups = swarm_cpu_traces_viz.groupby('event_int')
-                #swarm_stats = []
-                # add different swarm groups
-                for mem_index, l1_group in event_groups:
-                    # kmeans
-                    X = pd.DataFrame(l1_group['event'])
-                    num_of_cluster = 2
-                    y_pred = kmeans_cluster(num_of_cluster, X)
+        swarm_groups.append({'group': group, # data of each group
+                             'color':  random_generate_color(),
+                             'keyword': 'SWARM_' + '[' + caption + ']' +  ('_' * showing_idx),
+                             'total_duration': total_duration})
+        idx += 1
 
-                    # add new column
-                    # TODO: Eliminate warning of SettingWithCopyWarning
-                    l1_group['cluster'] = y_pred
-                    #for i in range(len(y_pred)):
-                    #    group.loc[i, 'cluster'] = y_pred[i]
+    swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
+    swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True)
+    if not cfg.cluster_ip:
+        print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms))
 
-                    # group by new column
-                    clusters = l1_group.groupby('cluster')
+        print('%45s\t%13s\t%30s'%('SwarmCaption', 'ExecutionTime[sum,mean,count] (s)', 'Example'))
+    for i in range(len(swarm_stats)):
+        if i >= cfg.num_swarms:
+            break
+        else:
+            swarm = swarm_stats[i]
+            if not cfg.cluster_ip:
+                print('%45s\t%.6lf, %.6lf, %6d\t%45s' % (swarm['keyword'], 
+                    swarm['duration_sum']/4.0, 
+                    swarm['duration_mean']/4.0, 
+                    swarm['count'], swarm['example']))
 
-                    for l2_group_idx, l2_group in clusters:
-                        # group by process id
-                        #pid_clusters = cluster.groupby('pid')
-                        X = pd.DataFrame(l2_group['event'])
-                        num_of_cluster = 4
-                        y_pred = kmeans_cluster(num_of_cluster, X)
-
-                        # add new column
-                        l2_group['cluster'] = y_pred
-                        #for i in range(len(y_pred)):
-                        #    l2_group.loc[i, 'cluster'] = y_pred[i]
-
-                        # group by new column
-                        l3_groups = l2_group.groupby('cluster')
-
-                        for l3_group_idx, l3_group in l3_groups:
-                            # kmeans
-                            X = pd.DataFrame(l3_group['event'])
-                            num_of_cluster = 4
-                            y_pred_pid_cluster = kmeans_cluster(num_of_cluster, X)
-
-                            # add new column
-                            l3_group['cluster_in_pid'] = y_pred_pid_cluster
-                            # group by new column
-                            cluster_in_pid_clusters = l3_group.groupby('cluster_in_pid')
-
-                
-                            for mini_cluster_id, cluster_in_pid_cluster in cluster_in_pid_clusters:
-                                # duration time
-                                total_duration = cluster_in_pid_cluster.duration.sum()
-                                mean_duration = cluster_in_pid_cluster.duration.mean()
-                                count = len(cluster_in_pid_cluster)
-                                # swarm diff
-                                # caption: assign mode of function name
-                                mode = str(cluster_in_pid_cluster['name'].mode()[0]) # api pd.Series.mode() returns a pandas series
-                                mode = mode.replace('::', '@') # str.replace(old, new[, max])
-                                # print('mode of this cluster: {}'.format(str(mode[:35]))) # uncomment this line of code when you need to check the mode of cluster
-
-                                swarm_stats.append({'keyword': 'SWARM_' + '["' + str(mode[:35]) + ']' +  ('_' * showing_idx),
-                                                    'duration_sum': total_duration,
-                                                    'duration_mean': mean_duration,
-                                                    'example':cluster_in_pid_cluster.head(1)['name'].to_string().split('  ')[2],
-                                                    'count':count})
-
-                                swarm_groups.append({'group': cluster_in_pid_cluster.drop(columns = ['event_int', 'cluster', 'cluster_in_pid']), # data of each group
-                                                     'color':  random_generate_color(),
-                                                     'keyword': 'SWARM_' + '[' + str(mode[:35]) + ']' +  ('_' * showing_idx),
-                                                     'total_duration': total_duration})
-                                idx += 1
-
-                swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
-                swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True)
-                if not cfg.cluster_ip:
-                    print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms))
-
-                    print('%45s\t%13s\t%30s'%('SwarmCaption', 'ExecutionTime[sum,mean,count] (s)', 'Example'))
-                for i in range(len(swarm_stats)):
-                    if i >= cfg.num_swarms:
-                        break
-                    else:
-                        swarm = swarm_stats[i]
-                        if not cfg.cluster_ip:
-                            print('%45s\t%.6lf, %.6lf, %6d\t%45s' % (swarm['keyword'], 
-                                swarm['duration_sum']/4.0, 
-                                swarm['duration_mean']/4.0, 
-                                swarm['count'], swarm['example']))
-
-            return swarm_groups, swarm_stats
-
-
+    return swarm_groups, swarm_stats
 
 def hsg_v2(cfg, df, export_file=None):
     T = df[['timestamp']].values
     X = df[['event', 'duration']].values
-    cluster = AgglomerativeClustering(n_clusters=cfg.num_swarms, affinity='euclidean', linkage='ward')  
+    cluster = AgglomerativeClustering(n_clusters=cfg.num_swarms, affinity='euclidean', linkage='average')  
     cluster.fit_predict(X) 
    
     plt.figure(figsize=(10, 7))  
@@ -330,6 +270,11 @@ def hsg_v2(cfg, df, export_file=None):
     swarms.sort(key=itemgetter('sum'), reverse = True) # reverse = True: descending
     df_swarms = pd.DataFrame(swarms)
     df_swarms = df_swarms.round({'sum':6, 'mean':6})
+    
+    print('\n\n========== Function Swarm Report ========== \n')
+    print(df_swarms[['ID', 'sum', 'mean', 'count', 'caption']])
+    if cfg.verbose: 
+        print(df_swarms[['ID','caption','examples']])
     if export_file is not None:
         with open(export_file, 'w') as f:
             f.write('\n\n========== Function Swarm Report ========== \n')
@@ -337,54 +282,10 @@ def hsg_v2(cfg, df, export_file=None):
         df_swarms[['ID', 'sum', 'mean', 'count', 'caption']].to_csv(export_file, sep=' ', index=True, header=True, mode='a') 
         if cfg.verbose: 
             df_swarms[['ID', 'caption','examples']].to_csv(export_file, sep=' ', index=False, header=True, mode='a') 
-    else:
-        print('\n\n========== Function Swarm Report ========== \n')
-        print(df_swarms[['ID', 'sum', 'mean', 'count', 'caption']])
-        if cfg.verbose: 
-            print(df_swarms[['ID','caption','examples']])
-      
+    
     return df, swarms 
 
-
-def swarms_to_sofatrace_v1(cfg, swarm_groups, traces): # record_for_auto_caption = True # temperarily: for auto-caption
-    dummy_i = 0
-    auto_caption_filename_with_path = cfg.logdir + 'auto_caption.csv'
-    with open(auto_caption_filename_with_path,'w') as f:
-        f.close()
-    for swarm in swarm_groups[:cfg.num_swarms]:
-        if cfg.display_swarms:
-            sofatrace = SOFATrace() # file.class
-            sofatrace.name = 'swarm' + str(dummy_i) # avoid errors casued by JavaScript. No special meaning, can be random unique ID.
-            sofatrace.title = swarm['keyword'] # add number of swarm
-            sofatrace.color = swarm['color']
-            sofatrace.x_field = 'timestamp'
-            sofatrace.y_field = 'duration'
-            sofatrace.data = swarm['group'].copy()
-            traces.append(sofatrace)
-
-        # append to csv file every time using pandas funciton
-        swarm['group']['cluster_ID'] = dummy_i # add new column cluster ID to dataframe swarm['group']
-        copy = swarm['group'].copy()
-        #print('*************************')
-        
-        copy.to_csv(auto_caption_filename_with_path, mode='a', header=False, index=False)
-        #print('\nRecord for auto-caption, data preview: \n{}'.format(copy.head(2)))
-        #print('*************************')
-        # --- for auto-caption --- #
-        dummy_i += 1
-    csv_input = pd.read_csv(auto_caption_filename_with_path, names=list(copy))
-    if 'instructions' not in copy.columns:
-        csv_input.insert(17, 'instructions', 0)
-    if 'cache-misses' not in copy.columns:
-        csv_input.insert(18, 'cache-misses', 0)
-    if 'branch-miss' not in copy.columns:
-        csv_input.insert(19, 'branch-misses', 0)
-    csv_input.to_csv(auto_caption_filename_with_path, header=False)
-    return traces
-
-
-def swarms_to_sofatrace_v2(cfg, swarms, traces): 
-    swarms.sort(key=itemgetter('sum'), reverse = True) # reverse = True: descending
+def swarms_to_sofatrace(cfg, swarms, traces): 
     auto_caption_filename_with_path = cfg.logdir + 'auto_caption.csv'
     with open(auto_caption_filename_with_path,'w') as f:
         f.close()
@@ -392,32 +293,18 @@ def swarms_to_sofatrace_v2(cfg, swarms, traces):
     for swarm in swarms[:cfg.num_swarms]: 
         if cfg.display_swarms:
             sofatrace = SOFATrace() # file.class
-            sofatrace.name = 'swarm' + str(swarm['ID']) # avoid errors casued by JavaScript. No special meaning, can be random unique ID.
-            sofatrace.title = '[swarm%02d] %s' % ( swarm['ID'], swarm['caption'].split('+0x')[0][0:50]) # add number of swarm
+            sofatrace.name = 'swarm' + str(swarm['ID']) 
+            sofatrace.title = '[swarm%02d] %s' % ( swarm['ID'], swarm['caption'].split('+0x')[0][0:50]) 
             sofatrace.color = swarm['color']
             sofatrace.x_field = 'timestamp'
             sofatrace.y_field = 'duration'
             sofatrace.data = swarm['data'].copy()
             traces.append(sofatrace)
 
-        # append to csv file every time using pandas funciton
-        swarm['data']['cluster_ID'] = swarm['ID'] # add new column cluster ID to dataframe swarm['group']
+        swarm['data']['cluster_ID'] = swarm['ID'] # add new column cluster ID 
         copy = swarm['data'].copy()
-        #print('*************************')
-        
         copy.to_csv(auto_caption_filename_with_path, mode='a', header=False, index=False)
-        #print('\nRecord for auto-caption, data preview: \n{}'.format(copy.head(2)))
-        #print('*************************')
-        # --- for auto-caption --- #
-    
-    csv_input = pd.read_csv(auto_caption_filename_with_path, names=list(copy))
-    #if 'instructions' not in copy.columns:
-    #    csv_input.insert(17, 'instructions', 0)
-    #if 'cache-misses' not in copy.columns:
-    #    csv_input.insert(18, 'cache-misses', 0)
-    #if 'branch-miss' not in copy.columns:
-    #    csv_input.insert(19, 'branch-misses', 0)
-    csv_input.to_csv(auto_caption_filename_with_path, header=False)
+
     return traces
 
 def matching_two_dicts_of_swarm(standard_dict, matching_dict, res_dict):
@@ -537,8 +424,6 @@ def sofa_swarm_diff(cfg):
                 "deviceId", "copyKind", "payload",
                 "bandwidth", "pkt_src", "pkt_dst",
                 "pid", "tid", "function_name", "category",
-                "feature_types", "mem_addr", "quotient",
-                "cycles", "instructions", "cache-misses", "branch-misses",
                 "cluster_ID"]
     base_df = pd.read_csv(cfg.base_logdir + 'auto_caption.csv', names=column_list)
     #print(base_df)
