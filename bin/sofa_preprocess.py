@@ -21,7 +21,7 @@ from sklearn.cluster import KMeans
 from sqlalchemy import create_engine
 
 from sofa_config import *
-from sofa_hsg import sofa_hsg, sofa_hsg_to_sofatrace
+from sofa_ml import hsg_v2, swarms_to_sofatrace_v2
 from sofa_models import SOFATrace
 from sofa_print import *
 
@@ -39,6 +39,11 @@ sofa_fieldnames = [
     "tid",  # 10
     "name",  # 11
     "category"] # 12
+
+def random_generate_color():
+        rand = lambda: randint(0, 255)
+        return '#%02X%02X%02X' % ( 200, 200, rand())
+
 
 def list_downsample(list_in, plot_ratio):
     new_list = []
@@ -1661,6 +1666,7 @@ def sofa_preprocess(cfg):
             else:
                 print_warning('Recorded progrom is too short.')
                 sys.exit(1)
+
     with open(logdir + 'perf.script') as f:
         samples = f.readlines()
         print_info(cfg,"Length of cpu_traces = %d" % len(samples))
@@ -1703,11 +1709,13 @@ def sofa_preprocess(cfg):
                                         'color': filter.color,
                                         'keyword': filter.keyword})
         try:
-            swarm_groups = []
-            swarm_stats = []
-            swarm_groups, swarm_stats = sofa_hsg(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp) 
+            #swarm_groups = []
+            #swarm_stats = []
+            swarms = []
+            #swarm_groups, swarm_stats = hsg_v1(cfg, swarm_groups, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp) 
+            cpu_traces, swarms = hsg_v2(cfg, cpu_traces, export_file=cfg.logdir+'/swarms_report.txt') 
         except TypeError:
-            print_warning('HSG returned a None object to swarm_groups, check if sofalog/perf.data can be accessed.')
+            print_warning('HSG returned a None object to swarms, check if sofalog/perf.data can be accessed.')
             pass 
              
     #=== Intel PCM Trace =======#
@@ -1883,10 +1891,9 @@ def sofa_preprocess(cfg):
         sofatrace.y_field = 'duration'
         sofatrace.data = filtered_group['group'].copy()
         traces.append(sofatrace)
-    
-
-    if len(swarm_groups) > 0 :
-        traces = sofa_hsg_to_sofatrace(cfg, swarm_groups, traces) # append data of hsg function
+ 
+    if len(swarms) > 0 :
+        traces = swarms_to_sofatrace_v2(cfg, swarms, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
     sofatrace.name = 'blktrace_starting_block'

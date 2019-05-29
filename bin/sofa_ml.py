@@ -17,6 +17,9 @@ from sofa_common import *
 from sofa_config import *
 from sofa_models import SOFATrace
 from sofa_print import *
+from scipy.cluster.hierarchy import dendrogram, linkage 
+from sklearn.cluster import AgglomerativeClustering
+from matplotlib import pyplot as plt
 
 sofa_fieldnames = [
     "timestamp",  # 0
@@ -112,6 +115,10 @@ def random_generate_color():
         rand = lambda: randint(0, 255)
         return '#%02X%02X%02X' % (rand(), rand(), rand())
 
+def random_generate_color_v2():
+        rand = lambda: randint(0, 255)
+        return '#%02X%02X%02X' % ( 64, rand(), rand())
+
 def kmeans_cluster(num_of_cluster, X):
     '''
     num_of_cluster: how many groups of data you prefer
@@ -128,7 +135,7 @@ def kmeans_cluster(num_of_cluster, X):
     return y_pred
 
 
-def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
+def hsg_v1(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
     """
     hierarchical swarm generation
     """
@@ -247,6 +254,7 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
                             # group by new column
                             cluster_in_pid_clusters = l3_group.groupby('cluster_in_pid')
 
+                
                             for mini_cluster_id, cluster_in_pid_cluster in cluster_in_pid_clusters:
                                 # duration time
                                 total_duration = cluster_in_pid_cluster.duration.sum()
@@ -289,7 +297,56 @@ def sofa_hsg(cfg, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu_mhz_fp):
 
             return swarm_groups, swarm_stats
 
-def sofa_hsg_to_sofatrace(cfg, swarm_groups, traces): # record_for_auto_caption = True # temperarily: for auto-caption
+
+
+def hsg_v2(cfg, df, export_file=None):
+    T = df[['timestamp']].values
+    X = df[['event', 'duration']].values
+    cluster = AgglomerativeClustering(n_clusters=cfg.num_swarms, affinity='euclidean', linkage='ward')  
+    cluster.fit_predict(X) 
+   
+    plt.figure(figsize=(10, 7))  
+    plt.scatter(T, cluster.labels_, c=cluster.labels_, cmap='rainbow') 
+    plt.savefig(cfg.logdir+'/hsg.png')
+    df['category'] = cluster.labels_
+
+    groups = df.groupby('category')[['duration','name','category']]
+    swarms = []
+    for key, group in groups:
+        swarm_sum = group['duration'].sum()
+        swarm_mean = group['duration'].mean()
+        swarm_count = len(group)
+        swarm_caption = group['name'].mode()[0].replace('::', '@')
+        swarm_examples = group[0:5].name
+        swarms.append({   'ID': int(group['category'].mean()), 
+                          'caption': swarm_caption.replace('[cycles:]', ''),
+                          'sum': swarm_sum,
+                          'mean': swarm_mean,
+                          'count': swarm_count,
+                          'color': random_generate_color(), 
+                          'data' : group,
+                          'examples': swarm_examples})
+    
+    swarms.sort(key=itemgetter('sum'), reverse = True) # reverse = True: descending
+    df_swarms = pd.DataFrame(swarms)
+    df_swarms = df_swarms.round({'sum':6, 'mean':6})
+    if export_file is not None:
+        with open(export_file, 'w') as f:
+            f.write('\n\n========== Function Swarm Report ========== \n')
+            f.close()
+        df_swarms[['ID', 'sum', 'mean', 'count', 'caption']].to_csv(export_file, sep=' ', index=True, header=True, mode='a') 
+        if cfg.verbose: 
+            df_swarms[['ID', 'caption','examples']].to_csv(export_file, sep=' ', index=False, header=True, mode='a') 
+    else:
+        print('\n\n========== Function Swarm Report ========== \n')
+        print(df_swarms[['ID', 'sum', 'mean', 'count', 'caption']])
+        if cfg.verbose: 
+            print(df_swarms[['ID','caption','examples']])
+      
+    return df, swarms 
+
+
+def swarms_to_sofatrace_v1(cfg, swarm_groups, traces): # record_for_auto_caption = True # temperarily: for auto-caption
     dummy_i = 0
     auto_caption_filename_with_path = cfg.logdir + 'auto_caption.csv'
     with open(auto_caption_filename_with_path,'w') as f:
@@ -322,6 +379,44 @@ def sofa_hsg_to_sofatrace(cfg, swarm_groups, traces): # record_for_auto_caption 
         csv_input.insert(18, 'cache-misses', 0)
     if 'branch-miss' not in copy.columns:
         csv_input.insert(19, 'branch-misses', 0)
+    csv_input.to_csv(auto_caption_filename_with_path, header=False)
+    return traces
+
+
+def swarms_to_sofatrace_v2(cfg, swarms, traces): 
+    swarms.sort(key=itemgetter('sum'), reverse = True) # reverse = True: descending
+    auto_caption_filename_with_path = cfg.logdir + 'auto_caption.csv'
+    with open(auto_caption_filename_with_path,'w') as f:
+        f.close()
+    
+    for swarm in swarms[:cfg.num_swarms]: 
+        if cfg.display_swarms:
+            sofatrace = SOFATrace() # file.class
+            sofatrace.name = 'swarm' + str(swarm['ID']) # avoid errors casued by JavaScript. No special meaning, can be random unique ID.
+            sofatrace.title = '[swarm%02d] %s' % ( swarm['ID'], swarm['caption'].split('+0x')[0][0:50]) # add number of swarm
+            sofatrace.color = swarm['color']
+            sofatrace.x_field = 'timestamp'
+            sofatrace.y_field = 'duration'
+            sofatrace.data = swarm['data'].copy()
+            traces.append(sofatrace)
+
+        # append to csv file every time using pandas funciton
+        swarm['data']['cluster_ID'] = swarm['ID'] # add new column cluster ID to dataframe swarm['group']
+        copy = swarm['data'].copy()
+        #print('*************************')
+        
+        copy.to_csv(auto_caption_filename_with_path, mode='a', header=False, index=False)
+        #print('\nRecord for auto-caption, data preview: \n{}'.format(copy.head(2)))
+        #print('*************************')
+        # --- for auto-caption --- #
+    
+    csv_input = pd.read_csv(auto_caption_filename_with_path, names=list(copy))
+    #if 'instructions' not in copy.columns:
+    #    csv_input.insert(17, 'instructions', 0)
+    #if 'cache-misses' not in copy.columns:
+    #    csv_input.insert(18, 'cache-misses', 0)
+    #if 'branch-miss' not in copy.columns:
+    #    csv_input.insert(19, 'branch-misses', 0)
     csv_input.to_csv(auto_caption_filename_with_path, header=False)
     return traces
 

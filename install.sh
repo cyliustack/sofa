@@ -30,6 +30,7 @@ BIN_FILES=(bin/sofa
 PLUGIN_FILES=(plugins/.placeholder
               )
 SOFABOARD_FILES=(sofaboard/index.html
+                 sofaboard/context.txt
                  sofaboard/cpu-report.html
                  sofaboard/gpu-report.html
                  sofaboard/comm-report.html

@@ -23,9 +23,12 @@ import grpc
 import potato_pb2
 import potato_pb2_grpc
 import socket
-from scipy.cluster.hierarchy import dendrogram, linkage 
-from sklearn.cluster import AgglomerativeClustering
-from matplotlib import pyplot as plt
+import random
+from sofa_ml import hsg_v2
+
+def random_generate_color():
+    rand = lambda: random.randint(0, 255)
+    return '#%02X%02X%02X' % (64, rand(), rand())
 
 # input: pfv(performance feature vector), Pandas.DataFrame
 # output: hint, docker_image  
@@ -54,42 +57,6 @@ def get_hint(potato_server, features):
         docker_image = 'NA' 
 
     return hint, docker_image 
-
-def hsg(cfg, df):
-    T = df[['timestamp']].values
-    X = df[['event', 'duration']].values
-    cluster = AgglomerativeClustering(n_clusters=10, affinity='euclidean', linkage='ward')  
-    cluster.fit_predict(X) 
-   
-    plt.figure(figsize=(10, 7))  
-    plt.scatter(T, cluster.labels_, c=cluster.labels_, cmap='rainbow') 
-    plt.savefig(cfg.logdir+'/hsg.png')
-    df['category'] = cluster.labels_
-
-    groups = df.groupby('category')[['duration','name']]
-    swarms = []
-    for key, group in groups:
-        swarm_sum = group['duration'].sum()
-        swarm_mean = group['duration'].mean()
-        swarm_count = len(group)
-        swarm_caption = group['name'].mode()[0].replace('::', '@')
-        swarm_examples = group[0:5].name
-        swarms.append({   'caption':swarm_caption,
-                          'sum':swarm_sum,
-                          'mean':swarm_mean,
-                          'count':swarm_count,
-                          'examples': swarm_examples})
-    
-    swarms.sort(key=itemgetter('sum'), reverse = True) # reverse = True: descending
-    for swarm in swarms:
-        print('%6.3lf\t%6.6lf\t%6d\t%s\n' % (swarm['sum'], swarm['mean'], swarm['count'], swarm['caption']))
-        if cfg.verbose:
-            print('%s\n' % (swarm['examples']))
-            print('=============\n')
-    
-    return df, swarms 
-
-
 
 def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features):
     print_title("Dynamic Top-down Analysis")
@@ -849,7 +816,7 @@ def sofa_analyze(cfg):
         df_cpu = pd.read_csv(filein_cpu)
         if not df_cpu.empty: 
             cpu_profile(logdir, cfg, df_cpu)
-            df_cpu, swarms = hsg(cfg, df_cpu)
+            df_cpu, swarms = hsg_v2(cfg, df_cpu)
     except IOError as e:
         df_cpu = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_cpu)

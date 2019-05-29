@@ -13,7 +13,7 @@ import numpy as np
 
 from sofa_analyze import *
 from sofa_config import *
-from sofa_hsg import sofa_swarm_diff
+from sofa_ml import sofa_swarm_diff
 from sofa_preprocess import *
 from sofa_print import *
 from sofa_record import *
