@@ -24,6 +24,8 @@ from sofa_config import *
 from sofa_ml import hsg_v1, hsg_v2, swarms_to_sofatrace
 from sofa_models import SOFATrace
 from sofa_print import *
+import random 
+
 
 sofa_fieldnames = [
     "timestamp",  # 0
@@ -41,7 +43,7 @@ sofa_fieldnames = [
     "category"] # 12
 
 def random_generate_color():
-        rand = lambda: randint(0, 255)
+        rand = lambda: random.randint(0, 255)
         return '#%02X%02X%02X' % ( 200, 200, rand())
 
 
@@ -1125,7 +1127,7 @@ def sofa_preprocess(cfg):
                         end = (net_traces['pkt_dst'] == float(filter))
                         group = net_traces[packet_not_zero & start & end]
                         filtered_net_groups.append({'group': group,
-                                                    'color': 'rgba(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
+                                                    'color': 'rgba(%s,%s,%s,0.8)' %(random.randint(0,255),random.randint(0,255),random.randint(0,255)),
                                                     'keyword': 'to_%s' %filter})
 
                         end = (net_traces['pkt_dst'] == float(cfg.net_filters[0]))
@@ -1133,7 +1135,7 @@ def sofa_preprocess(cfg):
                             start = (net_traces['pkt_src'] == float(filter))
                             group = net_traces[packet_not_zero & start & end]
                             filtered_net_groups.append({'group': group,
-                                                    'color': 'rgba(%s,%s,%s,0.8)' %(randint(0,255),randint(0,255),randint(0,255)),
+                                                    'color': 'rgba(%s,%s,%s,0.8)' %(random.randint(0,255),random.randint(0,255),random.randint(0,255)),
                                                     'keyword': 'from_%s' %filter})
     else:
         print_warning("no network traces were recorded.")
