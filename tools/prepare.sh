@@ -122,11 +122,11 @@ function install_packages()
 function install_utility_from_source()
 {
     echo -e "${C_GREEN}Installing utilities from source...${C_NONE}"
-    make -C sofa-pcm -j4 
+    make -C $FILEPATH/../sofa-pcm -j4 
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-    nvcc tools/cuhello.cu -o ./bin/cuhello
+    nvcc $FILEPATH/cuhello.cu -o $FILEPATH/../bin/cuhello
     [[ $? != 0 ]] && echo -e "${C_YELLOW}No nvcc found; nvcc is required to improve perf timestamp accuracy.${C_NONE}" 
-    g++  tools/sofa_perf_timebase.cc -o ./bin/sofa_perf_timebase
+    g++  $FILEPATH/sofa_perf_timebase.cc -o $FILEPATH/../bin/sofa_perf_timebase
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
 }
 
@@ -135,6 +135,7 @@ echo -e "${C_GREEN}OS Distribution:${C_NONE} '$OS'"
 echo -e "${C_GREEN}Version:${C_NONE} '$VERSION'"
 printf "\n\n"
 
+FILEPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 install_packages
 install_python_packages
 install_utility_from_source
