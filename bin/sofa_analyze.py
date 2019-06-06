@@ -654,29 +654,23 @@ def mpstat_profile(logdir, cfg, df, features):
         print_title("MPSTAT Profiling:")
     num_cores = int(df['deviceId'].max() + 1)
     df_summary = pd.DataFrame( np.zeros((num_cores,5)), columns=['USR','SYS','IDL','IOW','IRQ'])
-    for i in range(len(df)):
-        dt = df.iloc[i]['duration']
-        core = int(df.iloc[i]['deviceId'])
-        fields = df.loc[i,'name'].split('|')
-        r_usr = float(fields[5])
-        r_sys = float(fields[6])
-        r_idl = float(fields[7])
-        r_iow = float(fields[8])
-        r_irq = float(fields[9])
-        if r_idl == 100:
-            dt_all = 0.1
-        else:
-            dt_all = dt/((100-r_idl)/100.0)
-        t_usr = dt_all * r_usr/100.0
-        t_sys = dt_all * r_sys/100.0
-        t_idl = dt_all * r_idl/100.0
-        t_iow = dt_all * r_iow/100.0
-        t_irq = dt_all * r_irq/100.0
-        df_summary.iloc[core]['USR'] = df_summary.iloc[core]['USR'] + t_usr 
-        df_summary.iloc[core]['SYS'] = df_summary.iloc[core]['SYS'] + t_sys 
-        df_summary.iloc[core]['IDL'] = df_summary.iloc[core]['IDL'] + t_idl 
-        df_summary.iloc[core]['IOW'] = df_summary.iloc[core]['IOW'] + t_iow 
-        df_summary.iloc[core]['IRQ'] = df_summary.iloc[core]['IRQ'] + t_irq 
+    _,_,_,_,_,df['USR'],df['SYS'],df['IDL'],df['IOW'],df['IRQ'],_ = df["name"].str.split('|').str
+    df[['USR','SYS','IDL','IOW','IRQ']] = df[['USR','SYS','IDL','IOW','IRQ']].astype(float)
+    df["dt_all"] = np.where(df["IDL"]==100, 0.1, df["duration"]/((100-df["IDL"])/100.0))
+    df["t_USR"] = df['dt_all'] * df['USR']/100.0
+    df["t_SYS"] = df['dt_all'] * df['SYS']/100.0
+    df["t_IDL"] = df['dt_all'] * df['IDL']/100.0
+    df["t_IOW"] = df['dt_all'] * df['IOW']/100.0
+    df["t_IRQ"] = df['dt_all'] * df['IRQ']/100.0
+    dfs=[]
+    for i in range(num_cores):
+        dfs.append(df.loc[df['deviceId'] == float(i)])
+    for index,dff in enumerate(dfs):
+        df_summary.iloc[index]['USR'] = dff['t_USR'].sum()
+        df_summary.iloc[index]['SYS'] = dff['t_SYS'].sum()
+        df_summary.iloc[index]['IDL'] = dff['t_IDL'].sum()
+        df_summary.iloc[index]['IRQ'] = dff['t_IRQ'].sum()
+        df_summary.iloc[index]['IOW'] = dff['t_IOW'].sum()
     if not cfg.cluster_ip:
         print('CPU Utilization (%):')
         print('core\tUSR\tSYS\tIDL\tIOW\tIRQ')
