@@ -343,7 +343,7 @@ def sofa_record(command, cfg):
         if cfg.enable_strace:
             command_prefix = ' '.join(['strace', '-q', '-T', '-t', '-tt', '-f', '-o', '%s/strace.txt'%logdir]) + ' '
 
-        if int(os.system('command -v perf 1>/dev/null')) == 0:
+        if int(os.system('perf 2>&1 1>/dev/null')) == 0:
             ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
             if ret.find('not supported') >=0:
                 profile_command = 'perf record -o %s/perf.data -F %s %s %s' % (logdir, sample_freq, perf_options, command_prefix+command)
@@ -351,6 +351,7 @@ def sofa_record(command, cfg):
             else:
                 profile_command = 'perf record -o %s/perf.data -e %s -F %s %s %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command_prefix+command) 
         else:
+            print_warning("Use /usr/bin/time to measure program performance instead of perf.")
             profile_command = '/usr/bin/time -v %s' % (command_prefix+command)
             cfg.perf_events = ""
         
