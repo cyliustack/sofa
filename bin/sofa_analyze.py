@@ -226,10 +226,13 @@ def nvsmi_profile(logdir, cfg, df_nvsmi, features):
     if not cfg.cluster_ip:
         print_title("SM & MEM & ENCODE/DECODE Profiling")
    
-    if cfg.spotlight_gpu: 
-        cond1 = (df_nvsmi['timestamp'] > cfg.roi_begin)
-        cond2 = (df_nvsmi['timestamp'] <= cfg.roi_end)
-        df_nvsmi = df_nvsmi[ cond1 & cond2 ]
+    if cfg.spotlight_gpu:
+        if cfg.roi_end == 0 :
+            print_warning("spotlight_gpu has no effects.")
+        else:
+            cond1 = (df_nvsmi['timestamp'] > cfg.roi_begin)
+            cond2 = (df_nvsmi['timestamp'] <= cfg.roi_end)
+            df_nvsmi = df_nvsmi[ cond1 & cond2 ]
 
     sm_start = df_nvsmi.iloc[0].timestamp 
     sm_end = df_nvsmi.iloc[-1].timestamp
@@ -795,7 +798,7 @@ def sofa_analyze(cfg):
         if not df_nvsmi.empty and cfg.spotlight_gpu:
             state = 0 
             sm_high = 0
-            trigger = 20
+            trigger = 10
             for i in range(len(df_nvsmi)):
                 if df_nvsmi.iloc[i].event == 0 and df_nvsmi.iloc[i].deviceId == 0 :
                     if df_nvsmi.iloc[i].duration >= 50:
@@ -809,6 +812,9 @@ def sofa_analyze(cfg):
                         state = 0 
                         cfg.roi_end = df_nvsmi.iloc[i].timestamp
                     #print('sm_high=%d state=%d' % (sm_high, state))
+            if cfg.roi_end - cfg.roi_begin < 0:
+                cfg.roi_end = 0
+                cfg.roi_begin = 0
     except IOError:
         print_warning("nvsmi_trace.csv is not found")
 
