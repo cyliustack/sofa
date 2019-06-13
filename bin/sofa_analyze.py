@@ -907,6 +907,8 @@ def sofa_analyze(cfg):
 
     if cfg.potato_server:
         print_title('POTATO Feedback')
+        if cfg.potato_server.find(':') == -1:
+            cfg.potato_server = cfg.potato_server + ':50051'
         hint, docker_image = get_hint(cfg.potato_server, features)
         print('Optimization hints: \n')
         df_report = pd.read_json(hint, orient='table')
