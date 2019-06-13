@@ -350,11 +350,15 @@ def sofa_record(command, cfg):
                 cfg.perf_events = ""
             else:
                 profile_command = 'perf record -o %s/perf.data -e %s -F %s %s %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command_prefix+command) 
-            with open(logdir+'perf_events_used.txt','w') as f:
-                f.write(cfg.perf_events)
+        else:
+            profile_command = '/usr/bin/time -v %s' % (command_prefix+command)
+            cfg.perf_events = ""
+        
+        with open(logdir+'perf_events_used.txt','w') as f:
+            f.write(cfg.perf_events)
 
-            print_hint(profile_command)
-            p_perf = subprocess.Popen(profile_command, shell=True)
+        print_hint(profile_command)
+        p_perf = subprocess.Popen(profile_command, shell=True)
         
         try:
             p_perf.wait()

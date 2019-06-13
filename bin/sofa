@@ -298,6 +298,9 @@ if __name__ == "__main__":
         print_info(cfg,"GPU filter = %s:%s" % (filter.keyword, filter.color))
 
     print_info(cfg,"logdir = %s" % cfg.logdir)
+    if command != 'record' and not os.path.isdir(cfg.logdir):
+        print_error('Cannot find %s'%cfg.logdir)
+        sys.exit(-1)
 
     if command == 'stat':
         sofa_record(usr_command, cfg)
