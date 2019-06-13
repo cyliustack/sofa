@@ -469,7 +469,7 @@ def sofa_preprocess(cfg):
             #time, cpu,  user，nice, system, idle, iowait, irq, softirq
             core = mpstat[i,1]
             d_mp = mpstat[i,:] - mpstat[i-stride,:]
-            d_mp_total = np.sum(d_mp[2:8])
+            d_mp_total = d_mp[2] + d_mp[4] + d_mp[5] + d_mp[6] + d_mp[7]
             if d_mp_total == 0 :
                 print_info(cfg, 'No increases in mpstat values')
                 continue
