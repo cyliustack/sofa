@@ -257,6 +257,10 @@ def sofa_record(command, cfg):
         with open(logdir+'/perf_timebase.txt', 'w') as logfile:
             subprocess.call('%s/sofa_perf_timebase' % (cfg.script_path), shell=True, stderr=logfile, stdout=logfile)
         subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -q -o %s/cuhello.perf.data %s/cuhello' % (logdir,logdir,cfg.script_path), shell=True, stderr=DEVNULL, stdout=DEVNULL)
+        if int(os.system('perf 2>&1 1>/dev/null')) == 0:
+            subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -q -o %s/cuhello.perf.data %s/cuhello' % (logdir,logdir,cfg.script_path), shell=True, stderr=DEVNULL, stdout=DEVNULL)
+        else:
+            subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- /usr/bin/time -v %s/cuhello' % (logdir,cfg.script_path), shell=True, stderr=DEVNULL, stdout=DEVNULL)
 
         # sofa_time is time base for vmstat, nvidia-smi
         with open('%s/sofa_time.txt' % logdir, 'w') as logfile:

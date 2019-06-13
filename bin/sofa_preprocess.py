@@ -1662,12 +1662,15 @@ def sofa_preprocess(cfg):
     if perf_timebase_unix == 0:
         with open(logdir + 'perf_timebase.txt') as f:
             lines = f.readlines()
-            if len(lines) > 3:
-                perf_timebase_uptime = float(lines[-2].split()[2].split(':')[0])
-                perf_timebase_unix = float(lines[-1].split()[0])
-            else:
+            if len(lines) <= 3:
                 print_warning('Recorded progrom is too short.')
                 sys.exit(1)
+            elif lines[0].find('WARNING') != -1:
+                perf_timebase_uptime = 0 
+                perf_timebase_unix = 0 
+            else:
+                perf_timebase_uptime = float(lines[-2].split()[2].split(':')[0])
+                perf_timebase_unix = float(lines[-1].split()[0])
 
     with open(logdir + 'perf.script') as f:
         samples = f.readlines()
