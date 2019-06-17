@@ -617,25 +617,11 @@ def cpu_profile(logdir, cfg, df):
 
 def vmstat_profile(logdir, cfg, df, features):
     print_title("VMSTAT Profiling:")
-    df_name = df['name']
 
-    vmstat_fieldnames = []
-    fields = df_name.iloc[0].split('|')
-    for field in fields:
-       vmstat_fieldnames.append(field.split('=')[0])
-
-    records = []
-    for name in df_name:
-        fields = name.split('|')
-        row = []
-        for field in fields:
-            row.append(int(field.split('=')[1]))
-        records.append(row)
-
-    #1542188143.006416,-1,0.000010,-1,-1,-1,-1,-1,-1,-1,-1,r=1|b=0|sw=0|fr=12566580|bu=2140|ca=17433464|si=0|so=0|bi=0|bo=3|in=3|cs=2|usr=0|sys=0|idl=100|wa=0|st=0,-1
-    vmstat_traces = pd.DataFrame(records)
-    vmstat_traces.columns = vmstat_fieldnames
-
+    _,_,_,_,_,_,df['si'],df['so'],df['bi'],df['bo'],df['in'],df['cs'],_,_,_,_,_=df['name'].str.split('|').str
+    for col_name in ('si','so','bi','bo','in','cs'):
+        df[col_name] = df[col_name].str[3:]
+    vmstat_traces = df[['si','so','bi','bo','in','cs']].astype(float)
     vm_bi = vmstat_traces['bi'].mean()
     vm_bo = vmstat_traces['bo'].mean()
     vm_cs = vmstat_traces['cs'].mean()
