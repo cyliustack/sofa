@@ -98,7 +98,8 @@ def get_diskstat(logdir):
         for line in lines:
             m = line[:-1]
             m = line.split()
-            stat_list.append([unix_time]+[m[2]]+[m[5]]+[m[9]])
+            if re.search(r'sd\D$',m[2]):
+                stat_list.append([unix_time]+[m[2]]+[m[5]]+[m[9]])
         df_stat = pd.DataFrame(stat_list)
         df_stat.to_csv("%s/diskstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
 
