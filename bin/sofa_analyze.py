@@ -67,7 +67,7 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
     total_performace_vector = []
     
  
-    if len(df_mpstat) == 0 or len(df_cpu) == 0:
+    if len(df_mpstat) == 0:
         print_warning('no mpstat and perf traces!')
         return features
 
@@ -81,12 +81,13 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
         
         window_begin = t - 0.1 
         window_end = t
-        
-        if df_cpu.iloc[0].timestamp > window_end:
-            continue
-        cond1 = (df_cpu['timestamp'] > window_begin)
-        cond2 = (df_cpu['timestamp'] <= window_end)
-        df_cpu_interval = df_cpu[ cond1 & cond2 ]
+       
+        if len(df_cpu) > 0: 
+            if df_cpu.iloc[0].timestamp > window_end:
+                continue
+            cond1 = (df_cpu['timestamp'] > window_begin)
+            cond2 = (df_cpu['timestamp'] <= window_end)
+            df_cpu_interval = df_cpu[ cond1 & cond2 ]
         
         num_gpus = len(list(set(df_nvsmi['deviceId'])))
         cond1 = (df_nvsmi['timestamp'] > window_begin)

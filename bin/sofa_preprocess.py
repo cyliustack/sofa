@@ -374,16 +374,17 @@ def sofa_preprocess(cfg):
         else:
             print_warning('Incorrect misc.txt content. Some profiling information may not be available.')
 
-    with open(logdir + 'perf.script', 'w') as logfile:
-        subprocess.call(['perf',
-                         'script',
-                         '--kallsym',
-                         '%s/kallsyms' % logdir,
-                         '-i',
-                         '%s/perf.data' % logdir,
-                         '-F',
-                         'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'],
-                        stdout=logfile)
+    if int(os.system('command -v perf 1> /dev/null')) == 0:
+        with open(logdir + 'perf.script', 'w') as logfile:
+            subprocess.call(['perf',
+                             'script',
+                             '--kallsym',
+                             '%s/kallsyms' % logdir,
+                             '-i',
+                             '%s/perf.data' % logdir,
+                             '-F',
+                             'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'],
+                            stdout=logfile)
 
     with open(logdir + 'sofa_time.txt') as f:
         lines = f.readlines()
@@ -1482,33 +1483,37 @@ def sofa_preprocess(cfg):
         else:
            print_warning("There is no data in tables of NVVP file.")
 
-        with open(logdir + 'cuhello.perf.script', 'w') as logfile:
-            subprocess.call(['perf',
-                     'script',
-                     '--kallsym',
-                     '%s/kallsyms' % logdir,
-                     '-i',
-                     '%s/cuhello.perf.data' % logdir,
-                     '-F',
-                     'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'],
-                    stdout=logfile)
+        if int(os.system('command -v perf 1> /dev/null')) == 0:
+            with open(logdir + 'cuhello.perf.script', 'w') as logfile:
+                subprocess.call(['perf',
+                         'script',
+                         '--kallsym',
+                         '%s/kallsyms' % logdir,
+                         '-i',
+                         '%s/cuhello.perf.data' % logdir,
+                         '-F',
+                         'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'],
+                        stdout=logfile)
 
-        with open(logdir + 'cuhello.perf.script') as f:
-            samples = f.readlines()
-            print_info(cfg,"Length of cpu_traces = %d" % len(samples))
-            if len(samples) > 0:
-                for sample in reversed(samples):
-                    fields = sample.split()
-                    function_name = ""
-                    if re.match('\[\d+\]', fields[1]) is not None:
-                        function_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7]
-                    else:
-                        function_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6]
+        try: 
+            with open(logdir + 'cuhello.perf.script') as f:
+                samples = f.readlines()
+                print_info(cfg,"Length of cpu_traces = %d" % len(samples))
+                if len(samples) > 0:
+                    for sample in reversed(samples):
+                        fields = sample.split()
+                        function_name = ""
+                        if re.match('\[\d+\]', fields[1]) is not None:
+                            function_name = '[%s]'%fields[4].replace('-','_') + fields[6] + fields[7]
+                        else:
+                            function_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6]
 
-                    if function_name.find('libcuda.so') != -1 and len(last_nvvp_tss)>0:
-                        perf_timebase_uptime = float(sample.split()[1].split(':')[0])
-                        perf_timebase_unix = last_nvvp_ts
-                        break
+                        if function_name.find('libcuda.so') != -1 and len(last_nvvp_tss)>0:
+                            perf_timebase_uptime = float(sample.split()[1].split(':')[0])
+                            perf_timebase_unix = last_nvvp_ts
+                            break
+        except:
+            print_warning('no cuhello.perf.script, timestamp synchronization between CPU/GPU may not be precise enough.') 
         print_progress("Read " + nvvp_filename + " by nvprof -- end")
 
     # STRACE Preprocessing
@@ -1664,7 +1669,8 @@ def sofa_preprocess(cfg):
             lines = f.readlines()
             if len(lines) <= 3:
                 print_warning('Recorded progrom is too short.')
-                sys.exit(1)
+                perf_timebase_uptime = 0 
+                perf_timebase_unix = 0 
             elif lines[0].find('WARNING') != -1:
                 perf_timebase_uptime = 0 
                 perf_timebase_unix = 0 
@@ -1672,56 +1678,60 @@ def sofa_preprocess(cfg):
                 perf_timebase_uptime = float(lines[-2].split()[2].split(':')[0])
                 perf_timebase_unix = float(lines[-1].split()[0])
 
-    with open(logdir + 'perf.script') as f:
-        samples = f.readlines()
-        print_info(cfg,"Length of cpu_traces = %d" % len(samples))
-        if len(samples) > 0:
-            with mp.Pool(processes=cpu_count) as pool:
-                res = pool.map(
-                    partial(
-                        cpu_trace_read,
-                        cfg = cfg,
-                        t_offset = perf_timebase_unix - perf_timebase_uptime,
-                        cpu_mhz_xp = cpu_mhz_xp,
-			cpu_mhz_fp = cpu_mhz_fp),
-                    samples)
-            cpu_traces = pd.DataFrame(res)
-            cpu_traces.columns = sofa_fieldnames
-            cpu_traces.to_csv(
-                logdir + 'cputrace.csv',
-                mode='w',
-                header=True,
-                index=False,
-                float_format='%.6f')
-            res_viz = list_downsample(res, cfg.plot_ratio)
-            cpu_traces_viz = pd.DataFrame(res_viz)
-            cpu_traces_viz.columns = sofa_fieldnames
-            char1 = ']'
-            char2 = '+'
-            # demangle c++ symbol, little dirty work here...
-            cpu_traces_viz['name'] = cpu_traces_viz['name'].apply(
-                lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
-            )
+    try:
+        with open(logdir + 'perf.script') as f:
+            samples = f.readlines()
+            print_info(cfg,"Length of cpu_traces = %d" % len(samples))
+            if len(samples) > 0:
+                with mp.Pool(processes=cpu_count) as pool:
+                    res = pool.map(
+                        partial(
+                            cpu_trace_read,
+                            cfg = cfg,
+                            t_offset = perf_timebase_unix - perf_timebase_uptime,
+                            cpu_mhz_xp = cpu_mhz_xp,
+	    		cpu_mhz_fp = cpu_mhz_fp),
+                        samples)
+                cpu_traces = pd.DataFrame(res)
+                cpu_traces.columns = sofa_fieldnames
+                cpu_traces.to_csv(
+                    logdir + 'cputrace.csv',
+                    mode='w',
+                    header=True,
+                    index=False,
+                    float_format='%.6f')
+                res_viz = list_downsample(res, cfg.plot_ratio)
+                cpu_traces_viz = pd.DataFrame(res_viz)
+                cpu_traces_viz.columns = sofa_fieldnames
+                char1 = ']'
+                char2 = '+'
+                # demangle c++ symbol, little dirty work here...
+                cpu_traces_viz['name'] = cpu_traces_viz['name'].apply(
+                    lambda x: cxxfilt.demangle(str( x[x.find(char1)+1 : x.find(char2)].split('@')[0] ))
+                )
  
-        ###  Apply filters for cpu traces
-        filtered_groups = []
-        if len(cpu_traces) > 0:
-            df_grouped = cpu_traces_viz.groupby('name')
-            for filter in cfg.cpu_filters:
-                group = cpu_traces_viz[cpu_traces_viz['name'].str.contains(
-                    filter.keyword)]
-                filtered_groups.append({'group': group,
-                                        'color': filter.color,
-                                        'keyword': filter.keyword})
-        try:
-            swarm_stats = []
-            swarms = []
-            #swarms, swarm_stats = hsg_v1(cfg, cpu_traces, swarms, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp) 
-            cpu_traces, swarms = hsg_v2(cfg, cpu_traces, export_file=cfg.logdir+'/swarms_report.txt') 
-        except TypeError:
-            print_warning('HSG returned a None object to swarms, check if sofalog/perf.data can be accessed.')
-            pass 
-             
+            ###  Apply filters for cpu traces
+            filtered_groups = []
+            if len(cpu_traces) > 0:
+                df_grouped = cpu_traces_viz.groupby('name')
+                for filter in cfg.cpu_filters:
+                    group = cpu_traces_viz[cpu_traces_viz['name'].str.contains(
+                        filter.keyword)]
+                    filtered_groups.append({'group': group,
+                                            'color': filter.color,
+                                            'keyword': filter.keyword})
+            try:
+                swarm_stats = []
+                swarms = []
+                #swarms, swarm_stats = hsg_v1(cfg, cpu_traces, swarms, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp) 
+                cpu_traces, swarms = hsg_v2(cfg, cpu_traces, export_file=cfg.logdir+'/swarms_report.txt') 
+            except TypeError:
+                print_warning('HSG returned a None object to swarms, check if sofalog/perf.data can be accessed.')
+                pass 
+    except:
+        print_warning('no perf traces.') 
+
+         
     #=== Intel PCM Trace =======#
     if cfg.enable_pcm and os.path.isfile('%s/pcm_pcie.csv' % logdir):
         with open( logdir + '/pcm_pcie.csv' ) as f:
@@ -1877,27 +1887,29 @@ def sofa_preprocess(cfg):
     # gpu_traces.loc[:,'timestamp'] -= gpu_traces.loc[0,'timestamp']
 
     traces = []
-    sofatrace = SOFATrace()
-    sofatrace.name = 'cpu_trace'
-    sofatrace.title = 'CPU'
-    sofatrace.color = 'DarkGray'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'duration'
-    sofatrace.data = cpu_traces_viz
-    traces.append(sofatrace)
-
-    for filtered_group in filtered_groups:
+    
+    if len(cpu_traces_viz) > 0:
         sofatrace = SOFATrace()
-        sofatrace.name = filtered_group['keyword']
-        sofatrace.title = '[keyword]' + sofatrace.name
-        sofatrace.color = filtered_group['color']
+        sofatrace.name = 'cpu_trace'
+        sofatrace.title = 'CPU'
+        sofatrace.color = 'DarkGray'
         sofatrace.x_field = 'timestamp'
         sofatrace.y_field = 'duration'
-        sofatrace.data = filtered_group['group'].copy()
+        sofatrace.data = cpu_traces_viz
         traces.append(sofatrace)
+
+        for filtered_group in filtered_groups:
+            sofatrace = SOFATrace()
+            sofatrace.name = filtered_group['keyword']
+            sofatrace.title = '[keyword]' + sofatrace.name
+            sofatrace.color = filtered_group['color']
+            sofatrace.x_field = 'timestamp'
+            sofatrace.y_field = 'duration'
+            sofatrace.data = filtered_group['group'].copy()
+            traces.append(sofatrace)
  
-    if len(swarms) > 0 :
-        traces = swarms_to_sofatrace(cfg, swarms, traces) # append data of hsg function
+        if len(swarms) > 0 :
+            traces = swarms_to_sofatrace(cfg, swarms, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
     sofatrace.name = 'blktrace_starting_block'
