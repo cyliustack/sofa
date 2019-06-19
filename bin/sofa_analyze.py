@@ -577,15 +577,15 @@ def blktrace_latency_profile(logdir, cfg, df, features):
 def diskstat_profile(logdir, cfg, df, features):
     print_title("DISKSTAT Profiling:")
     print('Disk Throughput Quartile :')
-    diskstat_q1 = df['duration'].quantile(0.25)
-    diskstat_q2 = df['duration'].quantile(0.5)
-    diskstat_q3 = df['duration'].quantile(0.75)
-    diskstat_mean = df['duration'].mean()
+    diskstat_q1 = df['bandwidth'].quantile(0.25)
+    diskstat_q2 = df['bandwidth'].quantile(0.5)
+    diskstat_q3 = df['bandwidth'].quantile(0.75)
+    diskstat_mean = df['bandwidth'].mean()
 
-    print('Q1 disk throughput : %s' % convertbytes(diskstat_q1))
-    print('Q2 disk throughput : %s' % convertbytes(diskstat_q2))
-    print('Q3 disk throughput : %s' % convertbytes(diskstat_q3))
-    print('Avg disk throughput : %s' % convertbytes(diskstat_mean))
+    print('Q1 disk throughput : %.2f MB/s' % diskstat_q1)
+    print('Q2 disk throughput : %.2f MB/s' % diskstat_q2)
+    print('Q3 disk throughput : %.2f MB/s' % diskstat_q3)
+    print('Avg disk throughput : %.2f MB/s' % diskstat_mean)
     
     df_feature = pd.DataFrame({ 'name':['diskstat_q1','diskstat_q2','diskstat_q3'], 
                         'value': [diskstat_q1, diskstat_q2,  diskstat_q3] }, 
