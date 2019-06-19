@@ -14,7 +14,8 @@ Authors: All the contributors of SOFA
 3. [ALTERNATIVE] Add `source </PATH/TO/INSTALL>/sofa/tools/activate.sh` in your `~/.bashrc` to make this environment available on every shell.
 
 # Usages
-SOFA supports serveral different usages, like how one can use perf.
+SOFA supports serveral different usages, like how one can use perf. More details can be seen in the following slide   
+https://docs.google.com/presentation/d/1fyNnLlU-0WMIddkI8hgYn0Tg1vbP9i7VuXSPIsXB2L4/edit?usp=sharing   
 
 
 ## Basic Statistics
