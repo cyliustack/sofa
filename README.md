@@ -15,7 +15,9 @@ Authors: All the contributors of SOFA
 
 # Usages
 SOFA supports serveral different usages, like how one can use perf. More details can be seen in the following slide   
-https://www.slideshare.net/cyliustack/sofa-tutorial   
+* Released: https://www.slideshare.net/cyliustack/sofa-tutorial-150587622    
+* Nightly: https://docs.google.com/presentation/d/1fyNnLlU-0WMIddkI8hgYn0Tg1vbP9i7VuXSPIsXB2L4/edit?usp=sharing   
+
 
 
 ## Basic Statistics
