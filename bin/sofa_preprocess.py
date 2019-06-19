@@ -548,21 +548,26 @@ def sofa_preprocess(cfg):
             d_read *= secsize
             d_write = int(m[3]) - int(m_last[3])
             d_write *= secsize
-            d_disk_total = d_read + d_write
-            d_disk_total *= secsize
+            d_disk_total = d_read + d_write #total bytes
+            
             if not d_disk_total:
                 continue
-            t_begin = float(m[0])
+            t_begin = float(m_last[0])
 
             if not cfg.absolute_timestamp:
                 t_begin = t_begin - cfg.time_base     
             
+            d_duration = float(m[0]) - float(m_last[0])
+
+            # MB/s
+            d_throughput = round((d_disk_total/d_duration)/float(1024 ** 2),2)
+
             event = -1
-            rw = d_disk_total
-            deviceId = -1
+            duration = d_duration
+            deviceId = m[1]
             copyKind = -1
-            payload = -1
-            bandwidth = -1
+            payload = d_disk_total
+            bandwidth = d_throughput
             pkt_src = -1
             pkt_dst = -1
             pid = -1
@@ -571,7 +576,7 @@ def sofa_preprocess(cfg):
             trace = [
                 t_begin,
                 event,
-                rw,
+                duration,
                 deviceId,
                 copyKind,
                 payload,
@@ -1969,10 +1974,10 @@ def sofa_preprocess(cfg):
     if cfg.enable_diskstat:
         sofatrace = SOFATrace()
         sofatrace.name = 'diskstat'
-        sofatrace.title = 'DISK_USAGE'
+        sofatrace.title = 'DISK_USAGE (MB/s)'
         sofatrace.color = 'GreenYellow'
         sofatrace.x_field = 'timestamp'
-        sofatrace.y_field = 'duration'
+        sofatrace.y_field = 'bandwidth'
         sofatrace.data = diskstat_traces
         traces.append(sofatrace)
 
