@@ -154,19 +154,25 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
             #    dominator = 'gpu'
             total_elapsed_time[dominator] = total_elapsed_time[dominator] + 0.1
 
+            if num_gpus > 0:
+                time_gpu_avg = df_nvsmi_interval['duration'].sum() * 0.01 * 0.1 / num_gpus
+            else:
+                time_gpu_avg = 0 
+
             interval_vector = [mp_usr.max(),
                                mp_sys.max(),
                                mp_iow.max(),
-                               df_nvsmi_interval['duration'].sum() * 0.01 * 0.1 / num_gpus,
+                               time_gpu_avg,
                                df_tx_interval['bandwidth'].sum(),
                                df_rx_interval['bandwidth'].sum()]                             
             total_interval_vector.append(tuple(interval_vector)) 
-            
-            summ = df_nvsmi_interval['duration'].sum()
-            g_num = int(len(list(set(df_nvsmi_interval['deviceId']))))
+            if num_gpus > 0: 
+                sm_avg = df_nvsmi_interval['duration'].sum() / int(len(list(set(df_nvsmi_interval['deviceId']))))
+            else:
+                sm_avg = 0
             performace_vector = [window_end,
                                  df_nvsmi_interval['duration'].max(), 
-                                 summ / g_num, 
+                                 sm_avg, 
                                  df_nvsmi_interval['duration'].min(), 
                                  round((usr.mean() + sys.mean() + irq.mean()), 0),
                                  cpu_max,
@@ -721,6 +727,7 @@ def sofa_analyze(cfg):
     df_bandwidth = pd.DataFrame([], columns=cfg.columns)
     df_blktrace = pd.DataFrame([], columns=cfg.columns)
     df_diskstat = pd.DataFrame([], columns=cfg.columns)
+    df_nvsmi = pd.DataFrame([], columns=cfg.columns)
     iter_summary = None
     logdir = cfg.logdir
 
@@ -881,8 +888,7 @@ def sofa_analyze(cfg):
 
     try:
         df_nvsmi = pd.read_csv(filein_nvsmi) 
-        if not df_nvsmi.empty: 
-            features = nvsmi_profile(logdir, cfg, df_nvsmi, features)
+        features = nvsmi_profile(logdir, cfg, df_nvsmi, features)
     except IOError:
         print_warning("nvsmi_trace.csv is not found")
 
@@ -895,6 +901,8 @@ def sofa_analyze(cfg):
         print_warning("%s is not found. If there is no need to profile GPU, just ignore it." % filein_gpu)
 
     try:
+        if df_nvsmi.empty:
+            df_nvsmi.append(df_mpstat.iloc[0])
         features = dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features)
     except IOError as e:
         print_warning("Some files are not found, which are needed for dynamic_top_down analysis")

@@ -43,7 +43,20 @@ class SOFA_Config:
     time_base = 0
     pid = -1
     timeout = 30
-    columns = ['timestamp', 'duration']
+    columns = sofa_fieldnames = [
+    "timestamp",  # 0
+    "event",  # 1
+    "duration",  # 2
+    "deviceId",  # 3
+    "copyKind",  # 4
+    "payload",  # 5
+    "bandwidth",  # 6
+    "pkt_src",  # 7
+    "pkt_dst",  # 8
+    "pid",  # 9
+    "tid",  # 10
+    "name",  # 11
+    "category"] # 12
     enable_strace = False
     enable_py_stacks = False
     spotlight_gpu = False
