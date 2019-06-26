@@ -115,7 +115,7 @@ def get_netstat(logdir, interface):
     content = pd.DataFrame([tt], columns=['timestamp', 'tx_bytes', 'rx_bytes'])
     content.to_csv("%s/netstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
 
-def kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa):
+def kill_pcm_modules(cfg, p_pcm_pcie, p_pcm_memory, p_pcm_numa):
     if p_pcm_pcie != None:
         p_pcm_pcie.terminate()
         os.system('yes|pkill pcm-pcie.x')
@@ -433,7 +433,7 @@ def sofa_record(command, cfg):
             p_nvprof.terminate()
             print_info(cfg,"tried terminating nvprof")
         if cfg.enable_pcm:
-            kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa)
+            kill_pcm_modules(cfg, p_pcm_pcie, p_pcm_memory, p_pcm_numa)
         if p_strace != None:
             p_strace.terminate()
             print_info(cfg,"tried terminating strace")
@@ -476,7 +476,7 @@ def sofa_record(command, cfg):
             p_nvprof.kill()
             print_info(cfg,"tried killing nvprof")
         if cfg.enable_pcm:
-            kill_pcm_modules(p_pcm_pcie, p_pcm_memory, p_pcm_numa)
+            kill_pcm_modules(cfg, p_pcm_pcie, p_pcm_memory, p_pcm_numa)
         if p_strace != None:
             p_strace.kill()
             print_info(cfg,"tried killing strace")
