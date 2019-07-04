@@ -154,25 +154,36 @@ def cpu_trace_read(sample, cfg, t_offset, cpu_mhz_xp, cpu_mhz_fp):
     return trace
 
 def net_trace_read(packet, cfg, t_offset):
-    time = float(packet.split()[0])
+    #21234 1562233011.469681 IP 192.168.88.88.56828 > 224.224.255.255.5400: UDP, length 851
+    #21235 1562233011.471352 IP 10.57.185.172.8554 > 192.168.88.88.53528: tcp 0
+    fields = packet.split()
+    time = float(fields[0])
     
     if not cfg.absolute_timestamp:
         time = time - cfg.time_base
     
     t_begin = time + t_offset
     t_end = time + t_offset
-    if packet.split()[1] != 'IP':
+    if fields[1] != 'IP':
         return []
-    payload = int(packet.split()[6])
+
+    protocol = fields[5]
+    if protocol == 'UDP,': 
+        payload = int(fields[7])
+    elif protocol == 'tcp': 
+        payload = int(fields[6])
+    else:
+        return [] 
+
     duration = float(payload / 128.0e6)
     bandwidth = 128.0e6
     pkt_src = 0
     pkt_dst = 0
     for i in range(4):
         pkt_src = pkt_src + \
-            int(packet.split()[2].split('.')[i]) * np.power(1000, 3 - i)
+            int(fields[2].split('.')[i]) * np.power(1000, 3 - i)
         pkt_dst = pkt_dst + \
-            int(packet.split()[4].split('.')[i]) * np.power(1000, 3 - i)
+            int(fields[4].split('.')[i]) * np.power(1000, 3 - i)
     trace = [ t_begin,
               payload * 100 + 17,
               duration,
@@ -184,7 +195,7 @@ def net_trace_read(packet, cfg, t_offset):
               pkt_dst,
               -1,
               -1,
-              "network:tcp:%d_to_%d_with_%d" % (pkt_src, pkt_dst, payload),
+              "network:%s:%d_to_%d_with_%d" % (protocol, pkt_src, pkt_dst, payload),
               0
               ]
     return trace
