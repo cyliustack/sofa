@@ -1147,11 +1147,11 @@ def sofa_preprocess(cfg):
                                                     'color': 'rgba(%s,%s,%s,0.8)' %(random.randint(0,255),random.randint(0,255),random.randint(0,255)),
                                                     'keyword': 'to_%s' %filter})
 
-                        end = (net_traces['pkt_dst'] == float(cfg.net_filters[0]))
-                        for filter in cfg.net_filters[1:]:
-                            start = (net_traces['pkt_src'] == float(filter))
-                            group = net_traces[packet_not_zero & start & end]
-                            filtered_net_groups.append({'group': group,
+                    end = (net_traces['pkt_dst'] == float(cfg.net_filters[0]))
+                    for filter in cfg.net_filters[1:]:
+                        start = (net_traces['pkt_src'] == float(filter))
+                        group = net_traces[packet_not_zero & start & end]
+                        filtered_net_groups.append({'group': group,
                                                     'color': 'rgba(%s,%s,%s,0.8)' %(random.randint(0,255),random.randint(0,255),random.randint(0,255)),
                                                     'keyword': 'from_%s' %filter})
     else:
