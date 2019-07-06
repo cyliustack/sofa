@@ -308,8 +308,6 @@ def sofa_record(command, cfg):
                p_tcpdump =  subprocess.Popen(["tcpdump",
                                   '-i',
                                   'any',
-                                  '-v',
-                                  'tcp',
                                   '-w',
                                   '%s/sofa.pcap' % logdir],
                                  stderr=FNULL)
