@@ -95,6 +95,7 @@ if __name__ == '__main__':
         means_after=[]
         stds_before=[]
         stds_after=[]
+        pvalues=[]
         if 'tensorflow' in args.frameworks:
             for gpu in gpus:
                 gpu = int(gpu)
@@ -124,6 +125,8 @@ if __name__ == '__main__':
                     means_after.append(np.mean(np.array(afters)))
                     stds_after.append(np.std(np.array(afters)))
                     xlabels.append(model+'-'+'G%d'%gpu)
+                    tt,p = stats.ttest_rel(befores,afters)
+                    pvalues.append(p)
                     #xlabels.append(model+'-'+'G%d'%gpu+'+SOFA')
 
         if 'pytorch' in args.frameworks:
@@ -157,6 +160,8 @@ if __name__ == '__main__':
                     means_after.append(np.mean(afters))
                     stds_after.append(np.std(afters))
                     xlabels.append(model+'-'+'G%d'%gpu)
+                    tt,p = stats.ttest_rel(befores,afters)
+                    pvalues.append(p)
                     #xlabels.append(model+'-'+'G%d'%gpu+'+SOFA')
         
         fig, axs = plt.subplots(1, 1)
@@ -178,7 +183,11 @@ if __name__ == '__main__':
         b = np.array(means_after)
         tt,p = stats.ttest_rel(a,b)
         print(np.subtract(a,b))
-        print(np.mean(np.abs(np.divide(np.subtract(b,a),a))))
-        print(np.std(np.abs(np.divide(np.subtract(b,a),a))))
-        print('two-tailed p-value: ', p)
+        print('mean of overheads (%%) %.3lf' % np.mean(np.abs(np.divide(np.subtract(b,a),a))))
+        print('std of overheads  (%%) %.3lf' % np.std(np.abs(np.divide(np.subtract(b,a),a))))
+        i = 0
+        for p in pvalues:
+            print("%s:\t%.3lf"%(xlabels[i],p))
+            i = i + 1
+        print('minimum two-tailed p-value: ', min(pvalues))
     print("Evaluation is done.")
