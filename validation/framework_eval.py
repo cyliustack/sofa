@@ -40,6 +40,8 @@ if __name__ == '__main__':
     models = args.models.split(',')
     gpus = args.gpus.split(',')
 
+    data_dir = '/mnt/tmpfs/mini-imagenet/raw-data/'
+
     if args.clean:
         subprocess.call('rm t-bench-steptime-*.out', shell=True)
 
@@ -51,12 +53,12 @@ if __name__ == '__main__':
                     filename = 't-bench-steptime-%s-gpu%d-%d.out' % (model, gpu, i)
                     print('tensorflow collection for model %s with GPUx%d RUN-%d' % (model, gpu, i)) 
                     with open(filename,'w') as f:
-                        subprocess.call('sudo sysctl -w vm.drop_caches=3', shell=True)
+                        #subprocess.call('sudo sysctl -w vm.drop_caches=3', shell=True)
                         subprocess.call('export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH; /home/ubuntu/workspace/scout/t-bench --model=%s --num_batches=20 --data_dir=/mnt/tmpfs/mini-imagenet/ --num_gpus=%d --batch_size=64 --strategy=parameter_server' % (model, gpu), shell=True, stdout=f, stderr=f)
                     filename = 't-bench-steptime-withsofa-%s-gpu%d-%d.out' % (model, gpu, i)
                     print('tensorflow+SOFA collection for model %s with GPUx%d RUN-%d' % (model, gpu, i)) 
                     with open(filename,'w') as f:
-                        subprocess.call('sudo sysctl -w vm.drop_caches=3', shell=True)
+                        #subprocess.call('sudo sysctl -w vm.drop_caches=3', shell=True)
                         subprocess.call('export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH; sofa record "/home/ubuntu/workspace/scout/t-bench --model=%s --num_batches=20 --data_dir=/mnt/tmpfs/mini-imagenet/ --num_gpus=%d --batch_size=64 --strategy=parameter_server"' % (model, gpu), shell=True, stdout=f, stderr=f)
  
     if args.collect and 'pytorch' in args.frameworks:
@@ -73,20 +75,21 @@ if __name__ == '__main__':
                 gpuids = '0,1,2,3,4,5,6,7'
             else:
                 gpuids= '0'
-
-            batch_size = 16*gpu 
+            
+            data_dir = '/mnt/tmpfs/mini-imagenet-g%d/raw-data/'%gpu
+            batch_size = 64*gpu 
             for model in models:
                 for i in range(0,args.num_runs):
                     filename = 'p-bench-steptime-%s-gpu%d-%d.out' % (model, gpu, i)
                     print('pytorch collection for model %s with GPUx%d RUN-%d' % (model, gpu, i))
                     with open(filename,'w') as f:
-                        subprocess.call('sudo sysctl -w vm.drop_caches=3', shell=True)
-                        subprocess.call('export CUDA_VISIBLE_DEVICES=%s; python ~/workspace/scout/pytorch_examples/imagenet/main.py -a %s /mnt/tmpfs/mini-imagenet/raw-data --epochs=1 --batch-size=%d' % (gpuids, model, batch_size), shell=True, stdout=f, stderr=f)
+                        #subprocess.call('sudo sysctl -w vm.drop_caches=3', shell=True)
+                        subprocess.call('export CUDA_VISIBLE_DEVICES=%s; python ~/workspace/scout/pytorch_examples/imagenet/main.py -a %s %s --epochs=1 --batch-size=%d' % (gpuids, model, data_dir, batch_size), shell=True, stdout=f, stderr=f)
                     filename = 'p-bench-steptime-withsofa-%s-gpu%d-%d.out' % (model, gpu, i)
                     print('pytorch+SOFA collection for model %s with GPUx%d RUN-%d' % (model, gpu, i)) 
                     with open(filename,'w') as f:
-                        subprocess.call('sudo sysctl -w vm.drop_caches=3', shell=True)
-                        subprocess.call('export CUDA_VISIBLE_DEVICES=%s; sofa record "python ~/workspace/scout/pytorch_examples/imagenet/main.py -a %s /mnt/tmpfs/mini-imagenet/raw-data --epochs=1 --batch-size=%d"' % (gpuids, model, batch_size), shell=True, stdout=f, stderr=f)
+                        #subprocess.call('sudo sysctl -w vm.drop_caches=3', shell=True)
+                        subprocess.call('export CUDA_VISIBLE_DEVICES=%s; sofa record "python /home/ubuntu/workspace/scout/pytorch_examples/imagenet/main.py -a %s %s --epochs=1 --batch-size=%d"' % (gpuids, model, data_dir, batch_size), shell=True, stdout=f, stderr=f)
         
 
     if args.report:
@@ -96,6 +99,7 @@ if __name__ == '__main__':
         stds_before=[]
         stds_after=[]
         pvalues=[]
+        batch_times = []
         if 'tensorflow' in args.frameworks:
             for gpu in gpus:
                 gpu = int(gpu)
@@ -118,6 +122,8 @@ if __name__ == '__main__':
                                 if line.find('total images/sec:') != -1:
                                     afters.append(gpu*64.0/float(line.split()[2]))
                                     break
+                    
+                    batch_times.append(befores)
                     #data_models.append(data)
                     #xlabels.append(model+'-'+'G%d'%gpu)
                     means_before.append(np.mean(np.array(befores)))
@@ -132,8 +138,8 @@ if __name__ == '__main__':
         if 'pytorch' in args.frameworks:
             for gpu in gpus:
                 gpu = int(gpu)
-                if gpu == 8:
-                    break
+                #if gpu == 8:
+                #    break
                 for model in models:
                     befores=[]
                     afters=[]
@@ -145,7 +151,7 @@ if __name__ == '__main__':
                             for line in lines:
                                 if line.find('Epoch: [0][') != -1:
                                     values.append(float(line.split('Time')[1].split()[0]))
-                            befores.append(np.mean(np.asarray(values[1:-2])))
+                            befores.append(np.median(np.asarray(values[1:-2])))
                         filename = 'p-bench-steptime-withsofa-%s-gpu%d-%d.out'%(model, gpu, i)
                         with open(filename, 'r') as f:
                             lines = f.readlines()
@@ -153,9 +159,12 @@ if __name__ == '__main__':
                             for line in lines:
                                 if line.find('Epoch: [0][') != -1:
                                     values.append(float(line.split('Time')[1].split()[0]))
-                            afters.append( np.mean(np.asarray(values[1:-2]))) 
+                            afters.append( np.median(np.asarray(values[1:-2]))) 
                         #data.append(100*(value2-value1)/value1)
                     means_before.append(np.mean(befores))
+                    #print(befores)
+                    #print(afters)
+                    batch_times.append(befores)
                     stds_before.append(np.std(befores))
                     means_after.append(np.mean(afters))
                     stds_after.append(np.std(afters))
@@ -163,7 +172,10 @@ if __name__ == '__main__':
                     tt,p = stats.ttest_rel(befores,afters)
                     pvalues.append(p)
                     #xlabels.append(model+'-'+'G%d'%gpu+'+SOFA')
-        
+        #print(batch_times)
+        df_batch = pd.DataFrame( np.array(batch_times).T, columns = xlabels)
+        print(df_batch.describe()) 
+        df_batch.describe().to_csv('batch_summary.csv') 
         fig, axs = plt.subplots(1, 1)
         ind = np.arange(1,len(means_before)+1)  # the x locations for the groups
         print(ind)
@@ -182,9 +194,8 @@ if __name__ == '__main__':
         a = np.array(means_before)
         b = np.array(means_after)
         tt,p = stats.ttest_rel(a,b)
-        print(np.subtract(a,b))
-        print('mean of overheads (%%) %.3lf' % np.mean(np.abs(np.divide(np.subtract(b,a),a))))
-        print('std of overheads  (%%) %.3lf' % np.std(np.abs(np.divide(np.subtract(b,a),a))))
+        print('mean of overheads (%%) %.3lf' % (100*np.mean(np.abs(np.divide(np.subtract(b,a),a)))))
+        print('std of overheads  (%%) %.3lf' % (100*np.std(np.abs(np.divide(np.subtract(b,a),a)))))
         i = 0
         for p in pvalues:
             print("%s:\t%.3lf"%(xlabels[i],p))
