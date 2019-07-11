@@ -241,7 +241,7 @@ def hsg_v1(cfg, cpu_traces, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu
 
 def hsg_v2(cfg, df, export_file=None):
     T = df[['timestamp']].values
-    X = df[['event', 'duration']].values
+    X = df[['event']].values
     cluster = AgglomerativeClustering(n_clusters=cfg.num_swarms, affinity='euclidean', linkage='average')  
     cluster.fit_predict(X) 
    
