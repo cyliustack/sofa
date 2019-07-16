@@ -179,40 +179,39 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
                                  cpu_min]
             total_performace_vector.append(tuple(performace_vector))
                                  
-    total_all_elapsed_time = sum(total_elapsed_time.values())
-    if total_all_elapsed_time > 0 :
-        elapsed_time_ratio['usr'] = 100 * total_elapsed_time['usr'] / total_all_elapsed_time 
-        elapsed_time_ratio['sys'] = 100 * total_elapsed_time['sys'] / total_all_elapsed_time 
-        elapsed_time_ratio['gpu'] = 100 * total_elapsed_time['gpu'] / total_all_elapsed_time 
-        elapsed_time_ratio['iow'] = 100 * total_elapsed_time['iow'] / total_all_elapsed_time 
-        print('Elapsed Time = %.1lf ' % total_all_elapsed_time)
-        print('USR = %.1lf %%' % elapsed_time_ratio['usr'])
-        print('SYS = %.1lf %%' % elapsed_time_ratio['sys'])
-        print('GPU = %.1lf %%' % elapsed_time_ratio['gpu'])
-        print('IOW = %.1lf %%' % elapsed_time_ratio['iow'])
-        if cfg.spotlight_gpu:
-            elapsed_spotlight_time = cfg.roi_end - cfg.roi_begin 
-
-        else:
-            elapsed_spotlight_time = 0 
-        
-        df = pd.DataFrame({ 'name':['elapsed_usr_time_ratio', 'elapsed_sys_time_ratio', 'elapsed_gpu_time_ratio', 
-                            'elapsed_iow_time_ratio', 'elapsed_spotlight_time'], 
-                            'value':[elapsed_time_ratio['usr'], elapsed_time_ratio['sys'], elapsed_time_ratio['gpu'], 
-                            elapsed_time_ratio['iow'], elapsed_spotlight_time ] }, 
-                            columns=['name','value'])
-
+            total_all_elapsed_time = sum(total_elapsed_time.values())
+            if total_all_elapsed_time > 0 :
+                elapsed_time_ratio['usr'] = 100 * total_elapsed_time['usr'] / total_all_elapsed_time 
+                elapsed_time_ratio['sys'] = 100 * total_elapsed_time['sys'] / total_all_elapsed_time 
+                elapsed_time_ratio['gpu'] = 100 * total_elapsed_time['gpu'] / total_all_elapsed_time 
+                elapsed_time_ratio['iow'] = 100 * total_elapsed_time['iow'] / total_all_elapsed_time 
+                print('Elapsed Time = %.1lf ' % total_all_elapsed_time)
+                print('USR = %.1lf %%' % elapsed_time_ratio['usr'])
+                print('SYS = %.1lf %%' % elapsed_time_ratio['sys'])
+                print('GPU = %.1lf %%' % elapsed_time_ratio['gpu'])
+                print('IOW = %.1lf %%' % elapsed_time_ratio['iow'])
+                if cfg.spotlight_gpu:
+                    elapsed_spotlight_time = cfg.roi_end - cfg.roi_begin 
+    
+                else:
+                    elapsed_spotlight_time = 0 
+    
+                df = pd.DataFrame({ 'name':['elapsed_usr_time_ratio', 'elapsed_sys_time_ratio', 'elapsed_gpu_time_ratio', 
+                                    'elapsed_iow_time_ratio', 'elapsed_spotlight_time'], 
+                                    'value':[elapsed_time_ratio['usr'], elapsed_time_ratio['sys'], elapsed_time_ratio['gpu'], 
+                                    elapsed_time_ratio['iow'], elapsed_spotlight_time ] }, 
+                                    columns=['name','value'])
+    
+                features = pd.concat([features, df])
+    if len(total_performace_vector) > 0:
+        performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util', 'cpu_max', 'cpu_min'])
+        performance_table.to_csv('%s/performance.csv' % logdir)
+        vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'gpu', 'net_tx', 'net_rx'])
+        print('Correlation Table :')
+        pearson = vector_table.corr(method ='pearson').round(2)
+        print(pearson)
+        df = pd.DataFrame({ 'name':['corr_gpu_usr', 'corr_gpu_sys', 'corr_gpu_iow', 'corr_gpu_ntx', 'corr_gpu_nrx'], 'value':[pearson['gpu'].usr, pearson['gpu'].sys, pearson['gpu'].iow, pearson['gpu'].net_tx, pearson['gpu'].net_rx]}, columns=['name','value'])
         features = pd.concat([features, df])
-    performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util', 'cpu_max', 'cpu_min'])
-    performance_table.to_csv('%s/performance.csv' % logdir)
-    vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'gpu', 'net_tx', 'net_rx'])
-    print('Correlation Table :')
-    pearson = vector_table.corr(method ='pearson').round(2)
-    print(pearson)
-    df = pd.DataFrame({ 'name':['corr_gpu_usr', 'corr_gpu_sys', 'corr_gpu_iow', 'corr_gpu_ntx', 'corr_gpu_nrx'],
-                        'value':[pearson['gpu'].usr, pearson['gpu'].sys, pearson['gpu'].iow, pearson['gpu'].net_tx, pearson['gpu'].net_rx]}, 
-                            columns=['name','value'])
-    features = pd.concat([features, df])
     return features
 
 def payload_sum(df):
@@ -810,7 +809,8 @@ def sofa_analyze(cfg):
         df_cpu = pd.read_csv(filein_cpu)
         if not df_cpu.empty: 
             cpu_profile(logdir, cfg, df_cpu)
-            df_cpu, swarms = hsg_v2(cfg, df_cpu)
+            if len(df_cpu) > cfg.num_swarms:
+                df_cpu, swarms = hsg_v2(cfg, df_cpu)
     except IOError as e:
         df_cpu = pd.DataFrame([], columns=cfg.columns)
         print_warning("%s is not found" % filein_cpu)
@@ -887,9 +887,9 @@ def sofa_analyze(cfg):
         print_warning("%s is not found. If there is no need to profile GPU, just ignore it." % filein_gpu)
 
     try:
-        if df_nvsmi.empty:
+        if len(df_nvsmi)>0 and len(df_mpstat)>0:
             df_nvsmi.append(df_mpstat.iloc[0])
-        features = dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features)
+            features = dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features)
     except IOError as e:
         print_warning("Some files are not found, which are needed for dynamic_top_down analysis")
 

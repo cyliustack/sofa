@@ -1159,80 +1159,81 @@ def sofa_preprocess(cfg):
     # ============ Preprocessing Network Bandwidth Trace ============
     with open('%s/netstat.txt' % logdir) as f:
         lines = f.readlines()
-        tmp_time = float(lines[0].split(',')[0])
-        tmp_tx = int(lines[0].split(',')[1])
-        tmp_rx = int(lines[0].split(',')[2])
-        all_time = []
-        all_tx = []
-        all_rx = []
-        tx_list = []
-        rx_list = []
-        bandwidth_result = pd.DataFrame([], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
-
-        for line in lines[1:]:
-            time = float(line.split(',')[0])
-            tx = int(line.split(',')[1])
-            rx = int(line.split(',')[2])
-            tx_bandwidth = (tx - tmp_tx) / (time - tmp_time) 
-            rx_bandwidth = (rx - tmp_rx) / (time - tmp_time)
-            
-            #sofa_fieldnames = [
-            #    "timestamp",  # 0
-            #    "event",  # 1
-            #    "duration",  # 2
-            #    "deviceId",  # 3
-            #    "copyKind",  # 4
-            #    "payload",  # 5
-            #    "bandwidth",  # 6
-            #    "pkt_src",  # 7
-            #    "pkt_dst",  # 8
-            #    "pid",  # 9
-            #    "tid",  # 10
-            #    "name",  # 11
-            #    "category"] # 12
-            
-            t_begin = time
-            if not cfg.absolute_timestamp:
-                t_begin = t_begin - cfg.time_base
-
-            trace = [ 
-                t_begin, # timestamp
-                0, # event
-                -1,
-                -1,
-                -1,
-                -1,
-                tx_bandwidth, # tx bandwidth
-                -1,
-                -1,
-                -1,
-                -1,
-                "network_bandwidth_tx(bytes):%d" % tx_bandwidth,
-                0
-                ]
-            tx_list.append(trace)
-
-            trace = [
-                t_begin, # timestamp
-                1, # event
-                -1,
-                -1,
-                -1,
-                -1,
-                rx_bandwidth, # rx bandwidth
-                -1,
-                -1,
-                -1,
-                -1,
-                "network_bandwidth_rx(bytes):%d" % rx_bandwidth,
-                0
-                ]
-            rx_list.append(trace)
-
-            # for visualize
-            all_time.append(time)
-            all_tx.append(tx_bandwidth)
-            all_rx.append(rx_bandwidth)
+        if lines:
+            tmp_time = float(lines[0].split(',')[0])
+            tmp_tx = int(lines[0].split(',')[1])
+            tmp_rx = int(lines[0].split(',')[2])
+            all_time = []
+            all_tx = []
+            all_rx = []
+            tx_list = []
+            rx_list = []
+            bandwidth_result = pd.DataFrame([], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
+    
+            for line in lines[1:]:
+                time = float(line.split(',')[0])
+                tx = int(line.split(',')[1])
+                rx = int(line.split(',')[2])
+                tx_bandwidth = (tx - tmp_tx) / (time - tmp_time) 
+                rx_bandwidth = (rx - tmp_rx) / (time - tmp_time)
+                
+                #sofa_fieldnames = [
+                #    "timestamp",  # 0
+                #    "event",  # 1
+                #    "duration",  # 2
+                #    "deviceId",  # 3
+                #    "copyKind",  # 4
+                #    "payload",  # 5
+                #    "bandwidth",  # 6
+                #    "pkt_src",  # 7
+                #    "pkt_dst",  # 8
+                #    "pid",  # 9
+                #    "tid",  # 10
+                #    "name",  # 11
+                #    "category"] # 12
+                
+                t_begin = time
+                if not cfg.absolute_timestamp:
+                    t_begin = t_begin - cfg.time_base
+    
+                trace = [ 
+                    t_begin, # timestamp
+                    0, # event
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    tx_bandwidth, # tx bandwidth
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    "network_bandwidth_tx(bytes):%d" % tx_bandwidth,
+                    0
+                    ]
+                tx_list.append(trace)
+    
+                trace = [
+                    t_begin, # timestamp
+                    1, # event
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    rx_bandwidth, # rx bandwidth
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    "network_bandwidth_rx(bytes):%d" % rx_bandwidth,
+                    0
+                    ]
+                rx_list.append(trace)
+    
+                # for visualize
+                all_time.append(time)
+                all_tx.append(tx_bandwidth)
+                all_rx.append(rx_bandwidth)
             
             # for pandas
             result = [t_begin, tx_bandwidth, rx_bandwidth]
@@ -1243,20 +1244,20 @@ def sofa_preprocess(cfg):
             tmp_time = time
             tmp_tx = tx
             tmp_rx = rx    
-        tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
-        tx_traces.to_csv(
-                    logdir + 'netstat.csv',
-                    mode='w',
-                    header=True,
-                    index=False,
-                    float_format='%.6f')
-        rx_traces = pd.DataFrame(rx_list, columns = sofa_fieldnames)
-        rx_traces.to_csv(
-                    logdir + 'netstat.csv',
-                    mode='a',
-                    header=False,
-                    index=False,
-                    float_format='%.6f')
+            tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
+            tx_traces.to_csv(
+                        logdir + 'netstat.csv',
+                        mode='w',
+                        header=True,
+                        index=False,
+                        float_format='%.6f')
+            rx_traces = pd.DataFrame(rx_list, columns = sofa_fieldnames)
+            rx_traces.to_csv(
+                        logdir + 'netstat.csv',
+                        mode='a',
+                        header=False,
+                        index=False,
+                        float_format='%.6f')
         
     # ============ Preprocessing GPU Trace ==========================
     num_cudaproc = 0
