@@ -104,7 +104,6 @@ def get_diskstat(logdir):
         df_stat.to_csv("%s/diskstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
 
 def get_netstat(logdir, interface):
-    print('interface=',interface)
     if interface == '':
         return
     with open('/sys/class/net/%s/statistics/tx_bytes' %interface, 'r') as f:
