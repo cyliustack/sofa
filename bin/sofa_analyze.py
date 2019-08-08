@@ -58,8 +58,8 @@ def get_hint(potato_server, features):
 
     return hint, docker_image 
 
-def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features):
-    print_title("Dynamic Top-down Analysis")
+def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features):
+    print_title("Concurrency Breakdown Analysis")
 
     total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
     elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
@@ -179,30 +179,31 @@ def dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwi
                                  cpu_min]
             total_performace_vector.append(tuple(performace_vector))
                                  
-            total_all_elapsed_time = sum(total_elapsed_time.values())
-            if total_all_elapsed_time > 0 :
-                elapsed_time_ratio['usr'] = 100 * total_elapsed_time['usr'] / total_all_elapsed_time 
-                elapsed_time_ratio['sys'] = 100 * total_elapsed_time['sys'] / total_all_elapsed_time 
-                elapsed_time_ratio['gpu'] = 100 * total_elapsed_time['gpu'] / total_all_elapsed_time 
-                elapsed_time_ratio['iow'] = 100 * total_elapsed_time['iow'] / total_all_elapsed_time 
-                print('Elapsed Time = %.1lf ' % total_all_elapsed_time)
-                print('USR = %.1lf %%' % elapsed_time_ratio['usr'])
-                print('SYS = %.1lf %%' % elapsed_time_ratio['sys'])
-                print('GPU = %.1lf %%' % elapsed_time_ratio['gpu'])
-                print('IOW = %.1lf %%' % elapsed_time_ratio['iow'])
-                if cfg.spotlight_gpu:
-                    elapsed_spotlight_time = cfg.roi_end - cfg.roi_begin 
+    total_all_elapsed_time = sum(total_elapsed_time.values())
+    if total_all_elapsed_time > 0 :
+        elapsed_time_ratio['usr'] = 100 * total_elapsed_time['usr'] / total_all_elapsed_time 
+        elapsed_time_ratio['sys'] = 100 * total_elapsed_time['sys'] / total_all_elapsed_time 
+        elapsed_time_ratio['gpu'] = 100 * total_elapsed_time['gpu'] / total_all_elapsed_time 
+        elapsed_time_ratio['iow'] = 100 * total_elapsed_time['iow'] / total_all_elapsed_time 
+        print('Elapsed Time = %.1lf ' % total_all_elapsed_time)
+        print('USR = %.1lf %%' % elapsed_time_ratio['usr'])
+        print('SYS = %.1lf %%' % elapsed_time_ratio['sys'])
+        print('GPU = %.1lf %%' % elapsed_time_ratio['gpu'])
+        print('IOW = %.1lf %%' % elapsed_time_ratio['iow'])
+        if cfg.spotlight_gpu:
+            elapsed_spotlight_time = cfg.roi_end - cfg.roi_begin 
     
-                else:
-                    elapsed_spotlight_time = 0 
+        else:
+            elapsed_spotlight_time = 0 
     
-                df = pd.DataFrame({ 'name':['elapsed_usr_time_ratio', 'elapsed_sys_time_ratio', 'elapsed_gpu_time_ratio', 
-                                    'elapsed_iow_time_ratio', 'elapsed_spotlight_time'], 
-                                    'value':[elapsed_time_ratio['usr'], elapsed_time_ratio['sys'], elapsed_time_ratio['gpu'], 
-                                    elapsed_time_ratio['iow'], elapsed_spotlight_time ] }, 
-                                    columns=['name','value'])
+        df = pd.DataFrame({ 'name':['elapsed_usr_time_ratio', 'elapsed_sys_time_ratio', 'elapsed_gpu_time_ratio', 
+                            'elapsed_iow_time_ratio', 'elapsed_spotlight_time'], 
+                            'value':[elapsed_time_ratio['usr'], elapsed_time_ratio['sys'], elapsed_time_ratio['gpu'], 
+                            elapsed_time_ratio['iow'], elapsed_spotlight_time ] }, 
+                            columns=['name','value'])
     
-                features = pd.concat([features, df])
+        features = pd.concat([features, df])
+    
     if len(total_performace_vector) > 0:
         performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util', 'cpu_max', 'cpu_min'])
         performance_table.to_csv('%s/performance.csv' % logdir)
@@ -889,9 +890,9 @@ def sofa_analyze(cfg):
     try:
         if len(df_nvsmi)>0 and len(df_mpstat)>0:
             df_nvsmi.append(df_mpstat.iloc[0])
-            features = dynamic_top_down(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features)
+            features = concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features)
     except IOError as e:
-        print_warning("Some files are not found, which are needed for dynamic_top_down analysis")
+        print_warning("Some files are not found, which are needed for concurrency_breakdown analysis")
 
 
 
