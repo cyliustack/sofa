@@ -255,6 +255,10 @@ if __name__ == "__main__":
 
     if args.potato_server is not None:
         cfg.potato_server = args.potato_server
+    else:
+        if 'POTATO_SERVER' in os.environ:
+            print('POTATO_SERVER=%s' % os.environ['POTATO_SERVER'])
+            cfg.potato_server = os.environ['POTATO_SERVER']
 
     cfg.gpu_filters.append(Filter('CUDA_COPY_H2D', 'Red'))
     cfg.gpu_filters.append(Filter('CUDA_COPY_D2H', 'Peru'))
