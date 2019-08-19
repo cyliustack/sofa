@@ -22,10 +22,6 @@ BIN_FILES=(bin/sofa
            bin/sofa_common.py
            bin/potato_pb2.py
            bin/potato_pb2_grpc.py
-           sofa-pcm/pcm-core.x
-           sofa-pcm/pcm-numa.x
-           sofa-pcm/pcm-pcie.x
-           sofa-pcm/pcm-memory.x
            )
 PLUGIN_FILES=(plugins/.placeholder
               )
@@ -65,10 +61,6 @@ function clear_install_dir()
 function install_sofa()
 {
     echo "Installing..."
-    cp sofa-pcm/pcm-pcie.x          ${PREFIX}/bin
-    cp sofa-pcm/pcm-numa.x          ${PREFIX}/bin
-    cp sofa-pcm/pcm-core.x          ${PREFIX}/bin
-    cp sofa-pcm/pcm-memory.x    ${PREFIX}/bin
     cp -rf ${SCRIPT_PATH}/bin       ${PREFIX}
     cp -rf ${SCRIPT_PATH}/bin       ${PREFIX}
     cp -rf ${SCRIPT_PATH}/plugins   ${PREFIX}
@@ -79,7 +71,6 @@ function install_sofa()
     cat > ${PREFIX}/tools/activate.sh <<EOF
 export PATH=${PREFIX}/bin:\$PATH
 export PATH=\$PATH:/usr/local/cuda/bin
-export PATH=\$PATH:/usr/local/intelpcm/bin
 EOF
 ##################
 

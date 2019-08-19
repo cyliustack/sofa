@@ -113,7 +113,6 @@ if __name__ == "__main__":
         type=str,
         required=False,
         help='filters for network, put your ip into it, eg.192.168.0.100 is 192168000100, and first ip must be your localhost')
-    parser.add_argument('--enable_pcm', dest='enable_pcm', action='store_true')
     parser.add_argument('--cuda_api_tracing', dest='cuda_api_tracing', action='store_true')
     parser.add_argument(
         '--perf_events',
@@ -202,9 +201,6 @@ if __name__ == "__main__":
 
     if args.enable_vmstat is not None:
         cfg.enable_vmstat = args.enable_vmstat
-
-    if args.enable_pcm is not None:
-        cfg.enable_pcm = args.enable_pcm
 
     if args.spotlight_gpu is not None:
         cfg.spotlight_gpu = args.spotlight_gpu

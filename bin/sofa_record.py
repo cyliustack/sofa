@@ -117,21 +117,7 @@ def get_netstat(logdir, interface):
     content = pd.DataFrame([tt], columns=['timestamp', 'tx_bytes', 'rx_bytes'])
     content.to_csv("%s/netstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
 
-def kill_pcm_modules(cfg, p_pcm_pcie, p_pcm_memory, p_pcm_numa):
-    if p_pcm_pcie != None:
-        p_pcm_pcie.terminate()
-        os.system('yes|pkill pcm-pcie.x')
-        print_info(cfg,"tried killing pcm-pcie.x")
-    if p_pcm_memory != None:
-        p_pcm_memory.terminate()
-        os.system('yes|pkill pcm-memory.x')
-        print_info(cfg,"tried killing pcm-memory.x")
-    if p_pcm_numa != None:
-        p_pcm_numa.terminate()
-        os.system('yes|pkill pcm-numa.x')
-        print_info(cfg,"tried killing pcm-numa.x")
-
-
+        
 def sofa_clean(cfg):
     logdir = cfg.logdir
     print_info(cfg,'Clean previous logged files')
@@ -158,9 +144,6 @@ def sofa_record(command, cfg):
     p_nvsmi   = None
     p_nvsmi_query = None
     p_nvtopo  = None
-    p_pcm_pcie = None
-    p_pcm_memory = None
-    p_pcm_numa = None 
     logdir = cfg.logdir
     p_strace = None
     p_pystack = None
@@ -185,38 +168,9 @@ def sofa_record(command, cfg):
         print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
         sys.exit(1)
 
-    if cfg.enable_pcm:
-        print_info(cfg,'Test Capability of PCM programs ...')
-        ret = str(subprocess.check_output(['getcap `which pcm-memory.x`'], shell=True))
-        if ret.find('cap_sys_rawio+ep') == -1:
-            print_error('To read/write MSR in userspace is not avaiable, please try the commands below:')
-            print_error('sudo modprobe msr')
-            print_error('sudo setcap cap_sys_rawio=ep `which pcm-memory.x`')
-            sys.exit(1)
-
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
         print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
         sys.exit(1)
-
-        print_info(cfg,'Read NMI watchlog status ...')
-        nmi_output = ""
-        try:
-            with open(logdir+"nmi_status.txt", 'w') as f:
-                p_pcm_pcie = subprocess.Popen(['yes | timeout 3 pcm-pcie.x'], shell=True, stdout=f)
-                if p_pcm_pcie != None:
-                    p_pcm_pcie.kill()
-                    print_info(cfg,"tried killing pcm-pcie.x")
-                os.system('pkill pcm-pcie.x')
-            with open(logdir+"nmi_status.txt", 'r') as f:
-                lines = f.readlines()
-                if len(lines) > 0:
-                    if lines[0].find('Error: NMI watchdog is enabled.') != -1:
-                        print_error('NMI watchdog is enabled., please try the command below:')
-                        print_error('sudo sysctl -w kernel.nmi_watchdog=0')
-#            output = subprocess.check_output('yes | timeout 3 pcm-pcie.x 2>&1', shell=True)
-        except subprocess.CalledProcessError as e:
-            print_warning("There was error while reading NMI status.")
-
 
     print_info(cfg,'Clean previous logged files')
     # Not equal to sofa_clean(...) !!
@@ -239,13 +193,6 @@ def sofa_record(command, cfg):
             print_info(cfg,'nvprof is launched')
         else:
             print_warning('Profile without NVPROF')
-
-        if cfg.enable_pcm:
-            with open(os.devnull, 'w') as FNULL:
-                delay_pcie = 0.02
-                #p_pcm_pcie = subprocess.Popen(['yes|pcm-pcie.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_pcie.csv -B '], shell=True)
-                p_pcm_memory = subprocess.Popen(['yes|pcm-memory.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_memory.csv '], shell=True)
-                #p_pcm_numa = subprocess.Popen(['yes|pcm-numa.x ' + str(delay_pcie) + ' -csv=sofalog/pcm_numa.csv '], shell=True)
 
         print_progress("Recording...")
         if cfg.profile_all_cpus == True:
@@ -432,8 +379,6 @@ def sofa_record(command, cfg):
         if p_nvprof != None:
             p_nvprof.terminate()
             print_info(cfg,"tried terminating nvprof")
-        if cfg.enable_pcm:
-            kill_pcm_modules(cfg, p_pcm_pcie, p_pcm_memory, p_pcm_numa)
         if p_strace != None:
             p_strace.terminate()
             print_info(cfg,"tried terminating strace")
@@ -475,8 +420,6 @@ def sofa_record(command, cfg):
         if p_nvprof != None:
             p_nvprof.kill()
             print_info(cfg,"tried killing nvprof")
-        if cfg.enable_pcm:
-            kill_pcm_modules(cfg, p_pcm_pcie, p_pcm_memory, p_pcm_numa)
         if p_strace != None:
             p_strace.kill()
             print_info(cfg,"tried killing strace")

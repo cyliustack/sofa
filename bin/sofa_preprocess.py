@@ -441,9 +441,6 @@ def sofa_preprocess(cfg):
     nvsmi_mem_traces = []
     nvsmi_enc_traces = []
     nvsmi_dec_traces = []
-    pcm_pcie_traces = []
-    pcm_core_traces = []
-    pcm_memory_traces = []
     gpu_traces = []
     gpu_traces_viz = []
     gpu_api_traces = []
@@ -1749,152 +1746,6 @@ def sofa_preprocess(cfg):
         print_warning('no perf traces.') 
 
          
-    #=== Intel PCM Trace =======#
-    if cfg.enable_pcm and os.path.isfile('%s/pcm_pcie.csv' % logdir):
-        with open( logdir + '/pcm_pcie.csv' ) as f:
-            lines = f.readlines()
-            print_info(cfg,"Length of pcm_pcie_traces = %d" % len(lines))
-            if len(lines) > 0:
-                pcm_pcie_list = []
-                pcm_pcie_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-                for line in lines:
-                    if line.find('Skt') == -1:
-                        fields = line.split(',')
-                        #for f in range(len(fields)):
-                        #    print("field[%d] %s" % (f, fields[f]))
-
-                        skt = int(fields[1])
-                        t_begin = float(fields[0])
-
-                        if not cfg.absolute_timestamp:
-                            t_begin = t_begin - cfg.time_base
-
-                        deviceId = skt
-                        event = -1
-                        copyKind = -1
-                        payload = -1
-                        pcm_pcie_wt_count = int(float(fields[2])*64/1e3)+1e-6
-                        pcm_pcie_rd_count = int(float(fields[6])*64/1e3)+1e-6
-                        pkt_src = pkt_dst = -1
-                        pid = tid = -1
-                        pcm_pcie_info = "PCM=pcie | skt=%d | RD=%d (KB)" % (
-                            skt, pcm_pcie_rd_count)
-
-                        bandwidth = pcm_pcie_rd_count
-                        trace = [
-                            t_begin,
-                            event,
-                            bandwidth,
-                            deviceId,
-                            copyKind,
-                            payload,
-                            bandwidth,
-                            pkt_src,
-                            pkt_dst,
-                            pid,
-                            tid,
-                            pcm_pcie_info,
-                            cpuid]
-                        pcm_pcie_list.append(trace)
-
-                        pcm_pcie_info = "PCM=pcie | skt=%d | WT=%d (KB)" % (
-                            skt, pcm_pcie_wt_count)
-                        bandwidth = pcm_pcie_wt_count
-                        trace = [
-                            t_begin,
-                            event,
-                            bandwidth,
-                            deviceId,
-                            copyKind,
-                            payload,
-                            bandwidth,
-                            pkt_src,
-                            pkt_dst,
-                            pid,
-                            tid,
-                            pcm_pcie_info,
-                            cpuid]
-                        pcm_pcie_list.append(trace)
-                pcm_pcie_traces = list_to_csv_and_traces(logdir, pcm_pcie_list, 'pcm_pcie_trace.csv', 'w')
-
-            else:
-                print_warning('No pcm-pcie counter values are recorded.')
-                print_warning('If necessary, run /usr/local/intelpcm/bin/pcm-pcie.x ONCE to reset MSR so as to enable correct pcm recording')
-
-    ### time, skt, iMC_Read, iMC_Write [, partial_write] [, EDC_Read, EDC_Write] , sysRead, sysWrite, sysTotal
-    if cfg.enable_pcm and os.path.isfile('%s/pcm_memory.csv' % logdir):
-        with open( logdir + '/pcm_memory.csv' ) as f:
-            lines = f.readlines()
-            print_info(cfg,"Length of pcm_memory_traces = %d" % len(lines))
-            if len(lines) > 0:
-                pcm_memory_list = []
-                pcm_memory_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-                for line in lines:
-                    if line.find('Skt') == -1:
-                        fields = line.split(',')
-
-                        skt = int(fields[1])
-                        t_begin = float(fields[0])
-                        deviceId = skt
-                        event = -1
-                        copyKind = -1
-                        payload = -1
-                        try:
-                            pcm_memory_wt_count = int(float(fields[3]))
-                            pcm_memory_rd_count = int(float(fields[2]))
-                        except:
-                            pcm_memory_wt_count=0
-                            pcm_memory_rd_count=0
-
-                        pkt_src = pkt_dst = -1
-                        pid = tid = -1
-                        pcm_memory_info = "PCM=memory | skt=%d | RD=%d (MB/s)" % (
-                            skt, pcm_memory_rd_count)
-
-                        if not cfg.absolute_timestamp:
-                            t_begin = t_begin - cfg.time_base
-
-                        bandwidth = pcm_memory_rd_count
-                        trace = [
-                            t_begin,
-                            event,
-                            bandwidth,
-                            deviceId,
-                            copyKind,
-                            payload,
-                            bandwidth,
-                            pkt_src,
-                            pkt_dst,
-                            pid,
-                            tid,
-                            pcm_memory_info,
-                            cpuid]
-                        pcm_memory_list.append(trace)
-
-                        pcm_memory_info = "PCM=memory | skt=%d | WT=%d (MB/s)" % (
-                            skt, pcm_memory_wt_count)
-                        bandwidth = pcm_memory_wt_count
-                        trace = [
-                            t_begin,
-                            event,
-                            bandwidth,
-                            deviceId,
-                            copyKind,
-                            payload,
-                            bandwidth,
-                            pkt_src,
-                            pkt_dst,
-                            pid,
-                            tid,
-                            pcm_memory_info,
-                            cpuid]
-                        pcm_memory_list.append(trace)
-                pcm_memory_traces = list_to_csv_and_traces(logdir, pcm_memory_list, 'pcm_memory_trace.csv', 'w')
-
-            else:
-                print_warning('No pcm-memory counter values are recorded.')
-                print_warning('If necessary, run /usr/local/intelpcm/bin/pcm-memory.x ONCE to reset MSR so as to enable correct pcm recording')
-
     print_progress(
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
@@ -2085,24 +1936,6 @@ def sofa_preprocess(cfg):
         sofatrace.y_field = 'duration'
         sofatrace.data = nvsmi_dec_traces
         traces.append(sofatrace)
-
-    sofatrace = SOFATrace()
-    sofatrace.name = 'pcm_pcie'
-    sofatrace.title = 'PCM_PCIE'
-    sofatrace.color = 'purple'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'bandwidth'
-    sofatrace.data = pcm_pcie_traces
-    traces.append(sofatrace)
-
-    sofatrace = SOFATrace()
-    sofatrace.name = 'pcm_memory'
-    sofatrace.title = 'PCM_MEMORY'
-    sofatrace.color = 'pink'
-    sofatrace.x_field = 'timestamp'
-    sofatrace.y_field = 'bandwidth'
-    sofatrace.data = pcm_memory_traces
-    traces.append(sofatrace)
 
     sofatrace = SOFATrace()
     sofatrace.name = 'net_trace'

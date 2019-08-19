@@ -122,8 +122,6 @@ function install_packages()
 function install_utility_from_source()
 {
     echo -e "${C_GREEN}Installing utilities from source...${C_NONE}"
-    make -C $FILEPATH/../sofa-pcm -j4 
-    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     nvcc $FILEPATH/cuhello.cu -o $FILEPATH/../bin/cuhello
     [[ $? != 0 ]] && echo -e "${C_YELLOW}No nvcc found; nvcc is required to improve perf timestamp accuracy.${C_NONE}" 
     g++  $FILEPATH/sofa_perf_timebase.cc -o $FILEPATH/../bin/sofa_perf_timebase

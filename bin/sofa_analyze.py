@@ -811,6 +811,7 @@ def sofa_analyze(cfg):
         if not df_cpu.empty: 
             cpu_profile(logdir, cfg, df_cpu)
             if len(df_cpu) > cfg.num_swarms:
+                print('length of CPU traces:, ', len(df_cpu))
                 df_cpu, swarms = hsg_v2(cfg, df_cpu)
     except IOError as e:
         df_cpu = pd.DataFrame([], columns=cfg.columns)
