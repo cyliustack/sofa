@@ -192,7 +192,6 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
         print('IOW = %.1lf %%' % elapsed_time_ratio['iow'])
         if cfg.spotlight_gpu:
             elapsed_spotlight_time = cfg.roi_end - cfg.roi_begin 
-    
         else:
             elapsed_spotlight_time = 0 
     
@@ -898,7 +897,7 @@ def sofa_analyze(cfg):
 
 
     if cfg.enable_aisi:
-        selected_pattern, iter_summary = sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat)
+        selected_pattern, iter_summary, features = sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat, features)
                     
     print_title('Final Performance Features')
     print('%s%s%s' % ('ID'.ljust(10),'Feature'.ljust(30),'Value'.ljust(20)) )
@@ -914,6 +913,7 @@ def sofa_analyze(cfg):
             cfg.potato_server = cfg.potato_server + ':50051'
         hint, docker_image = get_hint(cfg.potato_server, features)
         print('Optimization hints: \n')
+        pd.set_option('display.max_colwidth', -1)
         df_report = pd.read_json(hint, orient='table')
         print(df_report)
         file_potato_report = cfg.logdir + 'potato_report.html'

@@ -356,7 +356,7 @@ def trace_timeline(path):
             f.write(str(i) + "," + str(index))
             i += 1
 
-def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
+def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat, features):
     a = 0
     times = []
     times_nosort = []
@@ -492,7 +492,13 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
             print("Averaged number of CUDA streams: %d" % mean_streams)
             print("Averaged MPSTAT USR Ratio : %d" % mean_mpstat_usr)
             print("Averaged MPSTAT SYS Ratio : %d" % mean_mpstat_sys)
-
+ 
+            df = pd.DataFrame({ 'name':['iter_fw_time', 'iter_bw_time', 'iter_copy_time'], 
+                            'value':[mean_fw_time, mean_bw_time, mean_copy_time]}, 
+                            columns=['name','value'])
+    
+            features = pd.concat([features, df])
+ 
             print_title('Performance Optimization Hints')
             comm_ratio = mean_copy_time / mean_step_time
             if comm_ratio < 0.15:
@@ -503,7 +509,7 @@ def sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat):
         else:
             print_warning('No iteration detected after scanning runtime string!')
 
-        return pattern, iter_summary 
+        return pattern, iter_summary, features 
 
     except IOError:
         print_warning(
