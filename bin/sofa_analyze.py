@@ -24,6 +24,7 @@ import potato_pb2
 import potato_pb2_grpc
 import socket
 import random
+import subprocess
 from sofa_ml import hsg_v2
 
 def random_generate_color():
@@ -923,6 +924,10 @@ def sofa_analyze(cfg):
         print('Tag of optimal image recommended from POTATO: ' + highlight(docker_image))
         print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
     
+    sofa_home = os.path.dirname(os.path.realpath(__file__))
+    subprocess.Popen(
+        ['bash', '-c', 'cp %s/../sofaboard/* %s;' % (sofa_home, cfg.logdir)])
+    subprocess.Popen(['sleep', '2'])
     print('\n\n')
 
 def cluster_analyze(cfg):
