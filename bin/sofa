@@ -87,6 +87,7 @@ if __name__ == "__main__":
     parser.add_argument('--enable_encode_decode', dest='enable_encode_decode', action='store_true')
     parser.add_argument('--aisi_via_strace', dest='aisi_via_strace', action='store_true')
     parser.add_argument('--display_swarms', dest='display_swarms', action='store_true')
+    parser.add_argument('--enable_swarms', dest='enable_swarms', action='store_true')
     parser.add_argument('--enable_py_stacks', dest='enable_py_stacks', action='store_true', required=False, 
                             help='Record the callstack of python program via py-spy')
     parser.add_argument('--base_logdir', dest='base_logdir', default='')
@@ -187,7 +188,10 @@ if __name__ == "__main__":
 
     if args.hsg_multifeatures is not None:
         cfg.hsg_multifeatures = args.hsg_multifeatures
-    
+
+    if args.enable_swarms is not None:
+        cfg.enable_swarms = args.enable_swarms
+
     if args.display_swarms is not None:
         cfg.display_swarms = args.display_swarms
 

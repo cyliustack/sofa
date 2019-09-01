@@ -24,6 +24,7 @@ class SOFA_Config:
     enable_aisi = False
     aisi_via_strace = False
     strace_min_time = 1e-6
+    enable_swarms = False
     display_swarms = False
     hsg_multifeatures = False
     use_diff = False # output csv file for sofa swarm-diff
@@ -65,4 +66,4 @@ class SOFA_Config:
     roi_begin=0
     roi_end=0
     netstat_interface=None
-    nvsmi_time_zone=0 
+    nvsmi_time_zone=0

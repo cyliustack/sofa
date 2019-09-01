@@ -19,16 +19,13 @@ def partial_sum(df):
 
 def get_top_k_events(df, topk):
     topk_events=[]
-    print("Top %d Events:"%topk)
+    print("Top %d Events: "%topk)
     gby = df.groupby(['name'])
     df_agg = gby.aggregate(np.sum)
     df_agg_sorted = df_agg.sort_values(by=['duration'],ascending=False)
     #memcpy = ['copyKind_1_','copyKind_2_','copyKind_8_']
+    print(df_agg_sorted[['duration']][0:topk])
     eventName = df_agg_sorted[df_agg_sorted.columns[0:0]].head(topk).index.values.tolist()
-    #eventName.extend(memcpy)
-
-    for i in range(len(eventName)):
-        print('[%d] %s'%(i,eventName[i]))
     return eventName
 
 # print_format_table()

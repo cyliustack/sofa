@@ -222,10 +222,11 @@ def hsg_v1(cfg, cpu_traces, swarm_groups, swarm_stats, t_offset, cpu_mhz_xp, cpu
 
     swarm_groups.sort(key=itemgetter('total_duration'), reverse = True) # reverse = True: descending
     swarm_stats.sort(key=itemgetter('duration_sum'), reverse = True)
+    
     if not cfg.cluster_ip:
         print_title('HSG Statistics - Top-%d Swarms'%(cfg.num_swarms))
 
-        print('%45s\t%13s\t%30s'%('SwarmCaption', 'ExecutionTime[sum,mean,count] (s)', 'Example'))
+    print('%45s\t%13s\t%30s'%('SwarmCaption', 'ExecutionTime[sum,mean,count] (s)', 'Example'))
     for i in range(len(swarm_stats)):
         if i >= cfg.num_swarms:
             break

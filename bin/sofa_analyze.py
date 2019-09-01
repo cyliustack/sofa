@@ -610,8 +610,7 @@ def cpu_profile(logdir, cfg, df):
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
     for key, item in grouped_df:
-        if cfg.verbose:
-            print(("[%d]: %lf" % (key, grouped_df.get_group(key).sum())))
+        print(("[%d]: %lf" % (key, grouped_df.get_group(key).sum())))
         total_exec_time = total_exec_time + grouped_df.get_group(key).sum()
     
     print("total execution time (s) = %.3lf" % total_exec_time)
@@ -809,9 +808,9 @@ def sofa_analyze(cfg):
     try:
         df_cpu = pd.read_csv(filein_cpu)
         if not df_cpu.empty: 
-            cpu_profile(logdir, cfg, df_cpu)
-            if len(df_cpu) > cfg.num_swarms:
-                print('length of CPU traces:, ', len(df_cpu))
+            if cfg.verbose:
+                cpu_profile(logdir, cfg, df_cpu)
+            if cfg.enable_swarms and len(df_cpu) > cfg.num_swarms:
                 df_cpu, swarms = hsg_v2(cfg, df_cpu)
     except IOError as e:
         df_cpu = pd.DataFrame([], columns=cfg.columns)
