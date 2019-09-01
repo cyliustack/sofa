@@ -1734,14 +1734,15 @@ def sofa_preprocess(cfg):
                     filtered_groups.append({'group': group,
                                             'color': filter.color,
                                             'keyword': filter.keyword})
-            try:
-                swarm_stats = []
-                swarms = []
-                #swarms, swarm_stats = hsg_v1(cfg, cpu_traces, swarms, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp) 
-                cpu_traces, swarms = hsg_v2(cfg, cpu_traces, export_file=cfg.logdir+'/swarms_report.txt') 
-            except TypeError:
-                print_warning('HSG returned a None object to swarms, check if sofalog/perf.data can be accessed.')
-                pass 
+            if cfg.enable_swarms:
+                try:
+                    swarm_stats = []
+                    swarms = []
+                    #swarms, swarm_stats = hsg_v1(cfg, cpu_traces, swarms, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp) 
+                    cpu_traces, swarms = hsg_v2(cfg, cpu_traces, export_file=cfg.logdir+'/swarms_report.txt') 
+                except TypeError:
+                    print_warning('HSG returned a None object to swarms, check if sofalog/perf.data can be accessed.')
+                    pass 
     except:
         print_warning('no perf traces.') 
 
@@ -1776,7 +1777,7 @@ def sofa_preprocess(cfg):
             sofatrace.data = filtered_group['group'].copy()
             traces.append(sofatrace)
  
-        if len(swarms) > 0 :
+        if cfg.enable_swarms and len(swarms) > 0 :
             traces = swarms_to_sofatrace(cfg, swarms, traces) # append data of hsg function
 
     sofatrace = SOFATrace()
