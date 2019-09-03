@@ -131,7 +131,7 @@ def sofa_clean(cfg):
 
 
 def sofa_record(command, cfg):
-
+    print_main_progress('SOFA recording...')
     p_perf = None
     p_tcpdump = None
     p_mpstat  = None
@@ -185,7 +185,7 @@ def sofa_record(command, cfg):
 
 
     try:
-        print_progress("Prologue of Recording...")
+        print_main_progress("Prologue of Recording...")
         if int(os.system('command -v nvprof 1> /dev/null')) == 0:
             p_nvprof = subprocess.Popen(['nvprof', '--profile-all-processes', '-o', logdir+'/gputrace%p.nvvp'], stderr=DEVNULL, stdout=DEVNULL)
             print_info(cfg,'Launching nvprof')
@@ -194,7 +194,7 @@ def sofa_record(command, cfg):
         else:
             print_warning('Profile without NVPROF')
 
-        print_progress("Recording...")
+        print_main_progress("Recording...")
         if cfg.profile_all_cpus == True:
             perf_options = '-a'
         else:
@@ -336,7 +336,7 @@ def sofa_record(command, cfg):
             f_misc.write('vcores %d\n' % (vcores))
             f_misc.write('pid %d\n' % (target_pid))
 
-        print_progress("Epilogue of Recording...")
+        print_main_progress("Epilogue of Recording...")
         if p_tcpdump != None:
             p_tcpdump.terminate()
             print_info(cfg,"tried terminating tcpdump")
@@ -425,4 +425,4 @@ def sofa_record(command, cfg):
             print_info(cfg,"tried killing strace")
 
         raise
-    print_progress("End of Recording")
+    print_main_progress("End of Recording")

@@ -22,8 +22,9 @@ def print_title(content):
 def print_error(content):
     print(bcolors.C_RED + "[ERROR] " + content + bcolors.ENDC)
 
-def print_warning(content):
-    print(bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC)
+def print_warning(cfg, content):
+    if cfg.verbose:
+        print(bcolors.WARNING + "[WARNING] " + content + bcolors.ENDC)
 
 def print_info(cfg, content):
     if cfg.verbose:
@@ -32,7 +33,11 @@ def print_info(cfg, content):
 def print_hint(content):
     print(bcolors.HINT + "[HINT] " + content + bcolors.ENDC)
 
-def print_progress(content):
+def print_progress(cfg, content):
+    if cfg.verbose:
+        print(bcolors.TEXT_PURPLE + "[PROGRESS] " + content + bcolors.ENDC)
+
+def print_main_progress(content):
     print(bcolors.TEXT_PURPLE + "[PROGRESS] " + content + bcolors.ENDC)
 
 def highlight(content):

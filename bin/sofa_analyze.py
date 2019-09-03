@@ -31,6 +31,19 @@ def random_generate_color():
     rand = lambda: random.randint(0, 255)
     return '#%02X%02X%02X' % (64, rand(), rand())
 
+def get_top_k_events(cfg, df, topk):
+    topk_events=[]
+    gby = df.groupby(['name'])
+    df_agg = gby.aggregate(np.sum)
+    df_agg_sorted = df_agg.sort_values(by=['duration'],ascending=False)
+    #memcpy = ['copyKind_1_','copyKind_2_','copyKind_8_']
+    if cfg.verbose:
+        print("Top %d Events: "%topk)
+        print(df_agg_sorted[['duration']][0:topk])
+    eventName = df_agg_sorted[df_agg_sorted.columns[0:0]].head(topk).index.values.tolist()
+    return eventName
+
+
 # input: pfv(performance feature vector), Pandas.DataFrame
 # output: hint, docker_image  
 def get_hint(potato_server, features):
@@ -60,7 +73,8 @@ def get_hint(potato_server, features):
     return hint, docker_image 
 
 def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features):
-    print_title("Concurrency Breakdown Analysis")
+    if cfg.verbose:
+        print_title('Concurrency Breakdown Analysis')
 
     total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
     elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
@@ -69,7 +83,7 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
     
  
     if len(df_mpstat) == 0:
-        print_warning('no mpstat and perf traces!')
+        print_warning(cfg, 'no mpstat and perf traces!')
         return features
 
     t_begin = df_mpstat.iloc[0]['timestamp']
@@ -167,7 +181,7 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
                                df_tx_interval['bandwidth'].sum(),
                                df_rx_interval['bandwidth'].sum()]                             
             total_interval_vector.append(tuple(interval_vector)) 
-            if num_gpus > 0: 
+            if num_gpus > 0:
                 sm_avg = df_nvsmi_interval['duration'].sum() / int(len(list(set(df_nvsmi_interval['deviceId']))))
             else:
                 sm_avg = 0
@@ -186,11 +200,12 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
         elapsed_time_ratio['sys'] = 100 * total_elapsed_time['sys'] / total_all_elapsed_time 
         elapsed_time_ratio['gpu'] = 100 * total_elapsed_time['gpu'] / total_all_elapsed_time 
         elapsed_time_ratio['iow'] = 100 * total_elapsed_time['iow'] / total_all_elapsed_time 
-        print('Elapsed Time = %.1lf ' % total_all_elapsed_time)
-        print('USR = %.1lf %%' % elapsed_time_ratio['usr'])
-        print('SYS = %.1lf %%' % elapsed_time_ratio['sys'])
-        print('GPU = %.1lf %%' % elapsed_time_ratio['gpu'])
-        print('IOW = %.1lf %%' % elapsed_time_ratio['iow'])
+        if cfg.verbose:
+            print('Elapsed Time = %.1lf ' % total_all_elapsed_time)
+            print('USR = %.1lf %%' % elapsed_time_ratio['usr'])
+            print('SYS = %.1lf %%' % elapsed_time_ratio['sys'])
+            print('GPU = %.1lf %%' % elapsed_time_ratio['gpu'])
+            print('IOW = %.1lf %%' % elapsed_time_ratio['iow'])
         if cfg.spotlight_gpu:
             elapsed_spotlight_time = cfg.roi_end - cfg.roi_begin 
         else:
@@ -208,9 +223,10 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
         performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util', 'cpu_max', 'cpu_min'])
         performance_table.to_csv('%s/performance.csv' % logdir)
         vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'gpu', 'net_tx', 'net_rx'])
-        print('Correlation Table :')
         pearson = vector_table.corr(method ='pearson').round(2)
-        print(pearson)
+        if cfg.verbose:
+            print('Correlation Table :')
+            print(pearson)
         df = pd.DataFrame({ 'name':['corr_gpu_usr', 'corr_gpu_sys', 'corr_gpu_iow', 'corr_gpu_ntx', 'corr_gpu_nrx'], 'value':[pearson['gpu'].usr, pearson['gpu'].sys, pearson['gpu'].iow, pearson['gpu'].net_tx, pearson['gpu'].net_rx]}, columns=['name','value'])
         features = pd.concat([features, df])
     return features
@@ -230,12 +246,12 @@ class Event:
         return repr((self.name, self.ttype, self.timestamp, self.duration))
 
 def nvsmi_profile(logdir, cfg, df_nvsmi, features):
-    if not cfg.cluster_ip:
-        print_title("SM & MEM & ENCODE/DECODE Profiling")
+    if not cfg.cluster_ip and cfg.verbose:
+        print_title('SM & MEM & ENCODE/DECODE Profiling')
    
     if cfg.spotlight_gpu:
         if cfg.roi_end == 0 :
-            print_warning("spotlight_gpu has no effects.")
+            print_warning(cfg, 'spotlight_gpu has no effects.')
         else:
             cond1 = (df_nvsmi['timestamp'] > cfg.roi_begin)
             cond2 = (df_nvsmi['timestamp'] <= cfg.roi_end)
@@ -288,7 +304,7 @@ def nvsmi_profile(logdir, cfg, df_nvsmi, features):
     sm_q.index.name = 'gpu_id'
     mem_q.index.name = 'gpu_id'
 
-    if not cfg.cluster_ip:
+    if not cfg.cluster_ip and cfg.verbose:
         print('GPU Utilization (%):')
         print(res)
         print('\nGPU SM Quartile (%):')
@@ -314,17 +330,18 @@ def nvsmi_profile(logdir, cfg, df_nvsmi, features):
     return features
 
 def gpu_profile(logdir, cfg, df_gpu, features):
-    print_title("GPU Profiling")
-    print('Per-GPU time (s):')
+    if cfg.verbose:
+        print_title('GPU Profiling')
+        print('Per-GPU time (s):')
     groups = df_gpu.groupby("deviceId")["duration"]
     gpu_time = 0
     for key, item in groups:
         gpuid = int(float(key))
         per_gpu_time = groups.get_group(key).sum()
-        print("[%d]: %lf" % (gpuid, per_gpu_time))
+        if cfg.verbose:
+            print("[%d]: %lf" % (gpuid, per_gpu_time))
         gpu_time = gpu_time + per_gpu_time 
     num_gpus = len(groups)
-    print(("Total GPU time of all GPUs (s) = %.3lf" % gpu_time))
    
     kernel_time = 0
     grouped_df = df_gpu.groupby("copyKind")["duration"]
@@ -341,7 +358,7 @@ def gpu_profile(logdir, cfg, df_gpu, features):
 
     features = comm_profile(logdir, cfg, df_gpu, features)
 
-    get_top_k_events(df_gpu, 10)
+    get_top_k_events(cfg, df_gpu, 10)
     df = pd.DataFrame({'name':['gpu_time', 'num_gpus', 'kernel_time', 'nccl_time'], 
                         'value':[gpu_time, num_gpus, kernel_time, nccl_time] }, 
                         columns=['name','value'])
@@ -349,14 +366,14 @@ def gpu_profile(logdir, cfg, df_gpu, features):
     return features
 
 def strace_profile(logdir, cfg, df, features):
-    print_title("STRACE Profiling:")
+    print_title('STRACE Profiling:')
 
     return features
 
  
 def net_profile(logdir, cfg, df, features):
     if not cfg.cluster_ip:
-        print_title("Network Profiling:")
+        print_title(cfg,"Network Profiling:")
     grouped_df = df.groupby("name")["duration"]
     net_time = 0
     n_packets = 0
@@ -429,8 +446,8 @@ def net_profile(logdir, cfg, df, features):
     packet_sum_matrix = packet_sum_matrix.rename(index=rename_index_new)
     packet_num_matrix.index.set_levels(rename_index2_final , level = 0, inplace = True)
     
-    print("total amount of network traffic : ", convertbyte(df['payload'].sum()), '\n', packet_sum_matrix.to_string(), "\n")
     if cfg.verbose:
+        print("total amount of network traffic : ", convertbyte(df['payload'].sum()), '\n', packet_sum_matrix.to_string(), "\n")
         print("total amount of network packets = %d\n" % packet_num_matrix.sum().sum() ,packet_num_matrix.to_string(), "\n")
     
     network_value = []
@@ -501,8 +518,8 @@ def convertbytes(B):
         return '{0:.2f} TB/s'.format(B/TB)
 
 def netbandwidth_profile(logdir, cfg, df, features):
-    if not cfg.cluster_ip:
-        print_title("Network Bandwidth Profiling:")
+    if not cfg.cluster_ip and cfg.verbose:
+        print_title('Network Bandwidth Profiling:')
     tx = df['event'] == float(0)
     rx = df['event'] == float(1)
       
@@ -533,14 +550,15 @@ def netbandwidth_profile(logdir, cfg, df, features):
         bw_rx_q2 = df[rx]['bandwidth'].quantile(0.5)
         bw_rx_q3 = df[rx]['bandwidth'].quantile(0.75)
         bw_rx_mean = int(df[rx]['bandwidth'].mean())
-        print('Amount of Network Traffic : %s' % (convertbyte(tx_amount + rx_amount)))
-        print('Amount of tx : %s' % convertbyte(tx_amount))
-        print('Amount of rx : %s' % convertbyte(rx_amount))
-        print('Bandwidth Quartile :')
-        print('Q1  tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
-        print('Q2  tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
-        print('Q3  tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
-        print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))
+        if cfg.verbose:
+            print('Amount of Network Traffic : %s' % (convertbyte(tx_amount + rx_amount)))
+            print('Amount of tx : %s' % convertbyte(tx_amount))
+            print('Amount of rx : %s' % convertbyte(rx_amount))
+            print('Bandwidth Quartile :')
+            print('Q1  tx : %s, rx : %s' % ( convertbytes(bw_tx_q1), convertbytes(bw_rx_q1)))
+            print('Q2  tx : %s, rx : %s' % ( convertbytes(bw_tx_q2), convertbytes(bw_rx_q2)))
+            print('Q3  tx : %s, rx : %s' % ( convertbytes(bw_tx_q3), convertbytes(bw_rx_q3)))
+            print('Avg tx : %s, rx : %s'% ( convertbytes(bw_tx_mean), convertbytes(bw_rx_mean)))
 
     #network chart part
     all_time = df[tx]['timestamp'].tolist()
@@ -554,7 +572,7 @@ def netbandwidth_profile(logdir, cfg, df, features):
     plt.xlabel('Timestamp (s)', fontsize=16)
     plt.ylabel("Bandwidth (bytes)", fontsize=16)
     fig.savefig("%s/network_report.pdf" % logdir, bbox_inches='tight')
-    if not cfg.cluster_ip:
+    if not cfg.cluster_ip and cfg.verbose:
         print('Network Bandwidth Chart is saved at %s/network_report.pdf' %logdir)
 
         df_feature = pd.DataFrame({ 'name':['bw_tx_q2', 'bw_tx_q3', 'bw_rx_q2', 'bw_rx_q3'], 
@@ -565,8 +583,9 @@ def netbandwidth_profile(logdir, cfg, df, features):
     return features
 
 def blktrace_latency_profile(logdir, cfg, df, features):
-    print_title("Storage Profiling:")
-    print('Blktracae Latency Quartile (s):')
+    if cfg.verbose:
+        print_title('Storage Profiling:')
+        print('Blktracae Latency Quartile (s):')
     blktrace_latency = df['event'] == 'C'
     blktrace_latency_q1 = df[blktrace_latency]['duration'].quantile(0.25)
     blktrace_latency_q2 = df[blktrace_latency]['duration'].quantile(0.5)
@@ -585,8 +604,9 @@ def blktrace_latency_profile(logdir, cfg, df, features):
     return features
 
 def diskstat_profile(logdir, cfg, df, features):
-    print_title("DISKSTAT Profiling:")
-    print('Disk Throughput Quartile :')
+    if cfg.verbose:
+        print_title('DISKSTAT Profiling:')
+        print('Disk Throughput Quartile :')
     diskstat_q1 = df['bandwidth'].quantile(0.25)
     diskstat_q2 = df['bandwidth'].quantile(0.5)
     diskstat_q3 = df['bandwidth'].quantile(0.75)
@@ -605,8 +625,9 @@ def diskstat_profile(logdir, cfg, df, features):
     return features
 
 def cpu_profile(logdir, cfg, df):
-    print_title("CPU Profiling:")
-    print('elapsed_time (s) = %.6lf' % cfg.elapsed_time) 
+    if cfg.verbose:
+        print_title('CPU Profiling:')
+        print('elapsed_time (s) = %.6lf' % cfg.elapsed_time) 
     grouped_df = df.groupby("deviceId")["duration"]
     total_exec_time = 0
     for key, item in grouped_df:
@@ -622,8 +643,6 @@ def cpu_profile(logdir, cfg, df):
     print(cpu_detail_profile_df[:20].to_string(index=False))
 
 def vmstat_profile(logdir, cfg, df, features):
-    print_title("VMSTAT Profiling:")
-
     _,_,_,_,_,_,df['si'],df['so'],df['bi'],df['bo'],df['in'],df['cs'],_,_,_,_,_=df['name'].str.split('|').str
     for col_name in ('si','so','bi','bo','in','cs'):
         df[col_name] = df[col_name].str[3:]
@@ -632,10 +651,12 @@ def vmstat_profile(logdir, cfg, df, features):
     vm_bo = vmstat_traces['bo'].mean()
     vm_cs = vmstat_traces['cs'].mean()
     vm_in = vmstat_traces['in'].mean()
-    print('average bi/s: %d' % int(vm_cs))
-    print('average bo/s: %d' % int(vm_in))
-    print('average cs/s: %d' % int(vm_bi))
-    print('average in/s: %d' % int(vm_bo))
+    if cfg.verbose:
+        print_title('VMSTAT Profiling:')
+        print('average bi/s: %d' % int(vm_cs))
+        print('average bo/s: %d' % int(vm_in))
+        print('average cs/s: %d' % int(vm_bi))
+        print('average in/s: %d' % int(vm_bo))
 
     df_feature = pd.DataFrame({ 'name':['vm_bi', 'vm_bo', 'vm_cs', 'vm_in' ], 
                         'value':[vm_bi, vm_bo, vm_cs, vm_in] }, 
@@ -645,8 +666,8 @@ def vmstat_profile(logdir, cfg, df, features):
     return features
 
 def mpstat_profile(logdir, cfg, df, features):
-    if not cfg.cluster_ip:
-        print_title("MPSTAT Profiling:")
+    if not cfg.cluster_ip and cfg.verbose:
+        print_title('MPSTAT Profiling:')
     num_cores = int(df['deviceId'].max() + 1)
     df_summary = pd.DataFrame( np.zeros((num_cores,5)), columns=['USR','SYS','IDL','IOW','IRQ'])
     _,_,_,_,_,df['USR'],df['SYS'],df['IDL'],df['IOW'],df['IRQ'],_ = df["name"].str.split('|').str
@@ -666,23 +687,23 @@ def mpstat_profile(logdir, cfg, df, features):
         df_summary.iloc[index]['IDL'] = dff['t_IDL'].sum()
         df_summary.iloc[index]['IRQ'] = dff['t_IRQ'].sum()
         df_summary.iloc[index]['IOW'] = dff['t_IOW'].sum()
-    if not cfg.cluster_ip:
+    if not cfg.cluster_ip and cfg.verbose:
         print('CPU Utilization (%):')
         print('core\tUSR\tSYS\tIDL\tIOW\tIRQ')
     for i in range(len(df_summary)):
         t_sum = df_summary.iloc[i].sum() 
-        if not cfg.cluster_ip:
+        if not cfg.cluster_ip and cfg.verbose:
             print('%3d\t%3d\t%3d\t%3d\t%3d\t%3d'%(i,int(100.0*df_summary.iloc[i]['USR']/t_sum),
                                                     int(100.0*df_summary.iloc[i]['SYS']/t_sum),
                                                     int(100.0*df_summary.iloc[i]['IDL']/t_sum),
                                                     int(100.0*df_summary.iloc[i]['IOW']/t_sum),
                                                     int(100.0*df_summary.iloc[i]['IRQ']/t_sum) ))
-    if not cfg.cluster_ip:
+    if not cfg.cluster_ip and cfg.verbose:
         print('CPU Time (s):')
         print('core\tUSR\tSYS\tIDL\tIOW\tIRQ')
     for i in range(len(df_summary)):
         t_sum = df_summary.iloc[i].sum()
-        if not cfg.cluster_ip:
+        if not cfg.cluster_ip and cfg.verbose:
             print('%3d\t%.2lf\t%.2lf\t%.2lf\t%.2lf\t%.2lf'%(i,
                                                     df_summary.iloc[i]['USR'],
                                                     df_summary.iloc[i]['SYS'],
@@ -692,7 +713,7 @@ def mpstat_profile(logdir, cfg, df, features):
 
     total_cpu_time = df_summary[['USR','SYS','IRQ']].sum().sum()
     cpu_util = int(100*total_cpu_time / (num_cores*cfg.elapsed_time))
-    if not cfg.cluster_ip:
+    if not cfg.cluster_ip and cfg.verbose:
         print('Active CPU Time (s): %.3lf' % total_cpu_time)
         print('Active CPU ratio (%%): %3d' % cpu_util)
     df_feature = pd.DataFrame({ 'name':['num_cores', 'cpu_util'], 
@@ -703,6 +724,7 @@ def mpstat_profile(logdir, cfg, df, features):
 
 
 def sofa_analyze(cfg):
+    print_main_progress('SOFA analyzing...')
     filein = []
     df_cpu = pd.DataFrame([], columns=cfg.columns)
     df_gpu = pd.DataFrame([], columns=cfg.columns)
@@ -758,7 +780,8 @@ def sofa_analyze(cfg):
                     # Try to find ring with its length of num_gpus
                     for cycle in nx.simple_cycles(G):
                         if len(cycle) == num_gpus:
-                            print(("One of the recommended ring having length of %d" % len(cycle) ))
+                            if cfg.verbose:
+                                print('One of the recommended ring having length of %d' % len(cycle))
                             ring_found = True
                             os.system("mkdir -p sofalog/sofa_hints/")
                             xring_order = ','.join(map(str, cycle))
@@ -803,7 +826,7 @@ def sofa_analyze(cfg):
                 cfg.roi_end = 0
                 cfg.roi_begin = 0
     except IOError:
-        print_warning("nvsmi_trace.csv is not found")
+        print_warning(cfg, "nvsmi_trace.csv is not found")
 
     try:
         df_cpu = pd.read_csv(filein_cpu)
@@ -814,7 +837,7 @@ def sofa_analyze(cfg):
                 df_cpu, swarms = hsg_v2(cfg, df_cpu)
     except IOError as e:
         df_cpu = pd.DataFrame([], columns=cfg.columns)
-        print_warning("%s is not found" % filein_cpu)
+        print_warning(cfg, "%s is not found" % filein_cpu)
 
     try:
         df_strace = pd.read_csv(filein_strace)
@@ -822,7 +845,7 @@ def sofa_analyze(cfg):
             features = strace_profile(logdir, cfg, df_strace, features)
     except IOError as e:
         df_strace = pd.DataFrame([], columns=cfg.columns)
-        print_warning("%s is not found" % filein_strace)
+        print_warning(cfg, "%s is not found" % filein_strace)
 
     try:
         df_net = pd.read_csv(filein_net)
@@ -830,7 +853,7 @@ def sofa_analyze(cfg):
             features = net_profile(logdir, cfg, df_net, features)
     except IOError as e:
         df_net = pd.DataFrame([], columns=cfg.columns)
-        print_warning("%s is not found" % filein_net)
+        print_warning(cfg, "%s is not found" % filein_net)
 
     try:
         df_bandwidth = pd.read_csv(filein_bandwidth)
@@ -838,7 +861,7 @@ def sofa_analyze(cfg):
             features = netbandwidth_profile(logdir, cfg, df_bandwidth, features)
     except IOError as e:
         df_bandwidth = pd.DataFrame([], columns=cfg.columns)
-        print_warning("%s is not found" % filein_bandwidth)
+        print_warning(cfg, "%s is not found" % filein_bandwidth)
 
     try:
         df_blktrace = pd.read_csv(filein_blktrace)
@@ -847,7 +870,7 @@ def sofa_analyze(cfg):
             features = blktrace_latency_profile(logdir, cfg, df_blktrace, features)
     except IOError as e:
         df_blktrace = pd.DataFrame([], columns=cfg.columns)
-        print_warning("%s is not found" % filein_blktrace)
+        print_warning(cfg, "%s is not found" % filein_blktrace)
 
     try:
         df_diskstat = pd.read_csv(filein_diskstat)
@@ -855,7 +878,7 @@ def sofa_analyze(cfg):
             features = diskstat_profile(logdir, cfg, df_diskstat, features)
     except IOError as e:
         df_diskstat = pd.DataFrame([], columns=cfg.columns)
-        print_warning("%s is not found" % filein_diskstat)
+        print_warning(cfg, "%s is not found" % filein_diskstat)
 
     try:
         df_vmstat = pd.read_csv(filein_vmstat)
@@ -863,7 +886,7 @@ def sofa_analyze(cfg):
             features = vmstat_profile(logdir, cfg, df_vmstat, features)
     except IOError as e:
         df_vmstat = pd.DataFrame([], columns=cfg.columns)
-        print_warning("%s is not found" % filein_vmstat)
+        print_warning(cfg, "%s is not found" % filein_vmstat)
 
     try:
         df_mpstat = pd.read_csv(filein_mpstat)
@@ -871,13 +894,13 @@ def sofa_analyze(cfg):
             features = mpstat_profile(logdir, cfg, df_mpstat, features)
     except IOError as e:
         df_mpstat = pd.DataFrame([], columns=cfg.columns)
-        print_warning("%s is not found" % filein_mpstat)
+        print_warning(cfg, "%s is not found" % filein_mpstat)
 
     try:
         df_nvsmi = pd.read_csv(filein_nvsmi) 
         features = nvsmi_profile(logdir, cfg, df_nvsmi, features)
     except IOError:
-        print_warning("nvsmi_trace.csv is not found")
+        print_warning(cfg, "nvsmi_trace.csv is not found")
 
     try:
         df_gpu = pd.read_csv(filein_gpu)
@@ -885,22 +908,21 @@ def sofa_analyze(cfg):
             features = gpu_profile(logdir, cfg, df_gpu, features)
     except IOError:
         df_gpu = pd.DataFrame([], columns=cfg.columns)
-        print_warning("%s is not found. If there is no need to profile GPU, just ignore it." % filein_gpu)
+        print_warning(cfg, "%s is not found. If there is no need to profile GPU, just ignore it." % filein_gpu)
 
     try:
         if len(df_nvsmi)>0 and len(df_mpstat)>0:
             df_nvsmi.append(df_mpstat.iloc[0])
             features = concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features)
     except IOError as e:
-        print_warning("Some files are not found, which are needed for concurrency_breakdown analysis")
+        print_warning(cfg, "Some files are not found, which are needed for concurrency_breakdown analysis")
 
 
 
     if cfg.enable_aisi:
         selected_pattern, iter_summary, features = sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat, features)
-                    
     print_title('Final Performance Features')
-    print('%s%s%s' % ('ID'.ljust(10),'Feature'.ljust(30),'Value'.ljust(20)) )
+    print('%s%s%s%s' % ('ID'.ljust(10),'Feature'.ljust(30),'Value'.ljust(20),'Unit'.ljust(20)) )
     
     for i in range(len(features)):
         name = features.iloc[i]['name']
@@ -908,18 +930,37 @@ def sofa_analyze(cfg):
         print('%s%s%s' % (str(i).ljust(10), name.ljust(30), ('%.3lf'%value).ljust(20)))
 
     if cfg.potato_server:
-        print_title('POTATO Feedback')
         if cfg.potato_server.find(':') == -1:
             cfg.potato_server = cfg.potato_server + ':50051'
         hint, docker_image = get_hint(cfg.potato_server, features)
-        print('Optimization hints: \n')
-        pd.set_option('display.max_colwidth', -1)
         df_report = pd.read_json(hint, orient='table')
-        print(df_report)
         file_potato_report = cfg.logdir + 'potato_report.html'
+        
+        # Export report to HTML file.
         df_report.to_html(file_potato_report )
         with open(file_potato_report, 'a') as f:
             f.write('<head><link rel=stylesheet type="text/css" href="potato_report.css"></head>')
+
+        print_title('POTATO Feedback')
+        print('%s%s%s' % ('Metric'.ljust(20), 'Value'.ljust(10), 'Reference-Value'.ljust(30)) )
+        for i in range(len(df_report)):
+            metric = df_report.iloc[i]['Metric']
+            if metric != 'suggestion':
+                value = df_report.iloc[i]['Value']
+                ref_value = df_report.iloc[i]['ReferenceValue']
+                print('%s%s%s' % (metric.ljust(20), ('%.3lf'%value).ljust(20), str(ref_value).ljust(30)))
+        
+        print('\n')
+        print_hint('Optimization Suggestions:')
+        for i in range(len(df_report)):
+            metric = df_report.iloc[i]['Metric']
+            if metric == 'suggestion':
+                value = df_report.iloc[i]['Value']
+                print(value)
+        
+
+        #print(df_report[['Metric', 'Value', 'Reference Value']])
+        #print(df_report[['Suggestion']])
         print('Tag of optimal image recommended from POTATO: ' + highlight(docker_image))
         print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
     
@@ -930,7 +971,8 @@ def sofa_analyze(cfg):
     print('\n\n')
 
 def cluster_analyze(cfg):
-    print_title("Cluster Network Profiling :")
+    if cfg.verbose:
+        print_title('Cluster Network Profiling :')
     cluster = cfg.cluster_ip.split(',')
     summary_net = pd.DataFrame([], columns=['Source', 'Destination', 'Amount', 'Percentage of a Node'])
     summary_compute = pd.DataFrame([], columns=['gpu_sm_util','gpu_mem_util','cpu_util'])
@@ -942,7 +984,8 @@ def cluster_analyze(cfg):
                                  columns=['name','value'])
         
         node = 'node ' + str(i)
-        print('node ' + str(i) + ' is ' + ip)
+        if cfg.verbose:
+            print('node ' + str(i) + ' is ' + ip)
         logdir = './sofalog-' + ip +'/'
         filein_net = logdir + "nettrace.csv"
         filein_mpstat = logdir + "mpstat.csv"
@@ -958,24 +1001,24 @@ def cluster_analyze(cfg):
             features = net_profile(logdir, cfg, df_net, features)
         except IOError as e:
             df_net = pd.DataFrame([], columns=cfg.columns)
-            print_warning("%s is not found" % filein_net)
+            print_warning(cfg, "%s is not found" % filein_net)
         try:
             df_mpstat = pd.read_csv(filein_mpstat)
             features = mpstat_profile(logdir, cfg, df_mpstat, features)
         except IOError as e:
             df_mpstat = pd.DataFrame([], columns=cfg.columns)
-            print_warning("%s is not found" % filein_mpstat)
+            print_warning(cfg, "%s is not found" % filein_mpstat)
         try:
             df_nvsmi = pd.read_csv(filein_nvsmi) 
             features = nvsmi_profile(logdir, cfg, df_nvsmi, features)
         except IOError:
-            print_warning("nvsmi_trace.csv is not found")
+            print_warning(cfg, "nvsmi_trace.csv is not found")
         try:
             df_bandwidth = pd.read_csv(filein_bandwidth)
             features = netbandwidth_profile(logdir, cfg, df_bandwidth, features)
         except IOError as e:
             df_bandwidth = pd.DataFrame([], columns=cfg.columns)
-            print_warning("%s is not found" % filein_bandwidth)
+            print_warning(cfg, "%s is not found" % filein_bandwidth)
 
         sm = int(features[features['name'] == 'gpu_sm_util']['value'])
         mem = int(features[features['name'] == 'gpu_mem_util']['value'])
@@ -1002,7 +1045,8 @@ def cluster_analyze(cfg):
         rx_pd = pd.DataFrame([rx_tmp], columns = ['Q1', 'Q2', 'Q3', 'Avg'], index = ['rx'])
         band_tmp = pd.concat([band_tmp, rx_pd]) 
         summary_band = pd.concat([summary_band, pd.concat([band_tmp], keys=[node])]) 
-    print('Ranked Network Traffic : \n', summary_net.to_string, '\n')
-    print('Cluster Bandwidth Quartile: \n', summary_band.to_string)
-    print_title('Cluster Computation Profiling:')
-    print(summary_compute)
+    if cfg.verbose:
+        print('Ranked Network Traffic : \n', summary_net.to_string, '\n')
+        print('Cluster Bandwidth Quartile: \n', summary_band.to_string)
+        print_title(cfg,'Cluster Computation Profiling:')
+        print(summary_compute)

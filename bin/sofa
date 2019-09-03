@@ -27,11 +27,15 @@ if __name__ == "__main__":
     swarm_diff_command = None
     sys.stdout.flush()
 
+    #TODO: solve all the divide and invalid issues.
+    np.seterr(divide='ignore',invalid='ignore')
+    
     print_hint("Welcome to SOFA! Your Python version is %s.%s.%s" % sys.version_info[:3])
     if sys.version_info < (3,5) :
         print_error("But SOFA requires minimum version of Python 3.5.")
         sys.exit(1)
 
+    print_hint("Use --verbose to have a more detailed performance report if necessary.")
     parser = argparse.ArgumentParser(description='SOFA')
     parser.add_argument(
         '--logdir',

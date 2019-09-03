@@ -85,20 +85,19 @@ def trace_init():
     
     return trace
 
-def list_to_csv_and_traces(logdir, _list, csvfile, _mode):
+def list_to_csv_and_traces(cfg, _list, csvfile, _mode):
     traces = []
     if len(_list[1:]) > 0:
-    	traces = pd.DataFrame(_list[1:])
-    	traces.columns = sofa_fieldnames
-    	_header = True if _mode == 'w' else False
-    	traces.to_csv(logdir +
-    	              csvfile,
-    	              mode=_mode,
-    	              header=_header,
-    	              index=False,
-    	              float_format='%.6f')
+        traces = pd.DataFrame(_list[1:])
+        traces.columns = sofa_fieldnames
+        _header = True if _mode == 'w' else False
+        traces.to_csv( cfg.logdir + csvfile,
+                       mode=_mode,
+                       header=_header,
+                       index=False,
+                       float_format='%.6f')
     else:
-        print_warning('Empty list cannot be exported to %s!' % csvfile)
+        print_warning(cfg, 'Empty list cannot be exported to %s!' % csvfile)
     return traces
 
 # 0/0     [004] 96050.733788:          1 bus-cycles:  ffffffff8106315a native_write_msr_safe
@@ -342,7 +341,7 @@ def gpu_trace_read(
 
 def traces_to_json(traces, path, cfg):
     if len(traces) == 0:
-        print_warning("Empty traces!")
+        print_warning(cfg,"Empty traces!")
         return
     with open(path, 'w') as f:
         for trace in traces:
@@ -375,6 +374,7 @@ def traces_to_json(traces, path, cfg):
 
 
 def sofa_preprocess(cfg):
+    print_main_progress('SOFA preprocessing...')
     cfg.time_base = 0
     t_glb_gpu_base = 0
     logdir = cfg.logdir
@@ -383,7 +383,7 @@ def sofa_preprocess(cfg):
         if len(lines) == 4:
             cfg.pid = int(lines[3].split()[1])
         else:
-            print_warning('Incorrect misc.txt content. Some profiling information may not be available.')
+            print_warning(cfg,'Incorrect misc.txt content. Some profiling information may not be available.')
 
     if int(os.system('command -v perf 1> /dev/null')) == 0:
         with open(logdir + 'perf.script', 'w') as logfile:
@@ -416,7 +416,7 @@ def sofa_preprocess(cfg):
                 cpu_mhz_xp.append(timestamp)
                 cpu_mhz_fp.append(mhz)
     except:
-        print_warning('no cpuinfo file is found, default cpu MHz = %lf'%(fp[0]))
+        print_warning(cfg,'no cpuinfo file is found, default cpu MHz = %lf'%(fp[0]))
 
     net_traces = []
     cpu_traces = []
@@ -520,7 +520,7 @@ def sofa_preprocess(cfg):
             
             mpstat_list.append(trace_usr)
             
-        mpstat_traces = list_to_csv_and_traces(logdir, mpstat_list, 'mpstat.csv', 'w')
+        mpstat_traces = list_to_csv_and_traces(cfg, mpstat_list, 'mpstat.csv', 'w')
 
     with open('%s/diskstat.txt' % logdir) as f:
         diskstats = f.readlines()
@@ -597,7 +597,7 @@ def sofa_preprocess(cfg):
                 0]
 
             diskstat_list.append(trace)
-        diskstat_traces = list_to_csv_and_traces(logdir, diskstat_list, 'diskstat.csv', 'w')
+        diskstat_traces = list_to_csv_and_traces(cfg, diskstat_list, 'diskstat.csv', 'w')
 
     
     #     dev   cpu   sequence  timestamp   pid  event operation start_block+number_of_blocks   process
@@ -700,7 +700,7 @@ def sofa_preprocess(cfg):
                     logdir, blktrace_list, 'blktrace.csv', 'a')
 
                 if record_error_flag == 1 :
-                    print_warning('blktrace maybe record failed!')
+                    print_warning(cfg,'blktrace maybe record failed!')
 
 
     # procs -----------------------memory---------------------- ---swap-- -
@@ -913,21 +913,21 @@ def sofa_preprocess(cfg):
                     t = t + 1
 
             vm_bi_traces = list_to_csv_and_traces(
-                logdir, vm_bi_list, 'vmstat.csv', 'w')
+                cfg, vm_bi_list, 'vmstat.csv', 'w')
             vm_bo_traces = list_to_csv_and_traces(
-                logdir, vm_bo_list, 'vmstat.csv', 'a')
+                cfg, vm_bo_list, 'vmstat.csv', 'a')
             vm_in_traces = list_to_csv_and_traces(
-                logdir, vm_in_list, 'vmstat.csv', 'a')
+                cfg, vm_in_list, 'vmstat.csv', 'a')
             vm_cs_traces = list_to_csv_and_traces(
-                logdir, vm_cs_list, 'vmstat.csv', 'a')
+                cfg, vm_cs_list, 'vmstat.csv', 'a')
             vm_wa_traces = list_to_csv_and_traces(
-                logdir, vm_wa_list, 'vmstat.csv', 'a')
+                cfg, vm_wa_list, 'vmstat.csv', 'a')
             vm_st_traces = list_to_csv_and_traces(
-                logdir, vm_st_list, 'vmstat.csv', 'a')
+                cfg, vm_st_list, 'vmstat.csv', 'a')
             vm_usr_traces = list_to_csv_and_traces(
-                logdir, vm_usr_list, 'vmstat.csv', 'a')
+                cfg, vm_usr_list, 'vmstat.csv', 'a')
             vm_sys_traces = list_to_csv_and_traces(
-                logdir, vm_sys_list, 'vmstat.csv', 'a')
+                cfg, vm_sys_list, 'vmstat.csv', 'a')
 
     
     # timestamp, name, index, utilization.gpu [%], utilization.memory [%]
@@ -940,7 +940,7 @@ def sofa_preprocess(cfg):
             for line in lines:
                 if line.find('failed') != -1 or line.find('Failed') != -1:
                     nvsmi_query_has_data = False
-                    print_warning('No nvsmi query data.')
+                    print_warning(cfg,'No nvsmi query data.')
                     break
             if nvsmi_query_has_data:
                 print_info(cfg,"Length of nvsmi_query_traces = %d" % len(lines))
@@ -1007,8 +1007,8 @@ def sofa_preprocess(cfg):
                     nvsmi_mem_list.append(trace)
                     
                 if len(nvsmi_sm_list)>1:
-                    nvsmi_sm_traces = list_to_csv_and_traces(logdir, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
-                    nvsmi_mem_traces = list_to_csv_and_traces(logdir, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
+                    nvsmi_sm_traces = list_to_csv_and_traces(cfg, nvsmi_sm_list, 'nvsmi_trace.csv', 'w')
+                    nvsmi_mem_traces = list_to_csv_and_traces(cfg, nvsmi_mem_list, 'nvsmi_trace.csv', 'a')
 
 
     # gpu    sm   mem   enc   dec
@@ -1023,7 +1023,7 @@ def sofa_preprocess(cfg):
             for line in lines:
                 if line.find('failed') != -1 or line.find('Failed') != -1:
                     nvsmi_has_data = False
-                    print_warning('No nvsmi data.')
+                    print_warning(cfg,'No nvsmi data.')
                     break
             if nvsmi_has_data:
                 print_info(cfg,"Length of nvsmi_traces = %d" % len(lines))
@@ -1099,10 +1099,10 @@ def sofa_preprocess(cfg):
                             t = t + 1
                 if len(nvsmi_enc_list)>1:
                     cfg.nvsmi_data = True
-                    nvsmi_enc_traces = list_to_csv_and_traces(logdir, nvsmi_enc_list, 'nvsmi_trace.csv', 'a')
-                    nvsmi_dec_traces = list_to_csv_and_traces(logdir, nvsmi_dec_list, 'nvsmi_trace.csv', 'a')
+                    nvsmi_enc_traces = list_to_csv_and_traces(cfg, nvsmi_enc_list, 'nvsmi_trace.csv', 'a')
+                    nvsmi_dec_traces = list_to_csv_and_traces(cfg, nvsmi_dec_list, 'nvsmi_trace.csv', 'a')
                 else:
-                    print_warning("Program exectution time is fewer than 3 seconds, so nvsmi trace analysis will not be displayed.")
+                    print_warning(cfg,"Program exectution time is fewer than 3 seconds, so nvsmi trace analysis will not be displayed.")
 
     # ============ Preprocessing Network Trace ==========================
     
@@ -1152,7 +1152,7 @@ def sofa_preprocess(cfg):
                                                     'color': 'rgba(%s,%s,%s,0.8)' %(random.randint(0,255),random.randint(0,255),random.randint(0,255)),
                                                     'keyword': 'from_%s' %filter})
     else:
-        print_warning("no network traces were recorded.")
+        print_warning(cfg,"no network traces were recorded.")
     # ============ Preprocessing Network Bandwidth Trace ============
     with open('%s/netstat.txt' % logdir) as f:
         lines = f.readlines()
@@ -1261,7 +1261,7 @@ def sofa_preprocess(cfg):
     filtered_gpu_groups = []
     indices = []
     for nvvp_filename in glob.glob(logdir + "gputrace*[0-9].nvvp"):
-        print_progress("Read " + nvvp_filename + " by nvprof -- begin")
+        print_progress(cfg,"Read " + nvvp_filename + " by nvprof -- begin")
         with open(logdir + "gputrace.tmp", "w") as f:
             subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "-i", nvvp_filename], stderr=f)
 
@@ -1289,11 +1289,11 @@ def sofa_preprocess(cfg):
         if len(t_glb_gpu_bases) > 0:
             t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]*1.0/1e+9
         else:
-           print_warning("There is no data in tables of NVVP file.")
+           print_warning(cfg,"There is no data in tables of NVVP file.")
 
         print_info(cfg,"Timestamp of the first GPU trace = " + str(t_glb_gpu_base))
 
-        print_progress("Read " + nvvp_filename + " by nvprof -- end")
+        print_progress(cfg,"Read " + nvvp_filename + " by nvprof -- end")
         num_cudaproc = num_cudaproc + 1
         with open(logdir + 'gputrace.tmp') as f:
             records = f.readlines()
@@ -1366,7 +1366,7 @@ def sofa_preprocess(cfg):
                     filtered_gpu_groups.append({'group': group, 'color': filter.color,
                                                 'keyword': filter.keyword})
             else:
-                print_warning(
+                print_warning(cfg,
                     "gputrace existed, but no kernel traces were recorded.")
                 os.system('cat %s/gputrace.tmp' % logdir)
 
@@ -1375,7 +1375,7 @@ def sofa_preprocess(cfg):
         num_cudaproc = 0
         indices = []
         for nvvp_filename in glob.glob(logdir + "gputrace*[0-9].nvvp"):
-            print_progress("Read " + nvvp_filename + " for API traces by nvprof -- begin")
+            print_progress(cfg,"Read " + nvvp_filename + " for API traces by nvprof -- begin")
             with open(logdir + "cuda_api_trace.tmp", "w") as f:
                 subprocess.call(["nvprof", "--csv", "--print-api-trace", "-i", nvvp_filename], stderr=f)
 
@@ -1392,11 +1392,11 @@ def sofa_preprocess(cfg):
             if len(t_glb_gpu_bases) > 0:
                 t_glb_gpu_base = sorted(t_glb_gpu_bases)[0]*1.0/1e+9
             else:
-               print_warning("There is no data in tables of NVVP file.")
+               print_warning(cfg,"There is no data in tables of NVVP file.")
 
             print_info(cfg,"Timestamp of the first CUDA API trace = " + str(t_glb_gpu_base))
 
-            print_progress("Read " + nvvp_filename + " by nvprof -- end")
+            print_progress(cfg,"Read " + nvvp_filename + " by nvprof -- end")
             num_cudaproc = num_cudaproc + 1
             with open(logdir + 'cuda_api_trace.tmp') as f:
                 records = f.readlines()
@@ -1470,7 +1470,7 @@ def sofa_preprocess(cfg):
     perf_timebase_unix = 0
     last_nvvp_ts = 0
     for nvvp_filename in glob.glob(logdir + "cuhello*[0-9].nvvp"):
-        print_progress("Read " + nvvp_filename + " by nvprof -- begin")
+        print_progress(cfg,"Read " + nvvp_filename + " by nvprof -- begin")
         engine = create_engine('sqlite:///' + nvvp_filename)
         last_nvvp_tss = []
         try:
@@ -1495,7 +1495,7 @@ def sofa_preprocess(cfg):
         if len(last_nvvp_tss) > 0:
             last_nvvp_ts = sorted(last_nvvp_tss,reverse=True)[0]*1.0/1e+9
         else:
-           print_warning("There is no data in tables of NVVP file.")
+           print_warning(cfg,"There is no data in tables of NVVP file.")
 
         if int(os.system('command -v perf 1> /dev/null')) == 0:
             with open(logdir + 'cuhello.perf.script', 'w') as logfile:
@@ -1527,8 +1527,8 @@ def sofa_preprocess(cfg):
                             perf_timebase_unix = last_nvvp_ts
                             break
         except:
-            print_warning('no cuhello.perf.script, timestamp synchronization between CPU/GPU may not be precise enough.') 
-        print_progress("Read " + nvvp_filename + " by nvprof -- end")
+            print_warning(cfg,'no cuhello.perf.script, timestamp synchronization between CPU/GPU may not be precise enough.') 
+        print_progress(cfg,"Read " + nvvp_filename + " by nvprof -- end")
 
     # STRACE Preprocessing
     #CASE1: strace: Process 8361 attached
@@ -1615,7 +1615,7 @@ def sofa_preprocess(cfg):
                 
                 print_info(cfg, 'strace.txt reading is done.')
                 if len(strace_list)>1:
-                    strace_traces = list_to_csv_and_traces(logdir, strace_list, 'strace.csv', 'w')
+                    strace_traces = list_to_csv_and_traces(cfg, strace_list, 'strace.csv', 'w')
     print_info(cfg,'Total strace duration: %.3lf' % total_strace_duration)
 
 
@@ -1673,7 +1673,7 @@ def sofa_preprocess(cfg):
                 ]
                 pystacks_list.append(trace)
         if pystacks_list:
-            pystacks_traces = list_to_csv_and_traces(logdir, pystacks_list, 'pystacks.csv', 'w')    
+            pystacks_traces = list_to_csv_and_traces(cfg, pystacks_list, 'pystacks.csv', 'w')    
 
     
     
@@ -1682,7 +1682,7 @@ def sofa_preprocess(cfg):
         with open(logdir + 'perf_timebase.txt') as f:
             lines = f.readlines()
             if len(lines) <= 3:
-                print_warning('Recorded progrom is too short.')
+                print_warning(cfg,'Recorded progrom is too short.')
                 perf_timebase_uptime = 0 
                 perf_timebase_unix = 0 
             elif lines[0].find('WARNING') != -1:
@@ -1741,13 +1741,13 @@ def sofa_preprocess(cfg):
                     #swarms, swarm_stats = hsg_v1(cfg, cpu_traces, swarms, swarm_stats, perf_timebase_unix - perf_timebase_uptime, cpu_mhz_xp, cpu_mhz_fp) 
                     cpu_traces, swarms = hsg_v2(cfg, cpu_traces, export_file=cfg.logdir+'/swarms_report.txt') 
                 except TypeError:
-                    print_warning('HSG returned a None object to swarms, check if sofalog/perf.data can be accessed.')
+                    print_warning(cfg,'HSG returned a None object to swarms, check if sofalog/perf.data can be accessed.')
                     pass 
     except:
-        print_warning('no perf traces.') 
+        print_warning(cfg,'no perf traces.') 
 
          
-    print_progress(
+    print_progress(cfg,
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- begin")
 
     # TODO: provide option to use absolute or relative timestamp
@@ -2006,5 +2006,5 @@ def sofa_preprocess(cfg):
         traces.append(sofatrace)
 
     traces_to_json(traces, logdir + 'report.js', cfg)
-    print_progress(
+    print_progress(cfg,
         "Export Overhead Dynamics JSON File of CPU, Network and GPU traces -- end")
