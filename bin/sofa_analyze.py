@@ -942,27 +942,27 @@ def sofa_analyze(cfg):
             f.write('<head><link rel=stylesheet type="text/css" href="potato_report.css"></head>')
 
         print_title('POTATO Feedback')
-        print('%s%s%s' % ('Metric'.ljust(20), 'Value'.ljust(10), 'Reference-Value'.ljust(30)) )
+        print('%s%s%s%s' % ('ID'.ljust(5), 'Metric'.ljust(20), 'Value'.ljust(10), 'Reference-Value'.ljust(30) ) )
         for i in range(len(df_report)):
             metric = df_report.iloc[i]['Metric']
             if metric != 'suggestion':
                 value = df_report.iloc[i]['Value']
                 ref_value = df_report.iloc[i]['ReferenceValue']
-                print('%s%s%s' % (metric.ljust(20), ('%.3lf'%value).ljust(20), str(ref_value).ljust(30)))
+                print('%s%s%s%s' % (str(i).ljust(5), metric.ljust(20), ('%.3lf'%value).ljust(20), str(ref_value).ljust(30)))
         
         print('\n')
-        print_hint('Optimization Suggestions:')
+        print_hint('Summerized Optimization Suggestions:')
         for i in range(len(df_report)):
             metric = df_report.iloc[i]['Metric']
-            if metric == 'suggestion':
-                value = df_report.iloc[i]['Value']
-                print(value)
+            suggestion = df_report.iloc[i]['Suggestion']
+            if metric != 'suggestion':
+                print('%d. %s' % (i,suggestion))
         
-
         #print(df_report[['Metric', 'Value', 'Reference Value']])
         #print(df_report[['Suggestion']])
-        print('Tag of optimal image recommended from POTATO: ' + highlight(docker_image))
-        print('Please re-launch KubeFlow Jupyter-notebook with the new tag.')
+        #print('Tag of optimal image recommended from POTATO: ' + highlight(docker_image))
+        print('\n')
+        print_hint('Please re-launch KubeFlow Jupyter-notebook to have suggested images or resources if necessary.')
     
     sofa_home = os.path.dirname(os.path.realpath(__file__))
     subprocess.Popen(
