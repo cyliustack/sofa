@@ -8,9 +8,9 @@ from sofa_print import *
 
 
 def sofa_viz(cfg):
-    print_warning(
+    print_warning(cfg,
         'If your rendering timeline is slow, please try \033[4msofa report --plot_ratio=10\033[24m to downsample scatter points,')
-    print_warning('and then \033[4msofa viz\033[24m to see the downsampled results.')
+    print_warning(cfg, 'and then \033[4msofa viz\033[24m to see the downsampled results.')
     print_hint('SOFA Vlization is listening on port \033[4m\033[97mhttp://localhost:%d\033[24m\033[0m\033[24m' % (cfg.viz_port) )
     print_hint('To change port, please run command: \033[4msofa viz --viz_port=PortNumber\033[24m')
     print_hint('Please open your browser to start profiling.')
