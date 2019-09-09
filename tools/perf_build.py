@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# requirements: apt install git wget python 
 import platform
 import subprocess
 
