@@ -104,14 +104,13 @@ function install_packages()
         $WITH_SUDO apt-get update 
         $WITH_SUDO apt-get install -y pyflame
 	    $WITH_SUDO apt-get install -y curl wget make gcc g++ cmake \
-            linux-tools-common tcpdump sysstat strace \
-            linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic \
+            tcpdump sysstat strace \
             autoconf automake autotools-dev pkg-config libtool
 	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install -y epel-release 
         $WITH_SUDO yum install -y curl wget make gcc gcc-c++ cmake \
-            perf tcpdump sysstat strace \
+            tcpdump sysstat strace \
             centos-release-scl devtoolset-5-gcc* 
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     else
@@ -121,6 +120,10 @@ function install_packages()
 
 function install_utility_from_source()
 {
+    echo -e "${C_GREEN}Installing Linux Perf from source...${C_NONE}"
+    $FILEPATH/perf_build.py
+    [[ $? != 0 ]] && echo -e "${C_YELLOW} Failed to build perf.${C_NONE}" 
+
     echo -e "${C_GREEN}Installing utilities from source...${C_NONE}"
     nvcc $FILEPATH/cuhello.cu -o $FILEPATH/../bin/cuhello
     [[ $? != 0 ]] && echo -e "${C_YELLOW}No nvcc found; nvcc is required to improve perf timestamp accuracy.${C_NONE}" 
