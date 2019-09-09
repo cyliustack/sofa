@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# requirements: apt install git wget python 
+# requirements: apt install git wget python make 
 import platform
 import subprocess
 
@@ -11,7 +11,7 @@ else:
 major = int(platform.release().split('.')[0])
 minor = int(platform.release().split('.')[1])
 revision = int(platform.release().split('.')[2].split('-')[0])
-url_kernel = 'https://cdn.kernel.org/pub/linux/kernel/v%d.x/linux-%d.%d.tar.gz' % (major, major, minor)
+url_kernel = 'https://mirrors.edge.kernel.org/pub/linux/kernel/v%d.x/linux-%d.%d.tar.gz' % (major, major, minor)
 tarfile = 'linux-%d.%d.tar.gz' % (major, minor)
 source_dir = 'linux-%d.%d' % (major, minor)
 print('URL: ', url_kernel)
