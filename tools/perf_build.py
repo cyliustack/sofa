@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# requirements: apt install git wget python make 
+# requirements: apt install git wget python gcc flex bison make 
 import platform
 import subprocess
 
