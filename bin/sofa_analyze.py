@@ -945,7 +945,7 @@ def sofa_analyze(cfg):
         print('%s%s%s%s' % ('ID'.ljust(5), 'Metric'.ljust(20), 'Value'.ljust(10), 'Reference-Value'.ljust(30) ) )
         for i in range(len(df_report)):
             metric = df_report.iloc[i]['Metric']
-            if metric != 'suggestion':
+            if metric != 'hybrid_suggestion':
                 value = df_report.iloc[i]['Value']
                 ref_value = df_report.iloc[i]['ReferenceValue']
                 print('%s%s%s%s' % (str(i).ljust(5), metric.ljust(20), ('%.3lf'%value).ljust(20), str(ref_value).ljust(30)))
@@ -954,9 +954,9 @@ def sofa_analyze(cfg):
         print_hint('Summerized Optimization Suggestions:')
         for i in range(len(df_report)):
             metric = df_report.iloc[i]['Metric']
-            suggestion = df_report.iloc[i]['Suggestion']
-            if metric != 'suggestion':
-                print('%d. %s' % (i,suggestion))
+            if metric == 'hybrid_suggestion':
+                suggestion = df_report.iloc[i]['Suggestion']
+                print('%d. %s' % (i, suggestion))
         
         #print(df_report[['Metric', 'Value', 'Reference Value']])
         #print(df_report[['Suggestion']])

@@ -395,7 +395,7 @@ def sofa_preprocess(cfg):
                              '%s/perf.data' % logdir,
                              '-F',
                              'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'],
-                            stdout=logfile)
+                            stdout=logfile, stderr=subprocess.DEVNULL)
 
     with open(logdir + 'sofa_time.txt') as f:
         lines = f.readlines()
