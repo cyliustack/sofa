@@ -921,13 +921,22 @@ def sofa_analyze(cfg):
 
     if cfg.enable_aisi:
         selected_pattern, iter_summary, features = sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat, features)
-    print_title('Final Performance Features')
-    print('%s%s%s%s' % ('ID'.ljust(10),'Feature'.ljust(30),'Value'.ljust(20),'Unit'.ljust(20)) )
-    
-    for i in range(len(features)):
-        name = features.iloc[i]['name']
-        value = features.iloc[i]['value']
-        print('%s%s%s' % (str(i).ljust(10), name.ljust(30), ('%.3lf'%value).ljust(20)))
+
+    if cfg.spotlight_gpu:
+        try:
+            print('Elapsed active GPU time: %.3lf' % features[features.name=='elapsed_spotlight_time'].value)
+        except:
+            print_warning(cfg, 'elpased_spotlight_time is not defined.')
+            
+
+    if 'IS_SOFA_ON_HAIHUB' in os.environ:
+        if os.environ['IS_SOFA_ON_HAIHUB'] == 'yes': 
+            print_title('Final Performance Features')
+            print('%s%s%s%s' % ('ID'.ljust(10),'Feature'.ljust(30),'Value'.ljust(20),'Unit'.ljust(20)) )
+            for i in range(len(features)):
+                name = features.iloc[i]['name']
+                value = features.iloc[i]['value']
+                print('%s%s%s' % (str(i).ljust(10), name.ljust(30), ('%.3lf'%value).ljust(20)))
 
     if cfg.potato_server:
         if cfg.potato_server.find(':') == -1:
