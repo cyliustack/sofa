@@ -207,14 +207,14 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
             print('GPU = %.1lf %%' % elapsed_time_ratio['gpu'])
             print('IOW = %.1lf %%' % elapsed_time_ratio['iow'])
         if cfg.spotlight_gpu:
-            elapsed_spotlight_time = cfg.roi_end - cfg.roi_begin 
+            elapsed_hotspot_time = cfg.roi_end - cfg.roi_begin 
         else:
-            elapsed_spotlight_time = 0 
+            elapsed_hotspot_time = 0 
     
         df = pd.DataFrame({ 'name':['elapsed_usr_time_ratio', 'elapsed_sys_time_ratio', 'elapsed_gpu_time_ratio', 
-                            'elapsed_iow_time_ratio', 'elapsed_spotlight_time'], 
+                            'elapsed_iow_time_ratio', 'elapsed_hotspot_time'], 
                             'value':[elapsed_time_ratio['usr'], elapsed_time_ratio['sys'], elapsed_time_ratio['gpu'], 
-                            elapsed_time_ratio['iow'], elapsed_spotlight_time ] }, 
+                            elapsed_time_ratio['iow'], elapsed_hotspot_time ] }, 
                             columns=['name','value'])
     
         features = pd.concat([features, df])
@@ -920,17 +920,9 @@ def sofa_analyze(cfg):
 
 
     if cfg.enable_aisi:
-        selected_pattern, iter_summary, features = sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat, features)
+        selected_pattern, iter_summary, features = sofa_aisi(logdir, cfg, df_cpu, df_gpu, df_strace, df_mpstat, features)           
 
-    if cfg.spotlight_gpu:
-        try:
-            print('Elapsed active GPU time: %.3lf' % features[features.name=='elapsed_spotlight_time'].value)
-        except:
-            print_warning(cfg, 'elpased_spotlight_time is not defined.')
-            
-
-    if 'IS_SOFA_ON_HAIHUB' in os.environ:
-        if os.environ['IS_SOFA_ON_HAIHUB'] == 'yes': 
+    if 'IS_SOFA_ON_HAIHUB' not in os.environ or os.environ['IS_SOFA_ON_HAIHUB'] == 'no': 
             print_title('Final Performance Features')
             print('%s%s%s%s' % ('ID'.ljust(10),'Feature'.ljust(30),'Value'.ljust(20),'Unit'.ljust(20)) )
             for i in range(len(features)):
@@ -938,6 +930,12 @@ def sofa_analyze(cfg):
                 value = features.iloc[i]['value']
                 print('%s%s%s' % (str(i).ljust(10), name.ljust(30), ('%.3lf'%value).ljust(20)))
 
+    if cfg.spotlight_gpu:
+        try:
+            print('Elapsed hotspot time: %.3lf' % features[features.name=='elapsed_hotspot_time'].value)
+        except:
+            print_warning(cfg, 'elpased_hostspot_time is not defined.')
+ 
     if cfg.potato_server:
         if cfg.potato_server.find(':') == -1:
             cfg.potato_server = cfg.potato_server + ':50051'
