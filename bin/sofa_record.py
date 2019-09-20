@@ -192,7 +192,7 @@ def sofa_record(command, cfg):
             time.sleep(3)
             print_info(cfg,'nvprof is launched')
         else:
-            print_warning('Profile without NVPROF')
+            print_warning(cfg,'Profile without NVPROF')
 
         print_main_progress("Recording...")
         if cfg.profile_all_cpus == True:
@@ -284,9 +284,9 @@ def sofa_record(command, cfg):
 
         if cfg.enable_py_stacks:
             if command.find('python') == -1:
-                print_warning("Not a python program to recorded, skip recording callstacks")
+                print_warning(cfg,"Not a python program to recorded, skip recording callstacks")
             elif cfg.enable_strace:
-                print_warning("Only one of --enable_py_stacks or --enable_strace option holds, ignore --enable_py_stack options")
+                print_warning(cfg,"Only one of --enable_py_stacks or --enable_strace option holds, ignore --enable_py_stack options")
             else:
                 # command_prefix = ' '.join(['py-spy','-n', '-s', '{}/pystacks.txt'.format(logdir), '-d', str(sys.maxsize), '--']) + ' '
                 command_prefix  = ' '.join(['pyflame', '--flamechart', '-o', '{}pystacks.txt'.format(logdir), '-t']) + ' '
@@ -303,7 +303,7 @@ def sofa_record(command, cfg):
             else:
                 profile_command = 'perf record -o %s/perf.data -e %s -F %s %s %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command_prefix+command) 
         else:
-            print_warning("Use /usr/bin/time to measure program performance instead of perf.")
+            print_warning(cfg,"Use /usr/bin/time to measure program performance instead of perf.")
             profile_command = '/usr/bin/time -v %s' % (command_prefix+command)
             cfg.perf_events = ""
         

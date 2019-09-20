@@ -100,20 +100,24 @@ function install_packages()
     if [[ $(which apt) ]] ; then
         $WITH_SUDO apt-get update
         $WITH_SUDO apt-get update --fix-missing
-        $WITH_SUDO apt-add-repository ppa:trevorjay/pyflame -y
+	$WITH_SUDO apt-get -y install software-properties-common
+        $WITH_SUDO apt-add-repository -y ppa:trevorjay/pyflame 
         $WITH_SUDO apt-get update 
         $WITH_SUDO apt-get install -y pyflame
-	    $WITH_SUDO apt-get install -y curl wget make gcc g++ cmake \
-            linux-tools-common tcpdump sysstat strace \
-            linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) linux-tools-generic linux-cloud-tools-generic \
-            autoconf automake autotools-dev pkg-config libtool
-	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+	$WITH_SUDO apt-get install -y curl wget make gcc g++ cmake \
+		                      autoconf automake autotools-dev pkg-config libtool \
+	                              tcpdump sysstat strace time 
+	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+        $WITH_SUDO apt-get install linux-tools-common \
+                                   linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) \
+	                           linux-tools-generic linux-cloud-tools-generic 
     elif [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install -y epel-release 
         $WITH_SUDO yum install -y curl wget make gcc gcc-c++ cmake \
-            perf tcpdump sysstat strace \
-            centos-release-scl devtoolset-5-gcc* 
+                                  tcpdump sysstat strace time \
+                                  centos-release-scl devtoolset-5-gcc* 
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+        $WITH_SUDO yum install -y perf 
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"
     fi
