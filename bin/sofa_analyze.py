@@ -956,9 +956,17 @@ def sofa_analyze(cfg):
                 value = df_report.iloc[i]['Value']
                 ref_value = df_report.iloc[i]['ReferenceValue']
                 print('%s%s%s%s' % (str(i).ljust(5), metric.ljust(20), ('%.3lf'%value).ljust(20), str(ref_value).ljust(30)))
+ 
+        print('\n')
+        print_hint('General Suggestions:')
+        for i in range(len(df_report)):
+            metric = df_report.iloc[i]['Metric']
+            if metric != 'hybrid_suggestion':
+                suggestion = df_report.iloc[i]['Suggestion']
+                print('%d. %s' % (i, suggestion))
         
         print('\n')
-        print_hint('Summerized Optimization Suggestions:')
+        print_hint('Framework-specific Optimization Suggestions:')
         for i in range(len(df_report)):
             metric = df_report.iloc[i]['Metric']
             if metric == 'hybrid_suggestion':
