@@ -29,8 +29,9 @@ SOFA supports serveral different usages, like how one can use perf. More details
 
 ## Performance Visualizations
 1. `sofa record "dd if=/dev/zero of=dummy.out bs=100M count=10"`
-2. `sofa report`
-3. Open browser with one of the following links for different visualizations
+2. `sofa report [--verbose]` 
+3. `sofa viz` 
+4. Open browser with one of the following links for different visualizations
     * [http://localhost:8000](http://localhost:8000)
     * [http://localhost:8000/cpu-report.html](http://localhost:8000/cpu-report.html)
     * [http://localhost:8000/gpu-report.html](http://localhost:8000/gpu-report.html)
