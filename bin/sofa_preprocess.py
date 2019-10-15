@@ -1236,12 +1236,13 @@ def sofa_preprocess(cfg):
                 result = [t_begin, tx_bandwidth, rx_bandwidth]
                 tmp_bandwidth_result = pd.DataFrame([result], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
                 bandwidth_result = pd.concat([bandwidth_result, tmp_bandwidth_result], ignore_index=True)
-                bandwidth_result.to_csv('%s/netbandwidth.csv' %logdir, header=True)
+                
                 # prepare for next round loop        
                 tmp_time = time
                 tmp_tx = tx
                 tmp_rx = rx    
-            tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
+            bandwidth_result.to_csv('%s/netbandwidth.csv' %logdir, header=True)
+	    tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
             tx_traces.to_csv(
                         logdir + 'netstat.csv',
                         mode='w',
