@@ -1173,7 +1173,7 @@ def sofa_preprocess(cfg):
                 rx = int(line.split(',')[2])
                 tx_bandwidth = (tx - tmp_tx) / (time - tmp_time) 
                 rx_bandwidth = (rx - tmp_rx) / (time - tmp_time)
-                
+
                 #sofa_fieldnames = [
                 #    "timestamp",  # 0
                 #    "event",  # 1
@@ -1232,16 +1232,17 @@ def sofa_preprocess(cfg):
                 all_tx.append(tx_bandwidth)
                 all_rx.append(rx_bandwidth)
             
-            # for pandas
-            result = [t_begin, tx_bandwidth, rx_bandwidth]
-            tmp_bandwidth_result = pd.DataFrame([result], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
-            bandwidth_result = pd.concat([bandwidth_result, tmp_bandwidth_result], ignore_index=True)
+                # for pandas
+                result = [t_begin, tx_bandwidth, rx_bandwidth]
+                tmp_bandwidth_result = pd.DataFrame([result], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
+                bandwidth_result = pd.concat([bandwidth_result, tmp_bandwidth_result], ignore_index=True)
+                
+                # prepare for next round loop        
+                tmp_time = time
+                tmp_tx = tx
+                tmp_rx = rx    
             bandwidth_result.to_csv('%s/netbandwidth.csv' %logdir, header=True)
-            # prepare for next round loop        
-            tmp_time = time
-            tmp_tx = tx
-            tmp_rx = rx    
-            tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
+	    tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
             tx_traces.to_csv(
                         logdir + 'netstat.csv',
                         mode='w',

@@ -373,7 +373,7 @@ def strace_profile(logdir, cfg, df, features):
  
 def net_profile(logdir, cfg, df, features):
     if not cfg.cluster_ip:
-        print_title(cfg,"Network Profiling:")
+        print_title("Network Profiling:")
     grouped_df = df.groupby("name")["duration"]
     net_time = 0
     n_packets = 0
@@ -1061,7 +1061,8 @@ def cluster_analyze(cfg):
         band_tmp = pd.concat([band_tmp, rx_pd]) 
         summary_band = pd.concat([summary_band, pd.concat([band_tmp], keys=[node])]) 
     if cfg.verbose:
-        print('Ranked Network Traffic : \n', summary_net.to_string, '\n')
-        print('Cluster Bandwidth Quartile: \n', summary_band.to_string)
-        print_title(cfg,'Cluster Computation Profiling:')
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+            print('Ranked Network Traffic : \n', summary_net, '\n')
+            print('Cluster Bandwidth Quartile: \n', summary_band)
+        print_title('Cluster Computation Profiling:')
         print(summary_compute)
