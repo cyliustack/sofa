@@ -1242,7 +1242,7 @@ def sofa_preprocess(cfg):
                 tmp_tx = tx
                 tmp_rx = rx    
             bandwidth_result.to_csv('%s/netbandwidth.csv' %logdir, header=True)
-	    tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
+            tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
             tx_traces.to_csv(
                         logdir + 'netstat.csv',
                         mode='w',
