@@ -151,11 +151,11 @@ def sofa_record(command, cfg):
     sample_freq = 99
     command_prefix = ''
 
-    if int(open("/proc/sys/kernel/yama/ptrace_scope").read()) != 0:
-        print_error(
-            "Could not attach to process, please try the command below:")
-        print_error("sudo sysctl -w kernel.yama.ptrace_scope=0")
-        sys.exit(1)
+#    if int(open("/proc/sys/kernel/yama/ptrace_scope").read()) != 0:
+#        print_error(
+#            "Could not attach to process, please try the command below:")
+#        print_error("sudo sysctl -w kernel.yama.ptrace_scope=0")
+#        sys.exit(1)
 
     if int(open("/proc/sys/kernel/kptr_restrict").read()) != 0:
         print_error(
