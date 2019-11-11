@@ -36,5 +36,7 @@ sudo groupadd docker
 
 sudo usermod -aG docker $USER
 
+sudo newgrp
+
 # Test nvidia-smi with the latest official CUDA image
 sudo docker run --runtime=nvidia --rm nvidia/cuda:9.0-base nvidia-smi
