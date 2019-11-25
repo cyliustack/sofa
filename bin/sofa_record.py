@@ -16,9 +16,10 @@ from pwd import getpwuid
 import pandas as pd
 import numpy as np
 import re
+from os import listdir
+from os.path import isfile, join
 
 from sofa_print import *
-
 
 def service_get_cpuinfo(logdir):
     next_call = time.time()
@@ -182,7 +183,7 @@ def sofa_record(command, cfg):
     subprocess.call('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.txt > /dev/null 2> /dev/null' % logdir, shell=True)
-
+    subprocess.call('sudo umount %s/container_root' % logdir, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     try:
         print_main_progress("Prologue of Recording...")
@@ -310,10 +311,54 @@ def sofa_record(command, cfg):
         with open(logdir+'perf_events_used.txt','w') as f:
             f.write(cfg.perf_events)
 
-        print_hint(profile_command)
-        p_perf = subprocess.Popen(profile_command, shell=True)
+
+        # Launch SOFA recording
+        if command.find('docker') != -1:
+            command_create = command.replace('docker run', 'docker create --cidfile=%s/cidfile.txt' % cfg.logdir)
+            cid = subprocess.check_output(command_create, shell=True).decode('utf-8')
+            inspect_text = subprocess.check_output('docker inspect  '+cid, shell=True).decode('utf-8')
+            inspect_info = json.loads(inspect_text)
+            ccmd = ' '.join(inspect_info[0]['Config']['Cmd'])
+            if subprocess.run('docker rm -f %s'%(cid), shell=True).returncode != 0:
+                print('oops with remove container ', cid)
+                sys.exit(-1)
+            
+            if os.path.isfile(cfg.logdir+'/cidfile.txt'):
+                subprocess.run('rm '+cfg.logdir+'/cidfile.txt', shell=True)
+           
+            # Step1: launch sleep process to keep the container alive 
+            command_sleep = command.replace(ccmd, 'sleep 600')
+            command_sleep = command_sleep.replace('docker run', 'docker run --cidfile=%s/cidfile.txt -v %s:/sofalog ' % (cfg.logdir, cfg.logdir))
+            print_hint(command_sleep)
+            p_container_sleep = subprocess.Popen(command_sleep.split())
+            time.sleep(1)
+            
+            if os.path.isfile(cfg.logdir+'/cidfile.txt'):
+                with open(cfg.logdir+'/cidfile.txt', 'r') as cidfile: 
+                    cid = cidfile.readlines()[0]
+                  
+                    # Step2: launch containerized application 
+                    if cfg.nvprof_inside:
+                        ccmd = '/usr/local/cuda/bin/nvprof --profile-child-processes -o /sofalog/gputrace001001%p.nvvp ' + ccmd 
+                    app_command = 'docker exec %s %s' % (cid, ccmd)
+                    print_hint(app_command)
+                    p_container_app = subprocess.Popen(app_command.split())
+            
+                    # Step3: launch perf profiling process 
+                    profile_command = 'perf record -o %s/perf.data -a -e cpu-clock --cgroup=docker/%s sleep 30' % (cfg.logdir, cid) 
+                    print_hint(profile_command)
+                    p_perf = subprocess.Popen(profile_command, shell=True)
+            else:
+                print('Cannot find cidfile.')
+                sys.exit(-1)
+        else:    
+            print_hint(profile_command)
+            p_perf = subprocess.Popen(profile_command, shell=True)
         
         try:
+            if os.path.isfile(cfg.logdir+'/cidfile.txt'):
+                p_container_app.wait() 
+            #p_perf.terminate()
             p_perf.wait()
             t_command_end = time.time()
         except TimeoutExpired:

@@ -67,3 +67,4 @@ class SOFA_Config:
     roi_end=0
     netstat_interface=None
     nvsmi_time_zone=0
+    nvprof_inside=False
