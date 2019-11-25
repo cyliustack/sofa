@@ -26,7 +26,7 @@ if __name__ == "__main__":
     # swarm_diff needs multiple input argument, deal with it independently
     swarm_diff_command = None
     sys.stdout.flush()
-
+    cfg.logdir = os.getcwd() + '/sofalog/'
     #TODO: solve all the divide and invalid issues.
     np.seterr(divide='ignore',invalid='ignore')
     
@@ -152,6 +152,7 @@ if __name__ == "__main__":
         required=False,
         help='interface to monitor by netstat: like eth0 or ib0')
     parser.add_argument('--nvsmi_time_zone', metavar='8', type=int, help='time zone for nvsmi_query.txt')
+    parser.add_argument('--nvprof_inside', action='store_true')
 	
     sofa_exec_path = os.path.abspath( __file__ )
     if Path(sofa_exec_path).is_symlink():
@@ -240,7 +241,6 @@ if __name__ == "__main__":
     else:
         cfg.strace_min_time = 1e-6
 
-
     if args.viz_port is not None:
         cfg.viz_port = args.viz_port
 
@@ -249,6 +249,9 @@ if __name__ == "__main__":
 
     if args.profile_all_cpus is not None:
         cfg.profile_all_cpus = args.profile_all_cpus
+
+    if args.nvprof_inside is not None:
+        cfg.nvprof_inside = args.nvprof_inside
 
     if args.cpu_filters is not None:
         pairs = args.cpu_filters.split(',')

@@ -378,6 +378,11 @@ def sofa_preprocess(cfg):
     cfg.time_base = 0
     t_glb_gpu_base = 0
     logdir = cfg.logdir
+    
+    with_sudo = ''
+    if int(os.system('command -v sudo  1> /dev/null')) == 0:
+        with_sudo = 'sudo '
+
     with open(logdir + 'misc.txt', 'r') as f:
         lines = f.readlines()
         if len(lines) == 4:
@@ -385,10 +390,23 @@ def sofa_preprocess(cfg):
         else:
             print_warning(cfg,'Incorrect misc.txt content. Some profiling information may not be available.')
 
+    cid = ''
+    container_pid = ''
+    if os.path.isfile(cfg.logdir+'/cidfile.txt'):
+        with open(cfg.logdir+'/cidfile.txt') as cidfile:
+            cid = cidfile.readlines()[0]
+            subprocess.call(with_sudo + 'umount  %s/container_root ' % (cfg.logdir), shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.call('rm -rf  %s/container_root ' % (cfg.logdir), shell=True )
+            subprocess.call('mkdir -p %s/container_root ' % (cfg.logdir), shell=True )
+            subprocess.call(with_sudo + 'bindfs /proc/$(docker inspect --format {{.State.Pid}} %s)/root %s/container_root ' % (cid, cfg.logdir), shell=True )
+            subprocess.call(with_sudo + 'chown $(whoami) %s/*.nvvp ' % (cfg.logdir), shell=True)
+
     if int(os.system('command -v perf 1> /dev/null')) == 0:
         with open(logdir + 'perf.script', 'w') as logfile:
             subprocess.call(['perf',
                              'script',
+                             '--symfs',
+                             '%s/container_root' % logdir,
                              '--kallsym',
                              '%s/kallsyms' % logdir,
                              '-i',
@@ -397,6 +415,8 @@ def sofa_preprocess(cfg):
                              'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'],
                             stdout=logfile, stderr=subprocess.DEVNULL)
 
+
+    
     with open(logdir + 'sofa_time.txt') as f:
         lines = f.readlines()
         cfg.time_base = float(lines[0]) + cfg.cpu_time_offset
@@ -1263,8 +1283,14 @@ def sofa_preprocess(cfg):
     indices = []
     for nvvp_filename in glob.glob(logdir + "gputrace*[0-9].nvvp"):
         print_progress(cfg,"Read " + nvvp_filename + " by nvprof -- begin")
-        with open(logdir + "gputrace.tmp", "w") as f:
-            subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "-i", nvvp_filename], stderr=f)
+
+        if nvvp_filename.find('001001') != -1:
+            nvvp_filename_base = nvvp_filename.split('/')[-1]
+            subprocess.call('nvidia-docker exec %s /usr/local/cuda/bin/nvprof --csv --print-gpu-trace -i /sofalog/%s --log-file /sofalog/gputrace.tmp' % (cid, nvvp_filename_base), shell=True)
+            subprocess.call(with_sudo + 'chown $(whoami) %s/gputrace.tmp ' % (cfg.logdir), shell=True)
+        else:
+            with open(logdir + "gputrace.tmp", "w") as f:
+                subprocess.call(["nvprof", "--csv", "--print-gpu-trace", "-i", nvvp_filename], stderr=f)
 
         #Automatically retrieve the timestamp of the first CUDA activity(e.g. kernel, memory op, etc..)
         engine = create_engine("sqlite:///"+nvvp_filename)
@@ -1296,10 +1322,9 @@ def sofa_preprocess(cfg):
 
         print_progress(cfg,"Read " + nvvp_filename + " by nvprof -- end")
         num_cudaproc = num_cudaproc + 1
+        
         with open(logdir + 'gputrace.tmp') as f:
             records = f.readlines()
-            # print(records[1])
-
             if len(records) > 0 and records[1].split(',')[0] == '"Start"':
                 indices = records[1].replace(
                     '"', '').replace(
@@ -1781,6 +1806,12 @@ def sofa_preprocess(cfg):
         if cfg.enable_swarms and len(swarms) > 0 :
             traces = swarms_to_sofatrace(cfg, swarms, traces) # append data of hsg function
 
+    if os.path.isdir(cfg.logdir+'/container_root'):
+        subprocess.call(with_sudo + 'umount %s/container_root ' % (cfg.logdir), shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.call('rm -r %s/container_root ' % (cfg.logdir), shell=True )
+    if os.path.isfile(cfg.logdir+'/cidfile.txt'):
+        subprocess.call('docker stop %s' % (cid), shell=True )
+
     sofatrace = SOFATrace()
     sofatrace.name = 'blktrace_starting_block'
     sofatrace.title = 'BLKTRACE_STARTING_BLOCK'
@@ -1845,7 +1876,6 @@ def sofa_preprocess(cfg):
         sofatrace.y_field = 'bandwidth'
         sofatrace.data = diskstat_traces
         traces.append(sofatrace)
-
 
     if cfg.enable_vmstat:
         sofatrace = SOFATrace()
