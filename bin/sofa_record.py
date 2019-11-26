@@ -356,7 +356,8 @@ def sofa_record(command, cfg):
             p_perf = subprocess.Popen(profile_command, shell=True)
         
         try:
-            p_container_app.wait() 
+            if os.path.isfile(cfg.logdir+'/cidfile.txt'):
+                p_container_app.wait() 
             #p_perf.terminate()
             p_perf.wait()
             t_command_end = time.time()
