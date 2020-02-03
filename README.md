@@ -4,6 +4,7 @@
 # Introduction
 SOFA: SOFA (Swarm-Oriented Function Call Analysis)
 Authors: All the contributors of SOFA
+![Alt text](./figures/realdata.png)
 
 # Prerequisite
 1. Run `./tools/prepare.sh` to install all the necessary packages and python packages.
