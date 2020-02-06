@@ -866,7 +866,6 @@ def sofa_analyze(cfg):
     try:
         df_blktrace = pd.read_csv(filein_blktrace)
         if not df_blktrace.empty: 
-            print(df_blktrace)
             features = blktrace_latency_profile(logdir, cfg, df_blktrace, features)
     except IOError as e:
         df_blktrace = pd.DataFrame([], columns=cfg.columns)

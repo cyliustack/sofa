@@ -222,7 +222,8 @@ def sofa_record(command, cfg):
             p_vmstat = subprocess.Popen(['vmstat', '-w', '1'], stdout=logfile)
 
         if cfg.blktrace_device is not None:
-            p_blktrace = subprocess.Popen(['blktrace', '-d', '/dev/%s' % cfg.blktrace_device], stdout=DEVNULL)
+            p_blktrace = subprocess.Popen('sudo blktrace --dev=%s' % cfg.blktrace_device, stderr=DEVNULL, stdout=DEVNULL, shell=True)
+            subprocess.call('echo "blktrace enabled"', shell=True)
 
         with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
             logfile.write('')
@@ -328,7 +329,7 @@ def sofa_record(command, cfg):
            
             # Step1: launch sleep process to keep the container alive 
             command_sleep = command.replace(ccmd, 'sleep 600')
-            command_sleep = command_sleep.replace('docker run', 'docker run --cidfile=%s/cidfile.txt -v %s:/sofalog ' % (cfg.logdir, cfg.logdir))
+            command_sleep = command_sleep.replace('docker run', 'docker run -u 1000:1000 --cidfile=%s/cidfile.txt -v %s:/sofalog ' % (cfg.logdir, cfg.logdir))
             print_hint(command_sleep)
             p_container_sleep = subprocess.Popen(command_sleep.split())
             time.sleep(1)
@@ -389,9 +390,10 @@ def sofa_record(command, cfg):
             p_vmstat.terminate()
             print_info(cfg,"tried terminating vmstat")
         if p_blktrace != None:
-            p_blktrace.terminate()
+            #TODO: seek for a elegant killing solution 
+            subprocess.call('sudo pkill blktrace', shell=True)
             if cfg.blktrace_device is not None:
-                os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device,logdir))
+                os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device.split('/')[-1],logdir))
                 os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)
             print_info(cfg,"tried terminating blktrace")
         if p_cpuinfo != None:
@@ -436,7 +438,8 @@ def sofa_record(command, cfg):
             p_vmstat.kill()
             print_info(cfg,"tried killing vmstat")
         if p_blktrace != None:
-            p_blktrace.terminate()
+            #TODO: seek for a elegant killing solution 
+            subprocess.call('sudo pkill blktrace', shell=True)
             if cfg.blktrace_device is not None:
                 os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device,logdir))
                 os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)

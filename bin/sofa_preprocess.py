@@ -629,6 +629,7 @@ def sofa_preprocess(cfg):
     #     8,0    6        5     0.000006175 31479  D   W 691248304 + 1024 [dd]
     #     8,0    2        1     0.001041752     0  C   W 691248304 + 1024 [0]
     if cfg.blktrace_device is not None:
+        subprocess.call("sudo chown $(id -un) %s/blktrace.txt" % logdir, shell=True)
         with open('%s/blktrace.txt' % logdir) as f:
             lines = f.readlines()
             print_info(cfg,"Length of blktrace = %d" % len(lines))
@@ -715,9 +716,9 @@ def sofa_preprocess(cfg):
                                     blktrace_d_list[i][11] = 'latency=%0.6f' % float(time_consume)
 
                 blk_d_traces = list_to_csv_and_traces(
-                    logdir, blktrace_d_list, 'blktrace.csv', 'w')
+                    cfg, blktrace_d_list, 'blktrace.csv', 'w')
                 blk_traces = list_to_csv_and_traces(
-                    logdir, blktrace_list, 'blktrace.csv', 'a')
+                    cfg, blktrace_list, 'blktrace.csv', 'a')
 
                 if record_error_flag == 1 :
                     print_warning(cfg,'blktrace maybe record failed!')
