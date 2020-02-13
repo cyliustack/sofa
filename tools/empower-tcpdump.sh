@@ -74,6 +74,7 @@ function main()
 
         inform_sudo "Running sudo for adding '$username' to 'pcap' group."
         $WITH_SUDO usermod -a -G pcap ${username}
+        #$WITH_SUDO newgrp pcap 
         shift
     done
     echo -e "\n\n${C_GREEN}Please logout and then login to make group setting effective.${C_NONE}"
