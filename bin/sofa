@@ -29,137 +29,127 @@ if __name__ == "__main__":
     cfg.logdir = os.getcwd() + '/sofalog/'
     #TODO: solve all the divide and invalid issues.
     np.seterr(divide='ignore',invalid='ignore')
-    
+ 
     print_hint("Welcome to SOFA! Your Python version is %s.%s.%s" % sys.version_info[:3])
-    if sys.version_info < (3,5) :
-        print_error("But SOFA requires minimum version of Python 3.5.")
-        sys.exit(1)
-
-    print_hint("Use --verbose to have a more detailed performance report if necessary.")
-    parser = argparse.ArgumentParser(description='SOFA')
-    parser.add_argument(
-        '--logdir',
-        metavar='/path/to/logdir/',
-        type=str,
-        required=False,
-        help='path to the directory of SOFA logged files')
-    parser.add_argument(
-        '--gpu_filters',
-        metavar='"keyword1:color1,keyword2:color2"',
-        type=str,
-        required=False,
-        help='A string of list of pairs of keyword and color')
-    parser.add_argument(
-        '--cpu_filters',
-        metavar='"keyword1:color1,keyword2:color2"',
-        type=str,
-        required=False,
-        help='A string of list of pairs of keyword and color')
-    parser.add_argument(
-        '--cluster_ip',
-        metavar='"192.168.0.1,192.168.0.2"',
-        type=str,
-        required=False,
-        help='cluster ip is designed for cluster sofa report')
-    parser.add_argument('--cpu_top_k', metavar='N', type=int, required=False,
-                        help='K functions of the highest overheads')
-    parser.add_argument('--num_iterations', metavar='N', type=int, required=False,
-                        help='number of iterations by which a program runs')
-    parser.add_argument('--num_swarms', metavar='N', type=int, required=False,
-                        help='number of iterations by which a program runs')
-    parser.add_argument('--cpu_time_offset_ms', metavar='N', type=int, required=False,
-            help='timestamp offset (unit: ms) between CPU and GPU, +N or -N')
-    parser.add_argument('--strace_min_time', metavar='F', type=float, required=False,
-            help='strace records whose durations less than this limit will not be processed in the following stages. (unit: s)')
-    parser.add_argument(
-        '--plot_ratio',
-        metavar='N',
-        type=int,
-        required=False,
-        help='Down-sample ratio for points in scatter plot: 1, 10, 100, etc..')
-    parser.add_argument(
-        '--viz_port',
-        metavar='N',
-        type=int,
-        required=False,
-        help='Specify port of web server for browsing visualization results')
-    parser.add_argument('--profile_all_cpus', dest='profile_all_cpus', action='store_true')
-    parser.add_argument('--verbose', dest='verbose', action='store_true')
-    parser.add_argument('--enable_aisi', dest='enable_aisi', action='store_true')
-    parser.add_argument('--enable_strace', dest='enable_strace', action='store_true')
-    parser.add_argument('--enable_tcpdump', dest='enable_tcpdump', action='store_true')
-    parser.add_argument('--enable_encode_decode', dest='enable_encode_decode', action='store_true')
-    parser.add_argument('--aisi_via_strace', dest='aisi_via_strace', action='store_true')
-    parser.add_argument('--display_swarms', dest='display_swarms', action='store_true')
-    parser.add_argument('--enable_swarms', dest='enable_swarms', action='store_true')
-    parser.add_argument('--enable_py_stacks', dest='enable_py_stacks', action='store_true', required=False, 
-                            help='Record the callstack of python program via py-spy')
-    parser.add_argument('--base_logdir', dest='base_logdir', default='')
-    parser.add_argument('--match_logdir', dest='match_logdir', default='')
-    parser.add_argument('--hsg_multifeatures', dest='hsg_multifeatures', action='store_true')
-    parser.add_argument('--enable_vmstat', dest='enable_vmstat', action='store_true')
-    parser.add_argument('--skip_preprocess', dest='skip_preprocess', action='store_true')
-    parser.add_argument('--pid', metavar='PID', type=int, required=False,
-                        help='Specify the PID of the process you want to trace')
-
-    parser.add_argument(
-        'command',
-        type=str,
-        nargs=1,
-        metavar='<stat|record|report|preprocess|analyze|diff|viz|clean>')
-    parser.add_argument(
-        'usr_command',
-        type=str,
-        nargs='?',
-        metavar='<PROFILED_COMMAND>')
-    parser.add_argument(
-        '--network_filters',
-        metavar='"ip1,ip2,ip3"',
-        type=str,
-        required=False,
-        help='filters for network, put your ip into it, eg.192.168.0.100 is 192168000100, and first ip must be your localhost')
-    parser.add_argument('--cuda_api_tracing', dest='cuda_api_tracing', action='store_true')
-    parser.add_argument(
-        '--perf_events',
-        metavar='"cycles,instructions,cache-misses"',
-        type=str,
-        required=False,
-        help='Declare which perf events are going to be recorded')
-    parser.add_argument(
-        '--potato_server',
-        metavar='"ip:port"',
-        type=str,
-        required=False,
-        help='IP address of POTATO server')
-    parser.add_argument('--absolute_timestamp', action='store_true')
-    parser.add_argument(
-        '--profile_region',
-        metavar='begin_time,end_time',
-        type=str,
-        required=False,
-        help='time region of interest for profiling. (unit:second)')
-    parser.add_argument('--spotlight_gpu', help='start profiling when GPU SM utilization is high.', action='store_true')
-    parser.add_argument('--with_gui', help='launch a http server to provide Web GUI.', action='store_true')
-    parser.add_argument(
-        '--blkdev',
-        dest='blktrace_device',
-        type=str,
-        required=False,
-        help='trace for specific block device, for example : --blktrace_device sda')
-    parser.add_argument(
-        '--netstat_interface',
-        type=str,
-        required=False,
-        help='interface to monitor by netstat: like eth0 or ib0')
-    parser.add_argument('--nvsmi_time_zone', metavar='8', type=int, help='time zone for nvsmi_query.txt')
-    parser.add_argument('--nvprof_inside', action='store_true')
-	
+   
     sofa_exec_path = os.path.abspath( __file__ )
     if Path(sofa_exec_path).is_symlink():
         cfg.script_path = os.path.dirname(os.readlink(sofa_exec_path))
     else:
         cfg.script_path = os.path.dirname(sofa_exec_path)
 
+    print_hint("Use --verbose to have a more detailed performance report if necessary.")
+    parser = argparse.ArgumentParser( description='SOFA',
+                                      epilog='Example: sofa record "dd if=/dev/zero of=dummy.out bs=10M count=100" && sofa report --with_viz')
+    parser.add_argument(
+        'command',
+        nargs=1,
+        metavar='<SOFA_COMMAND>',
+        help='e.g., stat|record|report|preprocess|analyze|diff|viz|clean')
+    parser.add_argument(
+        'usr_command',
+        nargs='?',
+        metavar='<PROFILED_COMMAND>',
+        help='"./program arg1 arg2"')
+
+
+    group_general = parser.add_argument_group('General')
+    group_general.add_argument(
+        '--logdir',
+        metavar='/path/to/logdir/',
+        help='path to the directory of SOFA logged files')
+    group_general.add_argument('--verbose', dest='verbose', action='store_true')
+    group_general.add_argument('--pid', metavar='PID', type=int, 
+                                help='Specify the PID of the process you want to trace')
+   
+    group_record = parser.add_argument_group('SOFA Record')
+    group_record.add_argument('--profile_all_cpus', dest='profile_all_cpus', action='store_true')
+    group_record.add_argument('--enable_strace', dest='enable_strace', action='store_true')
+    group_record.add_argument('--enable_tcpdump', dest='enable_tcpdump', action='store_true')
+    group_record.add_argument('--enable_py_stacks', dest='enable_py_stacks', action='store_true', required=False, 
+                            help='Record the callstack of python program via py-spy')
+    group_record.add_argument(
+        '--perf_events',
+        metavar='"cycles,instructions,cache-misses"',
+        required=False,
+        help='Declare which perf events are going to be recorded')
+    group_record.add_argument(
+        '--blkdev',
+        dest='blktrace_device',
+        help='trace for specific block device, for example : --blktrace_device sda')
+    group_record.add_argument(
+        '--netstat_interface',
+        help='interface to monitor by netstat: like eth0 or ib0')
+    group_record.add_argument('--nvprof_inside', action='store_true')
+
+
+    
+    group_report = parser.add_argument_group('SOFA Report')
+    group_report.add_argument('--skip_preprocess', dest='skip_preprocess', action='store_true')
+    group_report.add_argument(
+        '--gpu_filters',
+        metavar='"keyword1:color1,keyword2:color2"',
+        required=False,
+        help='A string of list of pairs of keyword and color')
+    group_report.add_argument(
+        '--cpu_filters',
+        metavar='"keyword1:color1,keyword2:color2"',
+        required=False,
+        help='A string of list of pairs of keyword and color')
+    group_report.add_argument(
+        '--cluster_ip',
+        metavar='"192.168.0.1,192.168.0.2"',
+        help='cluster ip is designed for cluster sofa report')  
+    group_report.add_argument('--cpu_top_k', metavar='N', type=int, required=False,
+                        help='K functions of the highest overheads')
+    group_report.add_argument('--num_iterations', metavar='N', type=int, required=False,
+                        help='number of iterations by which a program runs')
+    group_report.add_argument('--num_swarms', metavar='N', type=int, required=False,
+                        help='number of iterations by which a program runs')
+    group_report.add_argument('--cpu_time_offset_ms', metavar='N', type=int, required=False,
+            help='timestamp offset (unit: ms) between CPU and GPU, +N or -N')
+    group_report.add_argument('--strace_min_time', metavar='F', type=float, required=False,
+            help='strace records whose durations less than this limit will not be processed in the following stages. (unit: s)')
+    group_report.add_argument(
+        '--plot_ratio',
+        metavar='N',
+        type=int,
+        required=False,
+        help='Down-sample ratio for points in scatter plot: 1, 10, 100, etc..')
+    group_report.add_argument(
+        '--viz_port',
+        metavar='N',
+        type=int,
+        required=False,
+        help='Specify port of web server for browsing visualization results')
+
+    group_report.add_argument('--enable_aisi', dest='enable_aisi', action='store_true')
+    group_report.add_argument('--enable_encode_decode', dest='enable_encode_decode', action='store_true')
+    group_report.add_argument('--aisi_via_strace', dest='aisi_via_strace', action='store_true')
+    group_report.add_argument('--display_swarms', dest='display_swarms', action='store_true')
+    group_report.add_argument('--enable_swarms', dest='enable_swarms', action='store_true')
+    group_report.add_argument('--base_logdir', dest='base_logdir', default='')
+    group_report.add_argument('--match_logdir', dest='match_logdir', default='')
+    group_report.add_argument('--hsg_multifeatures', dest='hsg_multifeatures', action='store_true')
+    group_report.add_argument('--enable_vmstat', dest='enable_vmstat', action='store_true')
+    group_report.add_argument(
+        '--network_filters',
+        metavar='"ip1,ip2,ip3"',
+        help='filters for network, put your ip into it, eg.192.168.0.100 is 192168000100, and first ip must be your localhost')
+    group_report.add_argument('--cuda_api_tracing', dest='cuda_api_tracing', action='store_true')
+    
+    group_report.add_argument(
+        '--potato_server',
+        metavar='"ip:port"',
+        help='IP address of POTATO server')
+    group_report.add_argument('--absolute_timestamp', action='store_true')
+    group_report.add_argument('--profile_region', metavar='begin_time,end_time',
+                              help='time region of interest for profiling. (unit:second)')
+    group_report.add_argument('--spotlight_gpu', help='start profiling when GPU SM utilization is high.', action='store_true')
+    group_report.add_argument('--with_gui', help='launch a http server to provide Web GUI.', action='store_true')
+    group_report.add_argument('--nvsmi_time_zone', metavar='8', type=int, help='time zone for nvsmi_query.txt')
+
+	
     args = parser.parse_args()
     if args.logdir is not None:
         cfg.logdir = args.logdir + '/'

@@ -628,7 +628,7 @@ def sofa_preprocess(cfg):
     #     8,0    6        4     0.000005004 31479  I   W 691248304 + 1024 [dd]
     #     8,0    6        5     0.000006175 31479  D   W 691248304 + 1024 [dd]
     #     8,0    2        1     0.001041752     0  C   W 691248304 + 1024 [0]
-    if cfg.blktrace_device is not None:
+    if os.path.isfile('%s/blktrace.txt' % logdir):
         subprocess.call("sudo chown $(id -un) %s/blktrace.txt" % logdir, shell=True)
         with open('%s/blktrace.txt' % logdir) as f:
             lines = f.readlines()
