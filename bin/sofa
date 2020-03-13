@@ -76,7 +76,7 @@ if __name__ == "__main__":
     group_record.add_argument(
         '--blkdev',
         dest='blktrace_device',
-        help='trace for specific block device, for example : --blktrace_device sda')
+        help='trace for specific block device, for example : --blkdev /dev/sda1')
     group_record.add_argument(
         '--netstat_interface',
         help='interface to monitor by netstat: like eth0 or ib0')
