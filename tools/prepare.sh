@@ -50,18 +50,13 @@ function install_python_packages()
     source ~/.bashrc
     
 
-    if [[ $(which yum) ]]  ; then
+    if [[ $(which yum) ]] ; then
         echo "yum detected"
         $WITH_SUDO yum update -y
         $WITH_SUDO yum install -y python3 python3-pip python3-devel
-    elif [[ "${OS}" == "Ubuntu" ]] && ( [[ "${VERSION}" == "14.04"* ]] || [[ "${VERSION}" == "16.04"* ]] ) ; then	
-        $WITH_SUDO apt-get install software-properties-common -y
-        $WITH_SUDO add-apt-repository ppa:deadsnakes/ppa -y
-        $WITH_SUDO apt-get update -y
-        $WITH_SUDO apt-get install python3.6 python3.6-dev python3.6-tk -y
-	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
-	$WITH_SUDO python3.6 get-pip.py
-        $WITH_SUDO rm get-pip.py
+    elif [[ $(which apt) ]] ; then	
+        $WITH_SUDO apt update -y
+        $WITH_SUDO apt install -y python3 python3-pip python3-dev
     elif [[ "${OS}" == "MacOS" ]] ; then
         $WITH_SUDO brew install python3.6 python3-pip python3.6-dev python3.6-tk 
     else
@@ -79,8 +74,8 @@ function install_python_packages()
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip"
     PIP_PACKAGES="numpy pandas matplotlib scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein grpcio grpcio-tools matplotlib"
-    $WITH_SUDO python3.6 -m pip install --upgrade pip
-    $WITH_SUDO python3.6 -m pip install --no-cache-dir ${PIP_PACKAGES}
+    $WITH_SUDO python3 -m pip install --upgrade pip
+    $WITH_SUDO python3 -m pip install --no-cache-dir ${PIP_PACKAGES}
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
      
     if [[ $(which conda) ]] ; then 
