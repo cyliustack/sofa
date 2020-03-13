@@ -23,6 +23,9 @@ elif [[ -f /etc/debian_version ]]; then
     # Older Debian/Ubuntu/etc.
     OS="Debian"
     VERSION="$(cat /etc/debian_version)"
+elif [[ "$(uname)" == "Darwin" ]]; then
+    OS="MacOS"
+    VERSION="$(uname)"
 else
     OS="$(lsb_release -si)"
     VERSION="$(lsb_release -sr)"
@@ -49,21 +52,18 @@ function install_python_packages()
 
     if [[ $(which yum) ]]  ; then
         echo "yum detected"
-	    $WITH_SUDO yum install -y epel-release
-        $WITH_SUDO yum install -y https://centos7.iuscommunity.org/ius-release.rpm
-        $WITH_SUDO yum install -y python36u python36u-pip python36u-devel
+        $WITH_SUDO yum update -y
+        $WITH_SUDO yum install -y python3 python3-pip python3-devel
     elif [[ "${OS}" == "Ubuntu" ]] && ( [[ "${VERSION}" == "14.04"* ]] || [[ "${VERSION}" == "16.04"* ]] ) ; then	
         $WITH_SUDO apt-get install software-properties-common -y
         $WITH_SUDO add-apt-repository ppa:deadsnakes/ppa -y
         $WITH_SUDO apt-get update -y
         $WITH_SUDO apt-get install python3.6 python3.6-dev python3.6-tk -y
 	    curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
-	    $WITH_SUDO python3.6 get-pip.py
+	$WITH_SUDO python3.6 get-pip.py
         $WITH_SUDO rm get-pip.py
-    elif [[ $(which apt) ]] ; then
-	    $WITH_SUDO add-apt-repository universe
-        $WITH_SUDO apt update -y
-        $WITH_SUDO apt install -y python3.6 python3-pip python3.6-dev python3.6-tk 
+    elif [[ "${OS}" == "MacOS" ]] ; then
+        $WITH_SUDO brew install python3.6 python3-pip python3.6-dev python3.6-tk 
     else
 	    file_pytar="Python-3.6.0.tar.xz"
 	    wget https://www.python.org/ftp/python/3.6.0/$file_pytar
@@ -118,6 +118,10 @@ function install_packages()
                                   centos-release-scl devtoolset-5-gcc* 
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
         $WITH_SUDO yum install -y perf 
+    elif [[ "${OS}" == "Darwin" ]]  ; then
+        $WITH_SUDO brew install  curl wget make gcc gcc-c++ cmake \
+                                 tcpdump sysstat strace time 
+        [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"
     fi
