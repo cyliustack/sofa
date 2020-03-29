@@ -54,11 +54,11 @@ function install_python_packages()
         echo "yum detected"
         $WITH_SUDO yum update -y
         $WITH_SUDO yum install -y python3 python3-pip python3-devel
-    elif [[ $(which apt) ]] ; then	
+    elif [[ $(which apt-get) ]] ; then	
         $WITH_SUDO apt update -y
         $WITH_SUDO apt install -y python3 python3-pip python3-dev
     elif [[ "${OS}" == "MacOS" ]] ; then
-        $WITH_SUDO brew install python3.6 python3-pip python3.6-dev python3.6-tk 
+        echo -e "${C_YELLOW}Please install python3 python3-pip python3-dev${C_NONE}" 
     else
 	    file_pytar="Python-3.6.0.tar.xz"
 	    wget https://www.python.org/ftp/python/3.6.0/$file_pytar
@@ -73,7 +73,7 @@ function install_python_packages()
     fi
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     echo "Install via pip"
-    PIP_PACKAGES="numpy pandas matplotlib scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein grpcio grpcio-tools matplotlib"
+    PIP_PACKAGES="numpy pandas matplotlib scipy networkx cxxfilt fuzzywuzzy sqlalchemy sklearn python-Levenshtein grpcio grpcio-tools matplotlib pyqt5"
     $WITH_SUDO python3 -m pip install --upgrade pip
     $WITH_SUDO python3 -m pip install --no-cache-dir ${PIP_PACKAGES}
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
@@ -92,20 +92,20 @@ function install_packages()
     echo -e "${C_GREEN}Installing other packages...${C_NONE}"
 
     #inform_$WITH_SUDO "Running $WITH_SUDO for installing packages"
-    if [[ $(which apt) ]] ; then
+    if [[ $(which apt-get) ]] ; then
         $WITH_SUDO apt-get update
         $WITH_SUDO apt-get update --fix-missing
-	$WITH_SUDO apt-get -y install software-properties-common
+	    $WITH_SUDO apt-get -y install software-properties-common
         $WITH_SUDO apt-add-repository -y ppa:trevorjay/pyflame 
         $WITH_SUDO apt-get update 
         $WITH_SUDO apt-get install -y pyflame
-	$WITH_SUDO apt-get install -y curl wget make gcc g++ cmake \
-		                      autoconf automake autotools-dev pkg-config libtool \
-	                              tcpdump sysstat strace time 
-	[[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+	    $WITH_SUDO apt-get install -y curl wget make gcc g++ cmake \
+		                            autoconf automake autotools-dev pkg-config libtool \
+	                                tcpdump sysstat strace time 
+	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
         $WITH_SUDO apt-get install linux-tools-common \
-                                   linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) \
-	                           linux-tools-generic linux-cloud-tools-generic 
+                                    linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) \
+	                                linux-tools-generic linux-cloud-tools-generic 
     elif [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install -y epel-release 
         $WITH_SUDO yum install -y curl wget make gcc gcc-c++ cmake \
@@ -113,9 +113,8 @@ function install_packages()
                                   centos-release-scl devtoolset-5-gcc* 
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
         $WITH_SUDO yum install -y perf 
-    elif [[ "${OS}" == "Darwin" ]]  ; then
-        $WITH_SUDO brew install  curl wget make gcc gcc-c++ cmake \
-                                 tcpdump sysstat strace time 
+    elif [[ "${OS}" == "MacOS" ]]  ; then
+        echo -e "${C_YELLOW} please use brew to install curl wget make gcc gcc-c++ cmake tcpdump sysstat strace time ${C_NONE}" 
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     else
         echo -e "${C_RED_BK}This script does not support your OS distribution, '$OS'. Please install the required packages by yourself. :(${C_NONE}"
