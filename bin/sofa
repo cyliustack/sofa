@@ -18,6 +18,7 @@ from sofa_preprocess import *
 from sofa_print import *
 from sofa_record import *
 from sofa_viz import *
+from sofa_qtgui import *
 
 if __name__ == "__main__":
     cfg = SOFA_Config()
@@ -147,6 +148,7 @@ if __name__ == "__main__":
                               help='time region of interest for profiling. (unit:second)')
     group_report.add_argument('--spotlight_gpu', help='start profiling when GPU SM utilization is high.', action='store_true')
     group_report.add_argument('--with_gui', help='launch a http server to provide Web GUI.', action='store_true')
+    group_report.add_argument('--with_qtgui', help='launch a PyQt5-based GUI.', action='store_true')
     group_report.add_argument('--nvsmi_time_zone', metavar='8', type=int, help='time zone for nvsmi_query.txt')
 
 	
@@ -330,9 +332,14 @@ if __name__ == "__main__":
             print_error("{base_logdir,match_logdir}/auto_caption.csv must exist!")
             sys.exit(1)
     elif command == 'viz':
-        sofa_viz(cfg)
+        if args.with_qtgui:
+            sofa_qtgui(cfg)
+        else:
+            sofa_viz(cfg)
+
     elif command == 'clean':
         sofa_clean(cfg)
+
     elif command == 'report':
         if cfg.cluster_ip:
             cluster = cfg.cluster_ip.split(',')
@@ -346,7 +353,9 @@ if __name__ == "__main__":
             if not args.skip_preprocess:
                 sofa_preprocess(cfg)
             sofa_analyze(cfg)
-            if args.with_gui:
+            if args.with_qtgui:
+                sofa_qtgui(cfg)
+            elif args.with_gui:
                 sofa_viz(cfg)
     else:
         print_error("Cannot recognized SOFA-command [%s]" % command)
