@@ -17,7 +17,6 @@ BIN_FILES=(bin/sofa
            bin/sofa_analyze.py
            bin/STree.py
            bin/sofa_viz.py
-           bin/sofa_qtgui.py
            bin/sofa_config.py
            bin/sofa_print.py
            bin/sofa_common.py
