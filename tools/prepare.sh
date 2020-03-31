@@ -103,7 +103,7 @@ function install_packages()
 		                            autoconf automake autotools-dev pkg-config libtool \
 	                                tcpdump sysstat strace time 
 	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-        $WITH_SUDO apt-get install linux-tools-common \
+        $WITH_SUDO apt-get install -y linux-tools-common \
                                     linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) \
 	                                linux-tools-generic linux-cloud-tools-generic 
     elif [[ $(which yum) ]]  ; then
