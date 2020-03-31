@@ -348,7 +348,7 @@ if __name__ == "__main__":
             if not args.skip_preprocess:
                 sofa_preprocess(cfg)
             sofa_analyze(cfg)
-            elif args.with_gui:
+            if args.with_gui:
                 sofa_viz(cfg)
     else:
         print_error("Cannot recognized SOFA-command [%s]" % command)
