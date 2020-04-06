@@ -121,7 +121,7 @@ def cpu_trace_read(sample, cfg, t_offset, cpu_mhz_xp, cpu_mhz_fp):
         func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6]
         counts = float(fields[2])
         event_raw = 1.0 * int("0x01" + fields[4], 16)
-    print(fields[5]+fields[6])
+    
     if not cfg.absolute_timestamp:
         time = time - cfg.time_base
 
