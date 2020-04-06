@@ -5,6 +5,7 @@ import itertools
 import json
 import multiprocessing as mp
 import os
+import platform
 import re
 import datetime
 
@@ -425,7 +426,6 @@ def sofa_preprocess(cfg):
 
     cpu_mhz_xp = [0.0]
     cpu_mhz_fp = [3000.0]
-    #np.interp(2.5, xp, fp)
     try:
         with open(logdir + 'cpuinfo.txt') as f:
             lines = f.readlines()
@@ -436,7 +436,7 @@ def sofa_preprocess(cfg):
                 cpu_mhz_xp.append(timestamp)
                 cpu_mhz_fp.append(mhz)
     except:
-        print_warning(cfg,'no cpuinfo file is found, default cpu MHz = %lf'%(fp[0]))
+        print_warning(cfg,'no cpuinfo file is found, default cpu MHz = %lf'%(cpu_mhz_fp[0]))
 
     net_traces = []
     cpu_traces = []
@@ -446,7 +446,7 @@ def sofa_preprocess(cfg):
     vm_usr_traces = []
     vm_sys_traces = []
     vm_bi_traces = []
-    vm_b0_traces = []
+    vm_bo_traces = []
     vm_in_traces = []
     vm_cs_traces = []
     vm_wa_traces = []
@@ -482,142 +482,144 @@ def sofa_preprocess(cfg):
     gpulog_header = 'True'
     cpu_count = mp.cpu_count()
 
-    with open('%s/mpstat.txt' % logdir) as f:
-        mpstat = np.genfromtxt(logdir+'/mpstat.txt', delimiter=',', invalid_raise=False )
-        header = mpstat[0]
-        mpstat = mpstat[1:]
-        mpstat_list = []
-        mpstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-        n_cores = int(mpstat[:,1].max() + 1)
-        stride = n_cores + 1
-        for i in range(len(mpstat)):
-            if len(mpstat[i]) < len(header):
-                continue
-            if i <= stride or mpstat[i,1] == -1:
-                continue
-            #time, cpu,  user，nice, system, idle, iowait, irq, softirq
-            core = mpstat[i,1]
-            d_mp = mpstat[i,:] - mpstat[i-stride,:]
-            d_mp_total = d_mp[2] + d_mp[4] + d_mp[5] + d_mp[6] + d_mp[7]
-            if d_mp_total == 0 :
-                print_info(cfg, 'No increases in mpstat values')
-                continue
-            d_mp_usr = d_mp[2] * 100 / float(d_mp_total)
-            d_mp_sys = d_mp[4] * 100 / float(d_mp_total)
-            d_mp_idl = d_mp[5] * 100 / float(d_mp_total)
-            d_mp_iow = d_mp[6] * 100 / float(d_mp_total)
-            d_mp_irq = d_mp[7] * 100 / float(d_mp_total)
-            cpu_time = (d_mp_total - d_mp[5]) * 0.01
-            t_begin = mpstat[i,0]
+    if os.path.isfile('%s/mpstat.txt' % logdir):
+        with open('%s/mpstat.txt' % logdir) as f:
+            mpstat = np.genfromtxt(logdir+'/mpstat.txt', delimiter=',', invalid_raise=False )
+            header = mpstat[0]
+            mpstat = mpstat[1:]
+            mpstat_list = []
+            mpstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            n_cores = int(mpstat[:,1].max() + 1)
+            stride = n_cores + 1
+            for i in range(len(mpstat)):
+                if len(mpstat[i]) < len(header):
+                    continue
+                if i <= stride or mpstat[i,1] == -1:
+                    continue
+                #time, cpu,  user，nice, system, idle, iowait, irq, softirq
+                core = mpstat[i,1]
+                d_mp = mpstat[i,:] - mpstat[i-stride,:]
+                d_mp_total = d_mp[2] + d_mp[4] + d_mp[5] + d_mp[6] + d_mp[7]
+                if d_mp_total == 0 :
+                    print_info(cfg, 'No increases in mpstat values')
+                    continue
+                d_mp_usr = d_mp[2] * 100 / float(d_mp_total)
+                d_mp_sys = d_mp[4] * 100 / float(d_mp_total)
+                d_mp_idl = d_mp[5] * 100 / float(d_mp_total)
+                d_mp_iow = d_mp[6] * 100 / float(d_mp_total)
+                d_mp_irq = d_mp[7] * 100 / float(d_mp_total)
+                cpu_time = (d_mp_total - d_mp[5]) * 0.01
+                t_begin = mpstat[i,0]
 
-            if not cfg.absolute_timestamp:
-                t_begin = t_begin - cfg.time_base
+                if not cfg.absolute_timestamp:
+                    t_begin = t_begin - cfg.time_base
 
-            deviceId = core
-            metric = cpu_time
-            event = -1
-            copyKind = -1
-            payload = -1
-            bandwidth = -1
-            pkt_src = pkt_dst = -1
-            pid = tid = -1
-            mpstat_info = 'mpstat_core%d (usr|sys|idl|iow|irq): |%3d|%3d|%3d|%3d|%3d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
+                deviceId = core
+                metric = cpu_time
+                event = -1
+                copyKind = -1
+                payload = -1
+                bandwidth = -1
+                pkt_src = pkt_dst = -1
+                pid = tid = -1
+                mpstat_info = 'mpstat_core%d (usr|sys|idl|iow|irq): |%3d|%3d|%3d|%3d|%3d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
 
-            trace_usr = [
-                t_begin,
-                event,
-                metric,
-                deviceId,
-                copyKind,
-                payload,
-                bandwidth,
-                pkt_src,
-                pkt_dst,
-                pid,
-                tid,
-                mpstat_info,
-                0]
-            
-            mpstat_list.append(trace_usr)
-            
-        mpstat_traces = list_to_csv_and_traces(cfg, mpstat_list, 'mpstat.csv', 'w')
+                trace_usr = [
+                    t_begin,
+                    event,
+                    metric,
+                    deviceId,
+                    copyKind,
+                    payload,
+                    bandwidth,
+                    pkt_src,
+                    pkt_dst,
+                    pid,
+                    tid,
+                    mpstat_info,
+                    0]
+                
+                mpstat_list.append(trace_usr)
+                
+            mpstat_traces = list_to_csv_and_traces(cfg, mpstat_list, 'mpstat.csv', 'w')
 
-    with open('%s/diskstat.txt' % logdir) as f:
-        diskstats = f.readlines()
-        diskstat_list = []
-        diskstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-        tmp_list = []
-        for diskstat in diskstats:
-            m = diskstat[:-1]
-            m = m.split(',')
-            tmp_list.append(m)
-        devs = list(map(lambda x: x[1], tmp_list))
-        n_dev = len(set(devs)) 
+    if os.path.isfile('%s/diskstat.txt' % logdir):
+        with open('%s/diskstat.txt' % logdir) as f:
+            diskstats = f.readlines()
+            diskstat_list = []
+            diskstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            tmp_list = []
+            for diskstat in diskstats:
+                m = diskstat[:-1]
+                m = m.split(',')
+                tmp_list.append(m)
+            devs = list(map(lambda x: x[1], tmp_list))
+            n_dev = len(set(devs)) 
 
-        for i in range(len(diskstats)):
-            if i < n_dev:
-                continue
-            m = diskstats[i][:-1]
-            m = m.split(',')
-            dev = m[1]
-            m_last = diskstats[i-n_dev][:-1]
-            m_last = m_last.split(',')
+            for i in range(len(diskstats)):
+                if i < n_dev:
+                    continue
+                m = diskstats[i][:-1]
+                m = m.split(',')
+                dev = m[1]
+                m_last = diskstats[i-n_dev][:-1]
+                m_last = m_last.split(',')
 
-            # get sector size
-            try:
-                f = open('/sys/block/'+dev+'/queue/hw_sector_size')
-                s = f.readline()
-                s = re.match("\d+", s)
-                secsize = int(s.group())
-            except:
-                pass
+                # get sector size
+                try:
+                    f = open('/sys/block/'+dev+'/queue/hw_sector_size')
+                    s = f.readline()
+                    s = re.match("\d+", s)
+                    secsize = int(s.group())
+                except:
+                    pass
 
-            d_read = int(m[2]) - int(m_last[2])
-            d_read *= secsize
-            d_write = int(m[3]) - int(m_last[3])
-            d_write *= secsize
-            d_disk_total = d_read + d_write #total bytes
-            
-            if not d_disk_total:
-                continue
-            t_begin = float(m_last[0])
+                d_read = int(m[2]) - int(m_last[2])
+                d_read *= secsize
+                d_write = int(m[3]) - int(m_last[3])
+                d_write *= secsize
+                d_disk_total = d_read + d_write #total bytes
+                
+                if not d_disk_total:
+                    continue
+                t_begin = float(m_last[0])
 
-            if not cfg.absolute_timestamp:
-                t_begin = t_begin - cfg.time_base     
-            
-            d_duration = float(m[0]) - float(m_last[0])
+                if not cfg.absolute_timestamp:
+                    t_begin = t_begin - cfg.time_base     
+                
+                d_duration = float(m[0]) - float(m_last[0])
 
-            # MB/s
-            d_throughput = round((d_disk_total/d_duration)/float(1024 ** 2),2)
+                # MB/s
+                d_throughput = round((d_disk_total/d_duration)/float(1024 ** 2),2)
 
-            event = -1
-            duration = d_duration
-            deviceId = m[1]
-            copyKind = -1
-            payload = d_disk_total
-            bandwidth = d_throughput
-            pkt_src = -1
-            pkt_dst = -1
-            pid = -1
-            tid = -1
-            diskstat_info = 'diskstat_dev:%s (read|write): |%3d|%3d| bytes' % (m[1], d_read, d_write)
-            trace = [
-                t_begin,
-                event,
-                duration,
-                deviceId,
-                copyKind,
-                payload,
-                bandwidth,
-                pkt_src,
-                pkt_dst,
-                pid,
-                tid,
-                diskstat_info,
-                0]
+                event = -1
+                duration = d_duration
+                deviceId = m[1]
+                copyKind = -1
+                payload = d_disk_total
+                bandwidth = d_throughput
+                pkt_src = -1
+                pkt_dst = -1
+                pid = -1
+                tid = -1
+                diskstat_info = 'diskstat_dev:%s (read|write): |%3d|%3d| bytes' % (m[1], d_read, d_write)
+                trace = [
+                    t_begin,
+                    event,
+                    duration,
+                    deviceId,
+                    copyKind,
+                    payload,
+                    bandwidth,
+                    pkt_src,
+                    pkt_dst,
+                    pid,
+                    tid,
+                    diskstat_info,
+                    0]
 
-            diskstat_list.append(trace)
-        diskstat_traces = list_to_csv_and_traces(cfg, diskstat_list, 'diskstat.csv', 'w')
+                diskstat_list.append(trace)
+            diskstat_traces = list_to_csv_and_traces(cfg, diskstat_list, 'diskstat.csv', 'w')
 
     
     #     dev   cpu   sequence  timestamp   pid  event operation start_block+number_of_blocks   process
@@ -728,227 +730,228 @@ def sofa_preprocess(cfg):
     #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
     #  2  0            0    400091552       936896    386150912    0    0     3    18    0    1   5   0  95   0   0
     # ============ Preprocessing VMSTAT Trace ==========================
-    with open('%s/vmstat.txt' % logdir) as f:
-        lines = f.readlines()
-        print_info(cfg,"Length of vmstat_traces = %d" % len(lines))
-        if len(lines) > 0:
-            vm_usr_list = []
-            vm_sys_list = []
-            vm_bi_list = []
-            vm_bo_list = []
-            vm_in_list = []
-            vm_cs_list = []
-            vm_wa_list = []
-            vm_st_list = []
-            vm_usr_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            vm_sys_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            vm_bi_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            vm_bo_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            vm_in_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            vm_cs_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            vm_wa_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            vm_st_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
-            t = 0
-            for i in range(len(lines)):
-                if lines[i].find('procs') == - \
-                        1 and lines[i].find('swpd') == -1:
-                    fields = lines[i].split()
-                    if len(fields) < 17:
-                        continue
-                    vm_r = float(fields[0]) + 1e-5
-                    vm_b = float(fields[1]) + 1e-5
-                    vm_sw = float(fields[2]) + 1e-5
-                    vm_fr = float(fields[3]) + 1e-5
-                    vm_bu = float(fields[4]) + 1e-5
-                    vm_ca = float(fields[5]) + 1e-5
-                    vm_si = float(fields[6]) + 1e-5
-                    vm_so = float(fields[7]) + 1e-5
-                    vm_bi = float(fields[8]) + 1e-5
-                    vm_bo = float(fields[9]) + 1e-5
-                    vm_in = float(fields[10]) + 1e-5
-                    vm_cs = float(fields[11]) + 1e-5
-                    vm_usr = float(fields[12]) + 1e-5
-                    vm_sys = float(fields[13]) + 1e-5
-                    vm_idl = float(fields[14]) + 1e-5
-                    vm_wa = float(fields[15]) + 1e-5
-                    vm_st = float(fields[16]) + 1e-5
+    if os.path.isfile('%s/vmstat.txt' % logdir):
+        with open('%s/vmstat.txt' % logdir) as f:
+            lines = f.readlines()
+            print_info(cfg,"Length of vmstat_traces = %d" % len(lines))
+            if len(lines) > 0:
+                vm_usr_list = []
+                vm_sys_list = []
+                vm_bi_list = []
+                vm_bo_list = []
+                vm_in_list = []
+                vm_cs_list = []
+                vm_wa_list = []
+                vm_st_list = []
+                vm_usr_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                vm_sys_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                vm_bi_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                vm_bo_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                vm_in_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                vm_cs_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                vm_wa_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                vm_st_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+                t = 0
+                for i in range(len(lines)):
+                    if lines[i].find('procs') == - \
+                            1 and lines[i].find('swpd') == -1:
+                        fields = lines[i].split()
+                        if len(fields) < 17:
+                            continue
+                        vm_r = float(fields[0]) + 1e-5
+                        vm_b = float(fields[1]) + 1e-5
+                        vm_sw = float(fields[2]) + 1e-5
+                        vm_fr = float(fields[3]) + 1e-5
+                        vm_bu = float(fields[4]) + 1e-5
+                        vm_ca = float(fields[5]) + 1e-5
+                        vm_si = float(fields[6]) + 1e-5
+                        vm_so = float(fields[7]) + 1e-5
+                        vm_bi = float(fields[8]) + 1e-5
+                        vm_bo = float(fields[9]) + 1e-5
+                        vm_in = float(fields[10]) + 1e-5
+                        vm_cs = float(fields[11]) + 1e-5
+                        vm_usr = float(fields[12]) + 1e-5
+                        vm_sys = float(fields[13]) + 1e-5
+                        vm_idl = float(fields[14]) + 1e-5
+                        vm_wa = float(fields[15]) + 1e-5
+                        vm_st = float(fields[16]) + 1e-5
 
-                    if cfg.absolute_timestamp:
-                        t_begin = t + cfg.time_base
-                    else:
-                        t_begin = t
-                    
-                    deviceId = cpuid = -1
-                    event = -1
-                    copyKind = -1
-                    payload = -1
-                    bandwidth = -1
-                    pkt_src = pkt_dst = -1
-                    pid = tid = -1
-                    vmstat_info = 'r=' + str(int(vm_r)) + '|'\
-                        + 'b=' + str(int(vm_b)) + '|'\
-                        + 'sw=' + str(int(vm_sw)) + '|'\
-                        + 'fr=' + str(int(vm_fr)) + '|'\
-                        + 'bu=' + str(int(vm_bu)) + '|'\
-                        + 'ca=' + str(int(vm_ca)) + '|'\
-                        + 'si=' + str(int(vm_si)) + '|'\
-                        + 'so=' + str(int(vm_so)) + '|'\
-                        + 'bi=' + str(int(vm_bi)) + '|'\
-                        + 'bo=' + str(int(vm_bo)) + '|'\
-                        + 'in=' + str(int(vm_in)) + '|'\
-                        + 'cs=' + str(int(vm_cs)) + '|'\
-                        + 'usr=' + str(int(vm_usr)) + '|'\
-                        + 'sys=' + str(int(vm_sys)) + '|'\
-                        + 'idl=' + str(int(vm_idl)) + '|'\
-                        + 'wa=' + str(int(vm_wa)) + '|'\
-                        + 'st=' + str(int(vm_st))
+                        if cfg.absolute_timestamp:
+                            t_begin = t + cfg.time_base
+                        else:
+                            t_begin = t
+                        
+                        deviceId = cpuid = -1
+                        event = -1
+                        copyKind = -1
+                        payload = -1
+                        bandwidth = -1
+                        pkt_src = pkt_dst = -1
+                        pid = tid = -1
+                        vmstat_info = 'r=' + str(int(vm_r)) + '|'\
+                            + 'b=' + str(int(vm_b)) + '|'\
+                            + 'sw=' + str(int(vm_sw)) + '|'\
+                            + 'fr=' + str(int(vm_fr)) + '|'\
+                            + 'bu=' + str(int(vm_bu)) + '|'\
+                            + 'ca=' + str(int(vm_ca)) + '|'\
+                            + 'si=' + str(int(vm_si)) + '|'\
+                            + 'so=' + str(int(vm_so)) + '|'\
+                            + 'bi=' + str(int(vm_bi)) + '|'\
+                            + 'bo=' + str(int(vm_bo)) + '|'\
+                            + 'in=' + str(int(vm_in)) + '|'\
+                            + 'cs=' + str(int(vm_cs)) + '|'\
+                            + 'usr=' + str(int(vm_usr)) + '|'\
+                            + 'sys=' + str(int(vm_sys)) + '|'\
+                            + 'idl=' + str(int(vm_idl)) + '|'\
+                            + 'wa=' + str(int(vm_wa)) + '|'\
+                            + 'st=' + str(int(vm_st))
 
-                    trace = [
-                        t_begin,
-                        event,
-                        vm_bi,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        vmstat_info,
-                        cpuid]
-                    vm_bi_list.append(trace)
+                        trace = [
+                            t_begin,
+                            event,
+                            vm_bi,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            vmstat_info,
+                            cpuid]
+                        vm_bi_list.append(trace)
 
-                    trace = [
-                        t_begin,
-                        event,
-                        vm_bo,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        vmstat_info,
-                        cpuid]
-                    vm_bo_list.append(trace)
+                        trace = [
+                            t_begin,
+                            event,
+                            vm_bo,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            vmstat_info,
+                            cpuid]
+                        vm_bo_list.append(trace)
 
-                    trace = [
-                        t_begin,
-                        event,
-                        vm_in,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        vmstat_info,
-                        cpuid]
-                    vm_in_list.append(trace)
+                        trace = [
+                            t_begin,
+                            event,
+                            vm_in,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            vmstat_info,
+                            cpuid]
+                        vm_in_list.append(trace)
 
-                    trace = [
-                        t_begin,
-                        event,
-                        vm_cs,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        vmstat_info,
-                        cpuid]
-                    vm_cs_list.append(trace)
+                        trace = [
+                            t_begin,
+                            event,
+                            vm_cs,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            vmstat_info,
+                            cpuid]
+                        vm_cs_list.append(trace)
 
-                    trace = [
-                        t_begin,
-                        event,
-                        vm_wa,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        vmstat_info,
-                        cpuid]
-                    vm_wa_list.append(trace)
+                        trace = [
+                            t_begin,
+                            event,
+                            vm_wa,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            vmstat_info,
+                            cpuid]
+                        vm_wa_list.append(trace)
 
-                    trace = [
-                        t_begin,
-                        event,
-                        vm_st,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        vmstat_info,
-                        cpuid]
-                    vm_st_list.append(trace)
+                        trace = [
+                            t_begin,
+                            event,
+                            vm_st,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            vmstat_info,
+                            cpuid]
+                        vm_st_list.append(trace)
 
-                    trace = [
-                        t_begin,
-                        event,
-                        vm_usr,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        vmstat_info,
-                        cpuid]
-                    vm_usr_list.append(trace)
+                        trace = [
+                            t_begin,
+                            event,
+                            vm_usr,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            vmstat_info,
+                            cpuid]
+                        vm_usr_list.append(trace)
 
-                    trace = [
-                        t_begin,
-                        event,
-                        vm_sys,
-                        deviceId,
-                        copyKind,
-                        payload,
-                        bandwidth,
-                        pkt_src,
-                        pkt_dst,
-                        pid,
-                        tid,
-                        vmstat_info,
-                        cpuid]
-                    vm_sys_list.append(trace)
+                        trace = [
+                            t_begin,
+                            event,
+                            vm_sys,
+                            deviceId,
+                            copyKind,
+                            payload,
+                            bandwidth,
+                            pkt_src,
+                            pkt_dst,
+                            pid,
+                            tid,
+                            vmstat_info,
+                            cpuid]
+                        vm_sys_list.append(trace)
 
-                    t = t + 1
+                        t = t + 1
 
-            vm_bi_traces = list_to_csv_and_traces(
-                cfg, vm_bi_list, 'vmstat.csv', 'w')
-            vm_bo_traces = list_to_csv_and_traces(
-                cfg, vm_bo_list, 'vmstat.csv', 'a')
-            vm_in_traces = list_to_csv_and_traces(
-                cfg, vm_in_list, 'vmstat.csv', 'a')
-            vm_cs_traces = list_to_csv_and_traces(
-                cfg, vm_cs_list, 'vmstat.csv', 'a')
-            vm_wa_traces = list_to_csv_and_traces(
-                cfg, vm_wa_list, 'vmstat.csv', 'a')
-            vm_st_traces = list_to_csv_and_traces(
-                cfg, vm_st_list, 'vmstat.csv', 'a')
-            vm_usr_traces = list_to_csv_and_traces(
-                cfg, vm_usr_list, 'vmstat.csv', 'a')
-            vm_sys_traces = list_to_csv_and_traces(
-                cfg, vm_sys_list, 'vmstat.csv', 'a')
+                vm_bi_traces = list_to_csv_and_traces(
+                    cfg, vm_bi_list, 'vmstat.csv', 'w')
+                vm_bo_traces = list_to_csv_and_traces(
+                    cfg, vm_bo_list, 'vmstat.csv', 'a')
+                vm_in_traces = list_to_csv_and_traces(
+                    cfg, vm_in_list, 'vmstat.csv', 'a')
+                vm_cs_traces = list_to_csv_and_traces(
+                    cfg, vm_cs_list, 'vmstat.csv', 'a')
+                vm_wa_traces = list_to_csv_and_traces(
+                    cfg, vm_wa_list, 'vmstat.csv', 'a')
+                vm_st_traces = list_to_csv_and_traces(
+                    cfg, vm_st_list, 'vmstat.csv', 'a')
+                vm_usr_traces = list_to_csv_and_traces(
+                    cfg, vm_usr_list, 'vmstat.csv', 'a')
+                vm_sys_traces = list_to_csv_and_traces(
+                    cfg, vm_sys_list, 'vmstat.csv', 'a')
 
     
     # timestamp, name, index, utilization.gpu [%], utilization.memory [%]
@@ -1175,108 +1178,109 @@ def sofa_preprocess(cfg):
     else:
         print_warning(cfg,"no network traces were recorded.")
     # ============ Preprocessing Network Bandwidth Trace ============
-    with open('%s/netstat.txt' % logdir) as f:
-        lines = f.readlines()
-        if lines:
-            tmp_time = float(lines[0].split(',')[0])
-            tmp_tx = int(lines[0].split(',')[1])
-            tmp_rx = int(lines[0].split(',')[2])
-            all_time = []
-            all_tx = []
-            all_rx = []
-            tx_list = []
-            rx_list = []
-            bandwidth_result = pd.DataFrame([], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
-    
-            for line in lines[1:]:
-                time = float(line.split(',')[0])
-                tx = int(line.split(',')[1])
-                rx = int(line.split(',')[2])
-                tx_bandwidth = (tx - tmp_tx) / (time - tmp_time) 
-                rx_bandwidth = (rx - tmp_rx) / (time - tmp_time)
+    if os.path.isfile('%s/netstat.txt' % logdir):
+        with open('%s/netstat.txt' % logdir) as f:
+            lines = f.readlines()
+            if lines:
+                tmp_time = float(lines[0].split(',')[0])
+                tmp_tx = int(lines[0].split(',')[1])
+                tmp_rx = int(lines[0].split(',')[2])
+                all_time = []
+                all_tx = []
+                all_rx = []
+                tx_list = []
+                rx_list = []
+                bandwidth_result = pd.DataFrame([], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
+        
+                for line in lines[1:]:
+                    time = float(line.split(',')[0])
+                    tx = int(line.split(',')[1])
+                    rx = int(line.split(',')[2])
+                    tx_bandwidth = (tx - tmp_tx) / (time - tmp_time) 
+                    rx_bandwidth = (rx - tmp_rx) / (time - tmp_time)
 
-                #sofa_fieldnames = [
-                #    "timestamp",  # 0
-                #    "event",  # 1
-                #    "duration",  # 2
-                #    "deviceId",  # 3
-                #    "copyKind",  # 4
-                #    "payload",  # 5
-                #    "bandwidth",  # 6
-                #    "pkt_src",  # 7
-                #    "pkt_dst",  # 8
-                #    "pid",  # 9
-                #    "tid",  # 10
-                #    "name",  # 11
-                #    "category"] # 12
+                    #sofa_fieldnames = [
+                    #    "timestamp",  # 0
+                    #    "event",  # 1
+                    #    "duration",  # 2
+                    #    "deviceId",  # 3
+                    #    "copyKind",  # 4
+                    #    "payload",  # 5
+                    #    "bandwidth",  # 6
+                    #    "pkt_src",  # 7
+                    #    "pkt_dst",  # 8
+                    #    "pid",  # 9
+                    #    "tid",  # 10
+                    #    "name",  # 11
+                    #    "category"] # 12
+                    
+                    t_begin = time
+                    if not cfg.absolute_timestamp:
+                        t_begin = t_begin - cfg.time_base
+        
+                    trace = [ 
+                        t_begin, # timestamp
+                        0, # event
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        tx_bandwidth, # tx bandwidth
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        "network_bandwidth_tx(bytes):%d" % tx_bandwidth,
+                        0
+                        ]
+                    tx_list.append(trace)
+        
+                    trace = [
+                        t_begin, # timestamp
+                        1, # event
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        rx_bandwidth, # rx bandwidth
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        "network_bandwidth_rx(bytes):%d" % rx_bandwidth,
+                        0
+                        ]
+                    rx_list.append(trace)
+        
+                    # for visualize
+                    all_time.append(time)
+                    all_tx.append(tx_bandwidth)
+                    all_rx.append(rx_bandwidth)
                 
-                t_begin = time
-                if not cfg.absolute_timestamp:
-                    t_begin = t_begin - cfg.time_base
-    
-                trace = [ 
-                    t_begin, # timestamp
-                    0, # event
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    tx_bandwidth, # tx bandwidth
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    "network_bandwidth_tx(bytes):%d" % tx_bandwidth,
-                    0
-                    ]
-                tx_list.append(trace)
-    
-                trace = [
-                    t_begin, # timestamp
-                    1, # event
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    rx_bandwidth, # rx bandwidth
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    "network_bandwidth_rx(bytes):%d" % rx_bandwidth,
-                    0
-                    ]
-                rx_list.append(trace)
-    
-                # for visualize
-                all_time.append(time)
-                all_tx.append(tx_bandwidth)
-                all_rx.append(rx_bandwidth)
-            
-                # for pandas
-                result = [t_begin, tx_bandwidth, rx_bandwidth]
-                tmp_bandwidth_result = pd.DataFrame([result], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
-                bandwidth_result = pd.concat([bandwidth_result, tmp_bandwidth_result], ignore_index=True)
-                
-                # prepare for next round loop        
-                tmp_time = time
-                tmp_tx = tx
-                tmp_rx = rx    
-            bandwidth_result.to_csv('%s/netbandwidth.csv' %logdir, header=True)
-            tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
-            tx_traces.to_csv(
-                        logdir + 'netstat.csv',
-                        mode='w',
-                        header=True,
-                        index=False,
-                        float_format='%.6f')
-            rx_traces = pd.DataFrame(rx_list, columns = sofa_fieldnames)
-            rx_traces.to_csv(
-                        logdir + 'netstat.csv',
-                        mode='a',
-                        header=False,
-                        index=False,
-                        float_format='%.6f')
+                    # for pandas
+                    result = [t_begin, tx_bandwidth, rx_bandwidth]
+                    tmp_bandwidth_result = pd.DataFrame([result], columns=['time', 'tx_bandwidth', 'rx_bandwidth'])
+                    bandwidth_result = pd.concat([bandwidth_result, tmp_bandwidth_result], ignore_index=True)
+                    
+                    # prepare for next round loop        
+                    tmp_time = time
+                    tmp_tx = tx
+                    tmp_rx = rx    
+                bandwidth_result.to_csv('%s/netbandwidth.csv' %logdir, header=True)
+                tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
+                tx_traces.to_csv(
+                            logdir + 'netstat.csv',
+                            mode='w',
+                            header=True,
+                            index=False,
+                            float_format='%.6f')
+                rx_traces = pd.DataFrame(rx_list, columns = sofa_fieldnames)
+                rx_traces.to_csv(
+                            logdir + 'netstat.csv',
+                            mode='a',
+                            header=False,
+                            index=False,
+                            float_format='%.6f')
         
     # ============ Preprocessing GPU Trace ==========================
     num_cudaproc = 0
@@ -1715,6 +1719,9 @@ def sofa_preprocess(cfg):
             elif lines[0].find('WARNING') != -1:
                 perf_timebase_uptime = 0 
                 perf_timebase_unix = 0 
+            elif platform.platform().find('Darwin') != -1:
+                perf_timebase_unix = float(lines[-1].split()[0])
+                perf_timebase_uptime = perf_timebase_unix 
             else:
                 perf_timebase_uptime = float(lines[-2].split()[2].split(':')[0])
                 perf_timebase_unix = float(lines[-1].split()[0])
