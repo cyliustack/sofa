@@ -18,6 +18,7 @@ import numpy as np
 import re
 from os import listdir
 from os.path import isfile, join
+import platform 
 
 from sofa_print import *
 
@@ -158,16 +159,18 @@ def sofa_record(command, cfg):
 #        print_error("sudo sysctl -w kernel.yama.ptrace_scope=0")
 #        sys.exit(1)
 
-    if int(open("/proc/sys/kernel/kptr_restrict").read()) != 0:
-        print_error(
-            "/proc/kallsyms permission is restricted, please try the command below:")
-        print_error("sudo sysctl -w kernel.kptr_restrict=0")
-        sys.exit(1)
+    if os.path.isfile("/proc/sys/kernel/kptr_restrict"):
+        if int(open("/proc/sys/kernel/kptr_restrict").read()) != 0:
+            print_error(
+                "/proc/kallsyms permission is restricted, please try the command below:")
+            print_error("sudo sysctl -w kernel.kptr_restrict=0")
+            sys.exit(1)
 
-    if int(open("/proc/sys/kernel/perf_event_paranoid").read()) != -1:
-        print_error('PerfEvent is not avaiable, please try the command below:')
-        print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
-        sys.exit(1)
+    if os.path.isfile("/proc/sys/kernel/perf_event_paranoid"):
+        if int(open("/proc/sys/kernel/perf_event_paranoid").read()) != -1:
+            print_error('PerfEvent is not avaiable, please try the command below:')
+            print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
+            sys.exit(1)
 
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
         print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
@@ -201,8 +204,9 @@ def sofa_record(command, cfg):
         else:
             perf_options = ''
 
-        subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
-        subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
+        if os.path.isfile("/proc/kallsyms"):
+            subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
+            subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
 
         print_info(cfg,"Script path of SOFA: "+cfg.script_path)
         with open(logdir+'/perf_timebase.txt', 'w') as logfile:
@@ -218,42 +222,48 @@ def sofa_record(command, cfg):
             unix_time = time.time()
             logfile.write(str('%.9lf'%unix_time)+'\n')
 
-        with open('%s/vmstat.txt' % logdir, 'w') as logfile:
-            p_vmstat = subprocess.Popen(['vmstat', '-w', '1'], stdout=logfile)
+        if subprocess.call('which vmstat', shell=True) == 0: 
+            with open('%s/vmstat.txt' % logdir, 'w') as logfile:
+                p_vmstat = subprocess.Popen(['vmstat', '-w', '1'], stdout=logfile)
 
         if cfg.blktrace_device is not None:
             p_blktrace = subprocess.Popen('sudo blktrace --dev=%s' % cfg.blktrace_device, stderr=DEVNULL, stdout=DEVNULL, shell=True)
             subprocess.call('echo "blktrace enabled"', shell=True)
 
-        with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
-            logfile.write('')
-            timerThread = threading.Thread(target=service_get_cpuinfo, args=[logdir])
-            timerThread.daemon = True
-            timerThread.start()
+        if os.path.isfile('/proc/cpuinfo'): 
+            with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
+                logfile.write('')
+                timerThread = threading.Thread(target=service_get_cpuinfo, args=[logdir])
+                timerThread.daemon = True
+                timerThread.start()
         
-        with open('%s/mpstat.txt' % logdir, 'w') as logfile:
-            logfile.write('time,cpu,user,nice,system,idle,iowait,irq,softirq\n')
-            timerThread = threading.Thread(target=service_get_mpstat, args=[logdir])
-            timerThread.daemon = True
-            timerThread.start()
+        if subprocess.call('which mpstat', shell=True) == 0: 
+            with open('%s/mpstat.txt' % logdir, 'w') as logfile:
+                logfile.write('time,cpu,user,nice,system,idle,iowait,irq,softirq\n')
+                timerThread = threading.Thread(target=service_get_mpstat, args=[logdir])
+                timerThread.daemon = True
+                timerThread.start()
 
-        with open('%s/diskstat.txt' % logdir, 'w') as logfile:
-            logfile.write('')
-            timerThread = threading.Thread(target=service_get_diskstat, args=[logdir])
-            timerThread.daemon = True
-            timerThread.start()
+        if subprocess.call('which diskstat', shell=True) == 0: 
+            with open('%s/diskstat.txt' % logdir, 'w') as logfile:
+                logfile.write('')
+                timerThread = threading.Thread(target=service_get_diskstat, args=[logdir])
+                timerThread.daemon = True
+                timerThread.start()
 
-        with open('%s/netstat.txt' % logdir, 'w') as logfile:
-            logfile.write('')
-            interface = subprocess.check_output("ip addr | awk '/state UP/{print $2}'", shell=True)
-            interface = str(interface, 'utf-8')
-            if cfg.netstat_interface is not None:
-                interface = cfg.netstat_interface
-            else:
-                interface = interface.split(':')[0]
-            timerThread = threading.Thread(target=service_get_netstat, args=[logdir, interface])
-            timerThread.daemon = True
-            timerThread.start()
+        if subprocess.call('which ip', shell=True) == 0:
+            with open('%s/netstat.txt' % logdir, 'w') as logfile:
+                logfile.write('')
+                interface = subprocess.check_output("ip addr | awk '/state UP/{print $2}'", shell=True)
+                interface = str(interface, 'utf-8')
+                if cfg.netstat_interface is not None:
+                    interface = cfg.netstat_interface
+                else:
+                    interface = interface.split(':')[0]
+                timerThread = threading.Thread(target=service_get_netstat, args=[logdir, interface])
+                timerThread.daemon = True
+                timerThread.start()
+        
         if cfg.enable_tcpdump:    
             with open(os.devnull, 'w') as FNULL:
                p_tcpdump =  subprocess.Popen(["tcpdump",
@@ -297,17 +307,22 @@ def sofa_record(command, cfg):
         if cfg.enable_strace:
             command_prefix = ' '.join(['strace', '-q', '-T', '-t', '-tt', '-f', '-o', '%s/strace.txt'%logdir]) + ' '
 
-        if int(os.system('command -v perf 1> /dev/null')) == 0:
-            ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
-            if ret.find('not supported') >=0:
-                profile_command = 'perf record -o %s/perf.data -F %s %s %s' % (logdir, sample_freq, perf_options, command_prefix+command)
-                cfg.perf_events = ""
-            else:
-                profile_command = 'perf record -o %s/perf.data -e %s -F %s %s %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command_prefix+command) 
-        else:
+        if platform.platform().find('Darwin') != -1:
             print_warning(cfg,"Use /usr/bin/time to measure program performance instead of perf.")
-            profile_command = '/usr/bin/time -v %s' % (command_prefix+command)
+            profile_command = '/usr/bin/time -l %s' % (command_prefix+command)
             cfg.perf_events = ""
+        else:
+            if int(os.system('command -v perf 1> /dev/null')) == 0:
+                ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
+                if ret.find('not supported') >=0:
+                    profile_command = 'perf record -o %s/perf.data -F %s %s %s' % (logdir, sample_freq, perf_options, command_prefix+command)
+                    cfg.perf_events = ""
+                else:
+                    profile_command = 'perf record -o %s/perf.data -e %s -F %s %s %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command_prefix+command) 
+            else:
+                print_warning(cfg,"Use /usr/bin/time to measure program performance instead of perf.")
+                profile_command = '/usr/bin/time -v %s' % (command_prefix+command)
+                cfg.perf_events = ""
         
         with open(logdir+'perf_events_used.txt','w') as f:
             f.write(cfg.perf_events)
@@ -347,19 +362,20 @@ def sofa_record(command, cfg):
             
                     # Step3: launch perf profiling process 
                     profile_command = 'perf record -o %s/perf.data -a -e cpu-clock --cgroup=docker/%s sleep 30' % (cfg.logdir, cid) 
-                    print_hint(profile_command)
+                    print_hint('Profiling Command : ' + profile_command)
                     p_perf = subprocess.Popen(profile_command, shell=True)
             else:
                 print('Cannot find cidfile.')
                 sys.exit(-1)
         else:    
-            print_hint(profile_command)
+            print_hint('Profiling Command : ' + profile_command)
+            if platform.platform().find('Darwin') != -1:
+                print_hint('On Darwin, press Ctrl+C to continue if being blocked for a while.')
             p_perf = subprocess.Popen(profile_command, shell=True)
         
         try:
             if os.path.isfile(cfg.logdir+'/cidfile.txt'):
                 p_container_app.wait() 
-            #p_perf.terminate()
             p_perf.wait()
             t_command_end = time.time()
         except TimeoutExpired:
@@ -367,16 +383,17 @@ def sofa_record(command, cfg):
             sys.exit(1)
 
         with open('%s/misc.txt' % logdir, 'w') as f_misc:
-            vcores = 0
-            cores = 0
-            with open('/proc/cpuinfo','r') as f:
-                lines = f.readlines()
-                vcores = 0
-                cores = 0
-                for line in lines:
-                    if line.find('cpu cores') != -1:
-                        cores = int(line.split()[3])
-                        vcores = vcores + 1
+            vcores = 1
+            cores = 1
+            if os.path.isfile('/proc/cpuinfo'): 
+                with open('/proc/cpuinfo','r') as f:
+                    lines = f.readlines()
+                    vcores = 0
+                    cores = 0
+                    for line in lines:
+                        if line.find('cpu cores') != -1:
+                            cores = int(line.split()[3])
+                            vcores = vcores + 1
             f_misc.write('elapsed_time %.6lf\n' % (t_command_end - t_command_begin))
             f_misc.write('cores %d\n' % (cores))
             f_misc.write('vcores %d\n' % (vcores))
