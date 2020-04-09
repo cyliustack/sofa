@@ -97,7 +97,12 @@ function install_packages()
     echo -e "${C_GREEN}Installing other packages...${C_NONE}"
 
     #inform_$WITH_SUDO "Running $WITH_SUDO for installing packages"
-    if [[ $(which apt-get) ]] ; then
+    if [[ $(which zypper) ]] ; then
+        $WITH_SUDO zypper update
+        $WITH_SUDO zypper in perf curl wget make gcc gcc-c++ cmake \
+                   blktrace tcpdump sysstat strace time
+        [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+    elif [[ $(which apt-get) ]] ; then
         $WITH_SUDO apt-get update
         $WITH_SUDO apt-get update --fix-missing
 	    $WITH_SUDO apt-get -y install software-properties-common
