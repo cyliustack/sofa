@@ -77,7 +77,12 @@ function install_python_packages()
     $WITH_SUDO python3 -m pip install --upgrade pip
     $WITH_SUDO python3 -m pip install --no-cache-dir ${PIP_PACKAGES}
     [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-     
+    
+    echo "Install python3 packages without sudo"
+    python3 -m pip install --upgrade pip
+    python3 -m pip install --no-cache-dir ${PIP_PACKAGES}
+    [[ $? != 0 ]] && echo -e "${C_YELLOW}[warninig] Failed to install required package for conda python3! Skip it if you don't need conda.${C_NONE}" 
+ 
     if [[ $(which conda) ]] ; then 
     	echo "Install via conda python"
     	CONDA_PY3=$(dirname $(which conda))/python3

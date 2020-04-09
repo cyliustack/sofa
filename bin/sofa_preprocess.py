@@ -121,7 +121,7 @@ def cpu_trace_read(sample, cfg, t_offset, cpu_mhz_xp, cpu_mhz_fp):
         func_name = '[%s]'%fields[3].replace('-','_')  + fields[5] + fields[6]
         counts = float(fields[2])
         event_raw = 1.0 * int("0x01" + fields[4], 16)
-
+    
     if not cfg.absolute_timestamp:
         time = time - cfg.time_base
 
@@ -404,17 +404,14 @@ def sofa_preprocess(cfg):
 
     if int(os.system('command -v perf 1> /dev/null')) == 0:
         with open(logdir + 'perf.script', 'w') as logfile:
-            subprocess.call(['perf',
-                             'script',
-                             '--symfs',
-                             '%s/container_root' % logdir,
-                             '--kallsym',
-                             '%s/kallsyms' % logdir,
-                             '-i',
-                             '%s/perf.data' % logdir,
-                             '-F',
-                             'time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym'],
-                            stdout=logfile, stderr=subprocess.DEVNULL)
+            if os.path.isfile('%s/container_root' % logdir):
+                option_container_symbols = ' --symfs %s/container_root ' % logdir
+            else:
+                option_container_symbols = '' 
+            option_kernel_symbols = ' --kallsym  %s/kallsyms ' % logdir
+            subprocess.call('perf script -F time,pid,tid,event,ip,sym,dso,symoff,period,brstack,brstacksym -i %s/perf.data %s %s'
+                            % (logdir, option_kernel_symbols, option_container_symbols),
+                            shell=True, stdout=logfile, stderr=subprocess.DEVNULL)
 
 
     
