@@ -4,6 +4,7 @@ import { Router, Route, Switch } from 'react-router-dom';
 
 import history from '../history';
 import Header from './layout/Header';
+import TraceView from './layout/TraceView';
 import Dashboard from './todos/Dashboard';
 import TodoDelete from './todos/TodoDelete';
 import TodoEdit from './todos/TodoEdit';
@@ -17,6 +18,7 @@ class App extends Component {
       <Provider store={store}>
         <Router history={history}>
           <Header />
+          <TraceView />
           <Switch>
             <Route exact path='/' component={Dashboard} />
             <Route exact path='/delete/:id' component={TodoDelete} />
