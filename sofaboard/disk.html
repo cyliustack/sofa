@@ -6,7 +6,7 @@
   <!-- Plotly chart will be drawn inside this DIV -->
   <div id="myDiv"></div>
     <script>
-    Plotly.d3.csv("diskstat_vector.csv", function(err, rows){
+    Plotly.d3.csv("diskstat_vector_ui.csv", function(err, rows){
     function unpack(rows, key) {
     return rows.map(function(row) { return row[key]; });
     }

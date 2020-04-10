@@ -603,7 +603,8 @@ def blktrace_latency_profile(logdir, cfg, df, features):
     plt.title("Block Offset Report", fontsize=18)
     plt.xlabel('Timestamp (s)', fontsize=16)
     plt.ylabel("Block Number", fontsize=16)
-    fig.savefig("%s/Offset of Device Report.pdf" % logdir, bbox_inches='tight')
+    fig.savefig("%s/offset_of_device_report.pdf" % logdir, bbox_inches='tight')
+    print('Offset of Device Report is saved at %s/offset_of_device_report.pdf' %logdir)
 
     if cfg.verbose:
         print_title('Storage Profiling:')
@@ -672,7 +673,7 @@ def diskstat_profile(logdir, cfg, df, features):
         print(final_table.T)
     
     df_feature = pd.DataFrame({ 'name':['diskstat_q1','diskstat_q2','diskstat_q3'], 
-                        'value': [diskstat_q1, diskstat_q2,  diskstat_q3] }, 
+                        'value': [diskstat_q1.mean(), diskstat_q2.mean(),  diskstat_q3.mean()] }, 
                         columns=['name','value'])
     features = pd.concat([features, df_feature])   
  

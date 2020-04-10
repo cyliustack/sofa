@@ -656,7 +656,13 @@ def sofa_preprocess(cfg):
                     diskstat_traces = diskstat_traces[(diskstat_traces.deviceId != dev)]
             diskstat_traces.to_csv('%s/diskstat.csv' %logdir, index=False)
             diskstat_table.to_csv('%s/diskstat_vector.csv' %logdir, index=False)
-    
+   
+            if cfg.blktrace_device:
+                devi = cfg.blktrace_device.split('/')[-1]
+                de = (diskstat_table['dev'] == devi)
+                diskstat_table = diskstat_table[de]
+                diskstat_table.to_csv('%s/diskstat_vector_ui.csv' %logdir, index=False)
+
     #     dev   cpu   sequence  timestamp   pid  event operation start_block+number_of_blocks   process
     # <mjr,mnr>        number
     #     8,0    6        1     0.000000000 31479  A   W 691248304 + 1024 <- (8,5) 188175536
