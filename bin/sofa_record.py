@@ -93,6 +93,22 @@ def get_mpstat(logdir):
         df_stat.to_csv("%s/mpstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
 
 def get_diskstat(logdir):
+    # /proc/diskstats
+    #
+    # 0 1 2   3     4    5       6      7       8       9        10      11 12     13
+    # 3 0 hda 43205 4113 4800428 280967 1051597 1682874 21876608 1950120 0  858685 2231096
+    #
+    # Field 3 -- # of reads issued
+    # Field 5 -- # of sectors read
+    # Field 6 -- # of milliseconds spent reading
+                 # This is the total number of milliseconds spent by all reads (as
+                 # measured from __make_request() to end_that_request_last()).
+    # Field 7 -- # of writes completed
+    # Field 9 -- # of sectors written
+    # Field 10-- # of milliseconds spent writing
+                 # This is the total number of milliseconds spent by all writes (as
+                 # measured from __make_request() to end_that_request_last()).
+    
     with open('/proc/diskstats','r') as f:
         lines = f.readlines()
         stat_list = []
@@ -100,8 +116,7 @@ def get_diskstat(logdir):
         for line in lines:
             m = line[:-1]
             m = line.split()
-            if re.search(r'sd\D$',m[2]):
-                stat_list.append([unix_time]+[m[2]]+[m[5]]+[m[9]])
+            stat_list.append([unix_time]+[m[2]]+[m[5]]+[m[9]]+[m[3]]+[m[7]]+[m[6]]+[m[10]])
         df_stat = pd.DataFrame(stat_list)
         df_stat.to_csv("%s/diskstat.txt" % logdir, mode='a', header=False, index=False, index_label=False)
 
@@ -244,7 +259,7 @@ def sofa_record(command, cfg):
                 timerThread.daemon = True
                 timerThread.start()
 
-        if subprocess.call('which diskstat', shell=True) == 0: 
+        if os.path.isfile('/proc/diskstats'):
             with open('%s/diskstat.txt' % logdir, 'w') as logfile:
                 logfile.write('')
                 timerThread = threading.Thread(target=service_get_diskstat, args=[logdir])
@@ -410,7 +425,7 @@ def sofa_record(command, cfg):
             #TODO: seek for a elegant killing solution 
             subprocess.call('sudo pkill blktrace', shell=True)
             if cfg.blktrace_device is not None:
-                os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device.split('/')[-1],logdir))
+                os.system('sudo blkparse -i %s -o %s/blktrace.txt -d %s/blktrace.out > /dev/null' % (cfg.blktrace_device.split('/')[-1], logdir, logdir))
                 os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)
             print_info(cfg,"tried terminating blktrace")
         if p_cpuinfo != None:

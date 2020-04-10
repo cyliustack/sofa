@@ -545,13 +545,14 @@ def sofa_preprocess(cfg):
             diskstats = f.readlines()
             diskstat_list = []
             diskstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
+            all_diskstat_vector = []
             tmp_list = []
             for diskstat in diskstats:
                 m = diskstat[:-1]
                 m = m.split(',')
                 tmp_list.append(m)
-            devs = list(map(lambda x: x[1], tmp_list))
-            n_dev = len(set(devs)) 
+            devs = list(set(map(lambda x: x[1], tmp_list)))
+            n_dev = len(devs)
 
             for i in range(len(diskstats)):
                 if i < n_dev:
@@ -577,9 +578,7 @@ def sofa_preprocess(cfg):
                 d_write *= secsize
                 d_disk_total = d_read + d_write #total bytes
                 
-                if not d_disk_total:
-                    continue
-                t_begin = float(m_last[0])
+                t_begin = float(m[0])
 
                 if not cfg.absolute_timestamp:
                     t_begin = t_begin - cfg.time_base     
@@ -589,6 +588,37 @@ def sofa_preprocess(cfg):
                 # MB/s
                 d_throughput = round((d_disk_total/d_duration)/float(1024 ** 2),2)
 
+                # iops
+                r_io = int(m[4]) - int(m_last[4])
+                w_io = int(m[5]) - int(m_last[5])
+                r_iops = int(r_io / d_duration)
+                w_iops = int(w_io / d_duration)
+                iops =  int((r_io + w_io) / d_duration)
+   
+                # await time per io
+                r_time, w_time, await_time = 0, 0, 0            
+                if r_io > 0:
+                    r_time = (int(m[6]) - int(m_last[6])) / r_io
+                if w_io > 0:
+                    w_time = (int(m[7]) - int(m_last[7])) / w_io
+                if (r_io+w_io) > 0:
+                    await_time = ((int(m[6]) - int(m_last[6])) + (int(m[7]) - int(m_last[7]))) / (r_io + w_io)
+                          
+                diskstat_vector = [t_begin,
+                                   m[1],
+                                   r_iops,
+                                   w_iops,
+                                   iops,
+                                   r_time,
+                                   w_time,
+                                   await_time,
+                                   d_read,
+                                   d_write,
+                                   d_disk_total
+                                  ]
+                        
+                all_diskstat_vector.append(tuple(diskstat_vector))
+                
                 event = -1
                 duration = d_duration
                 deviceId = m[1]
@@ -616,9 +646,23 @@ def sofa_preprocess(cfg):
                     0]
 
                 diskstat_list.append(trace)
-            diskstat_traces = list_to_csv_and_traces(cfg, diskstat_list, 'diskstat.csv', 'w')
+            diskstat_traces = pd.DataFrame(diskstat_list[1:], columns = sofa_fieldnames)
+            diskstat_table = pd.DataFrame(all_diskstat_vector, columns = ['time', 'dev', 'r_iops', 'w_iops', 'iops',
+                                          'r_time', 'w_time', 'await_time', 'd_read', 'd_write', 'd_disk_total'])
+            for dev in devs:
+                device = (diskstat_table['dev'] == dev)
+                if diskstat_table[device]['d_disk_total'].max() == 0:
+                    diskstat_table = diskstat_table[(diskstat_table.dev != dev)]
+                    diskstat_traces = diskstat_traces[(diskstat_traces.deviceId != dev)]
+            diskstat_traces.to_csv('%s/diskstat.csv' %logdir, index=False)
+            diskstat_table.to_csv('%s/diskstat_vector.csv' %logdir, index=False)
+   
+            if cfg.blktrace_device:
+                devi = cfg.blktrace_device.split('/')[-1]
+                de = (diskstat_table['dev'] == devi)
+                diskstat_table = diskstat_table[de]
+                diskstat_table.to_csv('%s/diskstat_vector_ui.csv' %logdir, index=False)
 
-    
     #     dev   cpu   sequence  timestamp   pid  event operation start_block+number_of_blocks   process
     # <mjr,mnr>        number
     #     8,0    6        1     0.000000000 31479  A   W 691248304 + 1024 <- (8,5) 188175536
@@ -627,6 +671,11 @@ def sofa_preprocess(cfg):
     #     8,0    6        4     0.000005004 31479  I   W 691248304 + 1024 [dd]
     #     8,0    6        5     0.000006175 31479  D   W 691248304 + 1024 [dd]
     #     8,0    2        1     0.001041752     0  C   W 691248304 + 1024 [0]
+    
+    if os.path.isfile('%s/blktrace.out' % logdir):
+        subprocess.call('btt  -i %s/blktrace.out -B offset > %s/btt.txt' %(logdir, logdir), shell=True)
+        subprocess.call('mv offset*c.dat %s/offset_all.txt' % logdir, shell=True)
+    
     if os.path.isfile('%s/blktrace.txt' % logdir):
         subprocess.call("sudo chown $(id -un) %s/blktrace.txt" % logdir, shell=True)
         with open('%s/blktrace.txt' % logdir) as f:

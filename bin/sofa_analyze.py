@@ -583,42 +583,97 @@ def netbandwidth_profile(logdir, cfg, df, features):
     return features
 
 def blktrace_latency_profile(logdir, cfg, df, features):
+    with open('%s/btt.txt' % logdir) as f:
+        lines = f.readlines()
+        for i, line in enumerate(lines):
+            if '==================== All Devices ====================' in line:
+                start = i
+            if '==================== Device Merge Information ====================' in line:
+                end = i
+                break
+        bttoutput_result = lines[start:end]
+
+    df_offset = pd.read_table('%s/offset_all.txt' % logdir, delim_whitespace=True, names=('time', 'start', 'end'))
+    time = df_offset['time'].tolist()
+    start_b = df_offset['start'].tolist()
+    end_b = df_offset['end'].tolist()
+    fig = plt.figure(dpi=128, figsize=(16, 14))
+    plt.plot(time, start_b, c='red', marker='o', alpha=0.3, label='Start block')
+    plt.legend(loc='upper right')
+    plt.title("Block Offset Report", fontsize=18)
+    plt.xlabel('Timestamp (s)', fontsize=16)
+    plt.ylabel("Block Number", fontsize=16)
+    fig.savefig("%s/offset_of_device_report.pdf" % logdir, bbox_inches='tight')
+    print('Offset of Device Report is saved at %s/offset_of_device_report.pdf' %logdir)
+
     if cfg.verbose:
         print_title('Storage Profiling:')
-        print('Blktracae Latency Quartile (s):')
+        print('Blktracae Latency (s):')
+        for btt in bttoutput_result:
+            print(btt[:-1])
+
     blktrace_latency = df['event'] == 'C'
     blktrace_latency_q1 = df[blktrace_latency]['duration'].quantile(0.25)
     blktrace_latency_q2 = df[blktrace_latency]['duration'].quantile(0.5)
     blktrace_latency_q3 = df[blktrace_latency]['duration'].quantile(0.75)
     blktrace_latency_mean = df[blktrace_latency]['duration'].mean()
-
-    print('Q1 blktrace latency : %f' % blktrace_latency_q1)
-    print('Q2 blktrace latency : %f' % blktrace_latency_q2)
-    print('Q3 blktrace latency : %f' % blktrace_latency_q3)
-    print('Avg blktrace latency : %f'% blktrace_latency_mean)
+    
     df_feature = pd.DataFrame({ 'name':['blktrace_latency_q1','blktrace_latency_q2','blktrace_latency_q3'], 
                         'value': [blktrace_latency_q1, blktrace_latency_q2, blktrace_latency_q3] }, 
                         columns=['name','value'])
-    features = pd.concat([features, df_feature])   
+    features = pd.concat([features, df_feature])
+    
  
     return features
 
 def diskstat_profile(logdir, cfg, df, features):
+    diskstat_dev = list(set(df['dev']))
+    diskstat_r_q1 = df.groupby('dev')['d_read'].quantile(0.25)
+    diskstat_w_q1 = df.groupby('dev')['d_write'].quantile(0.25)
+    diskstat_q1 = df.groupby('dev')['d_disk_total'].quantile(0.25)
+    diskstat_r_q2 = df.groupby('dev')['d_read'].quantile(0.5)
+    diskstat_w_q2 = df.groupby('dev')['d_write'].quantile(0.5)
+    diskstat_q2 = df.groupby('dev')['d_disk_total'].quantile(0.5)
+    diskstat_r_q3 = df.groupby('dev')['d_read'].quantile(0.75)
+    diskstat_w_q3 = df.groupby('dev')['d_write'].quantile(0.75)
+    diskstat_q3 = df.groupby('dev')['d_disk_total'].quantile(0.75)
+    diskstat_r_avg = df.groupby('dev')['d_read'].mean()
+    diskstat_w_avg = df.groupby('dev')['d_write'].mean()
+    diskstat_avg = df.groupby('dev')['d_disk_total'].mean()
+    diskstat_r_iops = df.groupby('dev')['r_iops'].mean()
+    diskstat_w_iops = df.groupby('dev')['w_iops'].mean()
+    diskstat_iops = df.groupby('dev')['iops'].mean()
+    diskstat_wait = df.groupby('dev')['await_time'].mean()
+    diskstat_table = pd.concat([diskstat_r_q1, diskstat_r_q2, diskstat_r_q3, diskstat_r_avg, 
+                                diskstat_w_q1, diskstat_w_q2, diskstat_w_q3, diskstat_w_avg,
+                                diskstat_q1, diskstat_q2, diskstat_q3, diskstat_avg,
+                                diskstat_r_iops, diskstat_w_iops, diskstat_iops,
+                                diskstat_wait], axis=1, sort=False)
+    diskstat_columns = ['Q1 throughput(Read)', 'Q2 throughput(Read)', 'Q3 throughput(Read)', 'Avg throughput(Read)',
+                        'Q1 throughput(Write)', 'Q2 throughput(Write)', 'Q3 throughput(Write)', 'Avg throughput(Write)',
+                        'Q1 throughput(R+W)', 'Q2 throughput(R+W)', 'Q3 throughput(R+W)', 'Avg throughput(R+W)',
+                        'Avg IOPS(Read)', 'Avg IOPS(Write)', 'Avg IOPS(R+W)', 'Avg Await time(ms)']
+    diskstat_table.columns = diskstat_columns
+    
+    final_table = pd.DataFrame(columns=diskstat_columns)
+    for j, dev in enumerate(diskstat_dev):
+        tmp_list = []
+        for i in diskstat_columns[:-4]:
+            tmp_list.append(convertbytes(diskstat_table.iloc[j][i]))
+        for i in diskstat_columns[-4:-1]:
+            tmp_list.append('%d' % int(diskstat_table.iloc[j][i]))
+        tmp_list.append('%.2lf ms' % diskstat_table.iloc[j][-1])
+        tmp_table = pd.DataFrame([tuple(tmp_list)],
+                                 columns=diskstat_columns,
+                                 index=[dev])
+        final_table = pd.concat([final_table, tmp_table])
     if cfg.verbose:
         print_title('DISKSTAT Profiling:')
         print('Disk Throughput Quartile :')
-    diskstat_q1 = df['bandwidth'].quantile(0.25)
-    diskstat_q2 = df['bandwidth'].quantile(0.5)
-    diskstat_q3 = df['bandwidth'].quantile(0.75)
-    diskstat_mean = df['bandwidth'].mean()
-
-    print('Q1 disk throughput : %.2f MB/s' % diskstat_q1)
-    print('Q2 disk throughput : %.2f MB/s' % diskstat_q2)
-    print('Q3 disk throughput : %.2f MB/s' % diskstat_q3)
-    print('Avg disk throughput : %.2f MB/s' % diskstat_mean)
+        print(final_table.T)
     
     df_feature = pd.DataFrame({ 'name':['diskstat_q1','diskstat_q2','diskstat_q3'], 
-                        'value': [diskstat_q1, diskstat_q2,  diskstat_q3] }, 
+                        'value': [diskstat_q1.mean(), diskstat_q2.mean(),  diskstat_q3.mean()] }, 
                         columns=['name','value'])
     features = pd.concat([features, df_feature])   
  
@@ -753,7 +808,7 @@ def sofa_analyze(cfg):
     filein_nvsmi = logdir + "nvsmi_trace.csv"
     filein_bandwidth = logdir + "netstat.csv"
     filein_blktrace = logdir + "blktrace.csv"
-    filein_diskstat = logdir + "diskstat.csv"
+    filein_diskstat = logdir + "diskstat_vector.csv"
 
     if os.path.isfile('%s/nvlink_topo.txt' % logdir):
 
