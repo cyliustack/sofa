@@ -15,4 +15,4 @@ def sofa_viz(cfg):
     print_hint('To change port, please run command: \033[4msofa viz --viz_port=PortNumber\033[24m')
     print_hint('Please open your browser to start profiling.')
     print_hint('After profiling, please enter Ctrl+C to exit.')
-    os.system('cd %s && python3.6 -m http.server %d 2>&1 1> /dev/null; cd -' % (cfg.logdir,cfg.viz_port))
+    os.system('cd %s && python3 -m http.server %d 2>&1 1> /dev/null; cd -' % (cfg.logdir,cfg.viz_port))
