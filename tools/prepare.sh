@@ -119,8 +119,7 @@ function install_packages()
     elif [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install -y epel-release 
         $WITH_SUDO yum install -y curl wget make gcc gcc-c++ cmake \
-                                  tcpdump sysstat strace time \
-                                  centos-release-scl devtoolset-5-gcc* 
+                                  tcpdump sysstat strace time 
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
         $WITH_SUDO yum install -y perf 
     elif [[ "${OS}" == "MacOS" ]]  ; then
