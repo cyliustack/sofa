@@ -564,7 +564,7 @@ def sofa_preprocess(cfg):
                 m_last = m_last.split(',')
 
                 # get sector size
-		secsize = 512
+                secsize = 512
                 try:
                     f = open('/sys/block/'+dev+'/queue/hw_sector_size')
                     s = f.readline()
