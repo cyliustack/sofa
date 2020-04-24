@@ -1,7 +1,6 @@
 # Introduction
-SOFA: SOFA (Swarm-Oriented Function Call Analysis)
-Authors: All the contributors of SOFA    
-
+SOFA: SOFA (Swarm-Oriented Function Call Analysis)     
+    
 # Prerequisite
 1. Run `./tools/prepare.sh` to install all the necessary packages and python packages.
 2. [OPTIONAL] Run `./tools/empower-tcpdump.sh $(whoami)` to make network related events tracable in SOFA. After running this step, it is required to __re-login__ to __APPLY THE CHANGES__!!!
