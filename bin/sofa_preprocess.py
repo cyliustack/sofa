@@ -1770,8 +1770,12 @@ def sofa_preprocess(cfg):
                 perf_timebase_unix = float(lines[-1].split()[0])
                 perf_timebase_uptime = perf_timebase_unix 
             else:
-                perf_timebase_uptime = float(lines[-2].split()[2].split(':')[0])
-                perf_timebase_unix = float(lines[-1].split()[0])
+                try:
+                    perf_timebase_uptime = float(lines[-2].split()[2].split(':')[0])
+                    perf_timebase_unix = float(lines[-1].split()[0])
+                except:
+                    print_warning(cfg,'Incorrect format in perf_timebase.txt; the profiling time might be too short.') 
+
 
     try:
         with open(logdir + 'perf.script') as f:
