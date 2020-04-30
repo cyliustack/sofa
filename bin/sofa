@@ -344,6 +344,8 @@ if __name__ == "__main__":
                 if not args.skip_preprocess:
                     sofa_preprocess(cfg)
             cluster_analyze(cfg)
+            if args.with_gui:
+                sofa_viz(cfg)
         else:
             if not args.skip_preprocess:
                 sofa_preprocess(cfg)

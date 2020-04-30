@@ -168,6 +168,11 @@ def sofa_record(command, cfg):
     sample_freq = 99
     command_prefix = ''
 
+    with_sudo = ''
+    if int(os.system('command -v sudo  1> /dev/null')) == 0:
+        with_sudo = 'sudo '
+
+
 #    if int(open("/proc/sys/kernel/yama/ptrace_scope").read()) != 0:
 #        print_error(
 #            "Could not attach to process, please try the command below:")
@@ -201,7 +206,8 @@ def sofa_record(command, cfg):
     subprocess.call('rm %s/gputrace.tmp > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.txt > /dev/null 2> /dev/null' % logdir, shell=True)
-    subprocess.call('sudo umount %s/container_root' % logdir, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if os.path.isfile('%s/container_root' % logdir):
+        subprocess.call( with_sudo + 'umount %s/container_root' % logdir, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     try:
         print_main_progress("Prologue of Recording...")
