@@ -100,7 +100,7 @@ function install_packages()
     if [[ $(which zypper) ]] ; then
         $WITH_SUDO zypper update
         $WITH_SUDO zypper in perf curl wget make gcc gcc-c++ cmake \
-                   blktrace tcpdump sysstat strace time
+                   blktrace tcpdump sysstat strace time libcap-progs
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which apt-get) ]] ; then
         $WITH_SUDO apt-get update
@@ -111,7 +111,7 @@ function install_packages()
         $WITH_SUDO apt-get install -y pyflame
 	    $WITH_SUDO apt-get install -y curl wget make gcc g++ cmake \
 		                            autoconf automake autotools-dev pkg-config libtool \
-	                                tcpdump sysstat strace time 
+	                                tcpdump sysstat strace time libcap2-bin
 	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
         $WITH_SUDO apt-get install -y linux-tools-common \
                                     linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) \
@@ -119,7 +119,7 @@ function install_packages()
     elif [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install -y epel-release 
         $WITH_SUDO yum install -y curl wget make gcc gcc-c++ cmake \
-                                  tcpdump sysstat strace time 
+                                  tcpdump sysstat strace time libcap
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
         $WITH_SUDO yum install -y perf 
     elif [[ "${OS}" == "MacOS" ]]  ; then
