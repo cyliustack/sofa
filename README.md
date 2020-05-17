@@ -3,7 +3,7 @@ SOFA: SOFA (Swarm-Oriented Function Call Analysis)
     
 # Prerequisite
 1. Run `./tools/prepare.sh` to install all the necessary packages and python packages.
-2. [OPTIONAL] Run `./tools/empower-tcpdump.sh $(whoami)` to make network related events tracable in SOFA. After running this step, it is required to __re-login__ to __APPLY THE CHANGES__!!!
+2. [OPTIONAL] Run `./tools/empower.py $(whoami) $(which tcpdump)` to make network related events tracable in SOFA. After running this step, it is required to __re-login__ to __APPLY THE CHANGES__!!!
 
 # Installation
 1. Simply run `./install.sh </PATH/TO/INSTALL>` to install SOFA on your system. Note that `sofa` will be appended to the path if the last directory is not sofa.
