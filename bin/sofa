@@ -146,7 +146,7 @@ if __name__ == "__main__":
     group_report.add_argument('--profile_region', metavar='begin_time,end_time',
                               help='time region of interest for profiling. (unit:second)')
     group_report.add_argument('--spotlight_gpu', help='start profiling when GPU SM utilization is high.', action='store_true')
-    group_report.add_argument('--with_gui', help='launch a http server to provide Web GUI.', action='store_true')
+    group_report.add_argument('--with-gui', help='launch a http server to provide Web GUI.', action='store_true')
     group_report.add_argument('--nvsmi_time_zone', metavar='8', type=int, help='time zone for nvsmi_query.txt')
 
 	
