@@ -20,7 +20,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Running sudo for setting a system utility (e.g., /usr/sbin/tcpdump) with "sofa" group.')
     parser.add_argument( 'user', metavar='user_name')
     parser.add_argument( 'utility', metavar='system_utility')
-    parser.add_argument( '--recover', action='store_true', help='remove the added powers of sofa-group and recover capability of specified program')
+    parser.add_argument( '--recover', action='store_true', help='recover capability of specified program')
+    parser.add_argument( '--remove-group-sofa', action='store_true', help='remove sofa-group')
     args = parser.parse_args()
  
 
@@ -35,10 +36,11 @@ if __name__ == '__main__':
 
     if args.recover:     
         print('Recovering mode of user/group and capability of "' + args.utility + '"...')
-        ret = call(with_sudo + 'chgrp ' + args.user + ' ' + args.utility, shell=True)
-        print('The group "sofa" is going to be removed. Are you sure (y/n)?', end=' ')
-        if input() == 'y':
-            call(with_sudo + 'groupdel sofa', shell=True)
+        ret = call(with_sudo + 'chgrp root ' + ' ' + args.utility, shell=True)
+        if args.remove_group_sofa:
+            print('The group "sofa" is going to be removed. Are you sure (y/n)?', end=' ')
+            if input() == 'y':
+                call(with_sudo + 'groupdel sofa', shell=True)
         sys.exit(0)
     else:
         call(with_sudo + 'groupadd sofa', shell=True)
@@ -46,7 +48,7 @@ if __name__ == '__main__':
         if ret != 0:
             print('Failed...')
             sys.exit(1)
-        call(with_sudo + 'chmod 750 ' + args.utility, shell=True)
+        call(with_sudo + 'chmod g+rx ' + args.utility, shell=True)
 
     #Set capabilities for the specified utility
     if args.utility.find('tcpdump') != -1:
