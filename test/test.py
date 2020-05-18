@@ -44,9 +44,9 @@ if __name__ == '__main__':
         print(result)
         with open(logfile_name, 'a') as logfile:
             if result.find('Complete!!') != -1:
-                message = 'Building ' + image_name + ' PASSED!\n'
+                message = 'Testing on ' + image_name + ' PASSED!\n'
             else:
-                message = 'Building ' + image_name + ' FAILED!\n'
+                message = 'Testing on ' + image_name + ' FAILED!\n'
 
             print(message)
             logfile.write(message)
