@@ -49,13 +49,13 @@ function install_python_packages()
     echo -e "${C_GREEN}Installing python packages...${C_NONE}"
     source ~/.bashrc
     
-
-    if [[ $(which yum) ]] ; then
+    if [[ $(which zypper) ]] ; then
+        echo "zypper detected"
+        $WITH_SUDO zypper -n install python3 python3-pip python3-devel
+    elif [[ $(which yum) ]] ; then
         echo "yum detected"
-        $WITH_SUDO yum update -y
-        $WITH_SUDO yum install -y python3 python3-pip python3-devel
+        $WITH_SUDO yum install -y python3 python3-pip python3-devel python3-wheel
     elif [[ $(which apt-get) ]] ; then	
-        $WITH_SUDO apt update -y
         $WITH_SUDO apt install -y python3 python3-pip python3-dev
     elif [[ "${OS}" == "MacOS" ]] ; then
         echo -e "${C_YELLOW}Please install python3 python3-pip python3-dev${C_NONE}" 
@@ -98,22 +98,19 @@ function install_packages()
 
     #inform_$WITH_SUDO "Running $WITH_SUDO for installing packages"
     if [[ $(which zypper) ]] ; then
-        $WITH_SUDO zypper update
-        $WITH_SUDO zypper in perf curl wget make gcc gcc-c++ cmake \
+        $WITH_SUDO zypper -n update
+        $WITH_SUDO zypper -n install perf curl wget make gcc gcc-c++ cmake \
                    blktrace tcpdump sysstat strace time
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
     elif [[ $(which apt-get) ]] ; then
-        $WITH_SUDO apt-get update
-        $WITH_SUDO apt-get update --fix-missing
-	    $WITH_SUDO apt-get -y install software-properties-common
         $WITH_SUDO apt-add-repository -y ppa:trevorjay/pyflame 
-        $WITH_SUDO apt-get update 
-        $WITH_SUDO apt-get install -y pyflame
-	    $WITH_SUDO apt-get install -y curl wget make gcc g++ cmake \
-		                            autoconf automake autotools-dev pkg-config libtool \
-	                                tcpdump sysstat strace time 
-	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
-        $WITH_SUDO apt-get install -y linux-tools-common \
+        $WITH_SUDO apt update 
+        $WITH_SUDO apt update --fix-missing
+	    $WITH_SUDO apt install -y software-properties-common
+        $WITH_SUDO apt install -y pyflame
+	    $WITH_SUDO apt install -y curl wget build-essential cmake tcpdump sysstat strace time
+ 	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
+        $WITH_SUDO apt install -y linux-tools-common \
                                     linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) \
 	                                linux-tools-generic linux-cloud-tools-generic 
     elif [[ $(which yum) ]]  ; then
