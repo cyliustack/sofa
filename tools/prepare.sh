@@ -108,7 +108,7 @@ function install_packages()
         $WITH_SUDO apt update --fix-missing
 	    $WITH_SUDO apt install -y software-properties-common
         $WITH_SUDO apt install -y pyflame
-	    $WITH_SUDO apt install -y curl wget build-essential cmake tcpdump sysstat strace time
+	    $WITH_SUDO apt install -y curl wget build-essential cmake tcpdump sysstat strace time libcap2-bin
  	    [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
         $WITH_SUDO apt install -y linux-tools-common \
                                     linux-tools-$(uname -r) linux-cloud-tools-$(uname -r) \
@@ -116,7 +116,7 @@ function install_packages()
     elif [[ $(which yum) ]]  ; then
         $WITH_SUDO yum install -y epel-release 
         $WITH_SUDO yum install -y curl wget make gcc gcc-c++ cmake \
-                                  tcpdump sysstat strace time 
+                                  tcpdump sysstat strace time
         [[ $? != 0 ]] && echo -e "${C_RED_BK}Failed... :(${C_NONE}" && exit 1
         $WITH_SUDO yum install -y perf 
     elif [[ "${OS}" == "MacOS" ]]  ; then
