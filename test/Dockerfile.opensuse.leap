@@ -1,0 +1,8 @@
+FROM opensuse/leap:latest
+
+RUN zypper -n update 
+RUN zypper -n install git wget curl vim which 
+
+
+
+

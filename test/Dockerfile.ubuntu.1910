@@ -1,0 +1,8 @@
+FROM ubuntu:19.10
+
+RUN apt update -y
+RUN apt install git wget curl vim -y
+
+
+
+
