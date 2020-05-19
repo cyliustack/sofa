@@ -27,9 +27,8 @@ SOFA supports serveral different usages, like how one can use perf. More details
 
 ## Performance Visualizations
 1. `sofa record "dd if=/dev/zero of=dummy.out bs=100M count=10"`
-2. `sofa report [--verbose]` 
-3. `sofa viz` 
-4. Open browser with one of the following links for different visualizations
+2. `sofa report [--verbose] [--with-gui]` 
+3.  If passing "--with-gui" to "sofa report", you could open browser with one of the following links for different visualizations.
     * [http://localhost:8000](http://localhost:8000)
     * [http://localhost:8000/cpu-report.html](http://localhost:8000/cpu-report.html)
     * [http://localhost:8000/gpu-report.html](http://localhost:8000/gpu-report.html)
@@ -37,8 +36,8 @@ SOFA supports serveral different usages, like how one can use perf. More details
 
 # Configurations
 SOFA provides options for configurations. Some examples are shown below. Please use `sofa --help` to see more info.  
-1. `sofa --cpu_filters="idle:black,tensorflow:orange" record "python tf_cnn_benchmarks.py"`   
-2. `sofa --gpu_filters="tensorflow:orange" record "python tf_cnn_benchmarks.py"`   
+1. `sofa record "python tf_cnn_benchmarks.py" --cpu_filters="idle:black,tensorflow:orange"`   
+2. `sofa record "python tf_cnn_benchmarks.py" --gpu_filters="tensorflow:orange"`   
 
 
 # Examples of Visualization Results:
@@ -55,6 +54,3 @@ SOFA provides options for configurations. Some examples are shown below. Please 
 
 `sofa record "./scout t-bench resnet50_real"`   
 ![Alt text](./figures/realdata.png)
-
-# Uninstall
-Run `bash </PATH/TO/INSTALL>/sofa/tools/uninstall.sh` to safely remove/uninstall files of SOFA.
