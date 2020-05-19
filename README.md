@@ -1,5 +1,7 @@
 # Introduction
 SOFA: SOFA (Swarm-Oriented Function Call Analysis)     
+
+![Alt text](./figures/sofa.png)
     
 # Prerequisite
 1. Run `./tools/prepare.sh` to install all the necessary packages and python packages.

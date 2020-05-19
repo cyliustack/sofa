@@ -627,7 +627,7 @@ def blktrace_latency_profile(logdir, cfg, df, features):
     return features
 
 def diskstat_profile(logdir, cfg, df, features):
-    diskstat_dev = list(set(df['dev']))
+    #diskstat_dev = list(set(df['dev']))
     diskstat_r_q1 = df.groupby('dev')['d_read'].quantile(0.25)
     diskstat_w_q1 = df.groupby('dev')['d_write'].quantile(0.25)
     diskstat_q1 = df.groupby('dev')['d_disk_total'].quantile(0.25)
@@ -654,7 +654,8 @@ def diskstat_profile(logdir, cfg, df, features):
                         'Q1 throughput(R+W)', 'Q2 throughput(R+W)', 'Q3 throughput(R+W)', 'Avg throughput(R+W)',
                         'Avg IOPS(Read)', 'Avg IOPS(Write)', 'Avg IOPS(R+W)', 'Avg Await time(ms)']
     diskstat_table.columns = diskstat_columns
-    
+    diskstat_dev = diskstat_table.index.format()
+
     final_table = pd.DataFrame(columns=diskstat_columns)
     for j, dev in enumerate(diskstat_dev):
         tmp_list = []
@@ -662,7 +663,7 @@ def diskstat_profile(logdir, cfg, df, features):
             tmp_list.append(convertbytes(diskstat_table.iloc[j][i]))
         for i in diskstat_columns[-4:-1]:
             tmp_list.append('%d' % int(diskstat_table.iloc[j][i]))
-        tmp_list.append('%.2lf ms' % diskstat_table.iloc[j][-1])
+        tmp_list.append('%.3lf ms' % diskstat_table.iloc[j][-1])
         tmp_table = pd.DataFrame([tuple(tmp_list)],
                                  columns=diskstat_columns,
                                  index=[dev])

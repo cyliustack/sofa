@@ -1,7 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script> 
+  <style>  
+      body {font-family: "Lato", sans-serif;}
+     
+      .sidenav {
+        height: 100%;
+        width: 280px;
+        position: fixed;
+        z-index: 1;
+        top: 0px;
+        left: 0;
+        background-color: #111;
+        overflow-x: hidden;
+        padding-top: 60px;
+      }
+      .sidenav a {
+        padding: 6px 6px 6px 32px;
+        text-decoration: none;
+        font-size: 20px;
+        color: #818181;
+        display: block;
+      }
+      .sidenav a:hover {
+        color: #f1f1f1;
+      }
+      .main{
+        margin-left: 280px;
+        padding-top: 50px;
+      }
+      @media screen and (max-height: 450px) {
+        .sidenav {padding-top: 15px;}
+        .sidenav a {font-size: 18px;}
+      }
+
+      /* Style the header */
+      .header {
+        margin-left: 0;
+        background: #17BECF;
+        color: #f1f1f1;
+        width: 100%;
+        top: 0;
+        left: 0px;
+        height: 45px;
+        padding-left: 20px;
+        position: fixed;
+        z-index: 2;
+      }
+      .header h2{
+        font-family: Arial, Helvetica, sans-serif;
+        display: inline;
+        float: left;
+        margin-top: 10px;
+        margin-bottom: 10px;
+
+      }
+      .header p{
+        display: inline;
+        float: right;
+        margin-right: 30px;
+        font-weight: bold;
+      }
+
+  </style>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,23 +71,77 @@
   <meta name="author" content="Cheng-Yueh Liu">
   <title>SOFA-Viz</title>
   <!-- Bootstrap Core CSS -->
-  <link rel="stylesheet" href="stylesheets/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" type="text/css">
 
-  <link rel="stylesheet" href="lib/highlight/styles/github.css">
-  <link rel="stylesheet" href="stylesheets/app.css">
-
-  <!-- Custom Fonts -->
-  <link href="lib/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
-  <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
 </head>
-
 <body>
+  <div class="header" id="myHeader">
+    <h2>SOFA</h2>
+    <p>SOFA (Swarm-Oriented Function Call Analysis)</p>
+  </div>
+  <div class="sidenav">
+        <a href="#e"><i class="fa fa-image"></i> Functions and Events</a>
+        <a href="#n"><i class="fa fa-line-chart"></i> Network Utilization</a>
+  </div>
+
    <script src="https://code.highcharts.com/highcharts.js"></script>
    <script src="https://code.highcharts.com/modules/exporting.js"></script>
-   <div id="container" style="min-width: 310px; height: 400px; max-width: 90%; margin: 0 auto"></div>
+   <a name="e">
+   <div id="container" style="min-width: 310px; height: 400px; max-width: 90%; margin-left: 280px; padding-top: 50px"></div>
+   </a>
    <script src="report.js"></script>
    <script src="timeline.js"></script>
+  </a>
+<a name="n">
+<div class=main id="main_net"></div>
+  <script>
+  Plotly.d3.csv("netbandwidth.csv", function(err, rows){
+  function unpack(rows, key) {
+  return rows.map(function(row) { return row[key]; });
+  }
+
+
+  var trace1 = {
+  type: "scatter",
+  mode: "lines",
+  name: 'tx bandwidth',
+  //x: unpack(rows, 'Date'),
+  x: unpack(rows, 'time'),
+  //y: unpack(rows, 'AAPL.High'),
+  y: unpack(rows, 'tx_bandwidth'),
+  line: {color: '#17BECF'}
+  }
+
+  var trace2 = {
+  type: "scatter",
+  mode: "lines",
+  name: 'rx bandwidth',
+  x: unpack(rows, 'time'),
+  y: unpack(rows, 'rx_bandwidth'),
+  line: {color: '#7F7F7F'}
+  }
+
+  var data = [trace1,trace2];
+  
+  var layout = {
+  title: 'Time Series with Network Bandwidth (Bytes/s)', 
+  xaxis: {
+  autorange: true, 
+  //range: ['0', '999999999'], 
+
+  rangeslider: {range: []}, 
+  type: 'time'
+  }, 
+  yaxis: {
+  autorange: true, 
+  //range: [86.8700008333, 138.870004167], 
+  type: 'linear'
+  }
+  };
+
+  Plotly.newPlot('main_net', data, layout, {showSendToCloud: true});
+  })
+  </script>
+  </a>
 </body>
-
 </html>
-

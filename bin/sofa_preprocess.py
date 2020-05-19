@@ -593,6 +593,9 @@ def sofa_preprocess(cfg):
 
                 # MB/s
                 d_throughput = round((d_disk_total/d_duration)/float(1024 ** 2),2)
+                read_bandwidth = d_read / d_duration
+                write_bandwidth = d_write / d_duration
+                total_bandwidth = d_disk_total / d_duration
 
                 # iops
                 r_io = int(m[4]) - int(m_last[4])
@@ -618,9 +621,9 @@ def sofa_preprocess(cfg):
                                    r_time,
                                    w_time,
                                    await_time,
-                                   d_read,
-                                   d_write,
-                                   d_disk_total
+                                   read_bandwidth,
+                                   write_bandwidth,
+                                   total_bandwidth
                                   ]
                         
                 all_diskstat_vector.append(tuple(diskstat_vector))
