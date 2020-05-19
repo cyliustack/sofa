@@ -34,10 +34,10 @@ SOFA supports serveral different usages, like how one can use perf. More details
     * [http://localhost:8000/gpu-report.html](http://localhost:8000/gpu-report.html)
 
 
-# Configurations
-SOFA provides options for configurations. Some examples are shown below. Please use `sofa --help` to see more info.  
+## Advanced Usages
+SOFA provides options for advanced usages. Some examples are shown below. Please use `sofa --help` to see more info.  
 1. `sofa record "python tf_cnn_benchmarks.py" --cpu_filters="idle:black,tensorflow:orange"`   
-2. `sofa record "python tf_cnn_benchmarks.py" --gpu_filters="tensorflow:orange"`   
+2. `sofa record "python tf_cnn_benchmarks.py" --gpu_filters="tensorflow:orange"`  
 
 
 # Examples of Visualization Results:
