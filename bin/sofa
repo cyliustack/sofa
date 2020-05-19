@@ -81,7 +81,7 @@ if __name__ == "__main__":
         '--netstat_interface',
         help='interface to monitor by netstat: like eth0 or ib0')
     group_record.add_argument('--nvprof_inside', action='store_true')
-
+    group_record.add_argument('--no-perf-events', action='store_true', help = 'Profiling without perf')
 
     
     group_report = parser.add_argument_group('SOFA Report')
@@ -136,6 +136,10 @@ if __name__ == "__main__":
         '--network_filters',
         metavar='"ip1,ip2,ip3"',
         help='filters for network, put your ip into it, eg.192.168.0.100 is 192168000100, and first ip must be your localhost')
+    group_report.add_argument(
+        '--diskstat_filters',
+        metavar='"sda"',
+        help='filters for diskstat to show on diskstat UI')
     group_report.add_argument('--cuda_api_tracing', dest='cuda_api_tracing', action='store_true')
     
     group_report.add_argument(
@@ -277,6 +281,9 @@ if __name__ == "__main__":
         pairs = args.network_filters.split(',')
         for pair in pairs:
             cfg.net_filters.append(pair)
+    
+    if args.diskstat_filters:
+        cfg.diskstat_filters = args.diskstat_filters 
 
     if args.perf_events is not None:
         cfg.perf_events = args.perf_events
@@ -292,6 +299,9 @@ if __name__ == "__main__":
         except:
             print_error("The usage of profile_region should look like --profile_region='begin_time,end_time'")
             sys.exit(-1)
+
+    if args.no_perf_events:
+        cfg.no_perf_events = True
 
     print_info(cfg, "Ratio of raw data points to plotting points : %d" % cfg.plot_ratio)
     for filter in cfg.cpu_filters:
@@ -343,7 +353,7 @@ if __name__ == "__main__":
                 cfg.logdir = tmp_dir[0:-1] + '-' + ip + '/'
                 if not args.skip_preprocess:
                     sofa_preprocess(cfg)
-            cluster_analyze(cfg)
+            cluster_analyze(cfg, tmp_dir)
             if args.with_gui:
                 sofa_viz(cfg)
         else:

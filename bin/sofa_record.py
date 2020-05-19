@@ -168,9 +168,9 @@ def sofa_record(command, cfg):
     sample_freq = 99
     command_prefix = ''
 
-    with_sudo = ''
+    sudo = ''
     if int(os.system('command -v sudo  1> /dev/null')) == 0:
-        with_sudo = 'sudo '
+        sudo = 'sudo '
 
 
 #    if int(open("/proc/sys/kernel/yama/ptrace_scope").read()) != 0:
@@ -183,13 +183,13 @@ def sofa_record(command, cfg):
         if int(open("/proc/sys/kernel/kptr_restrict").read()) != 0:
             print_error(
                 "/proc/kallsyms permission is restricted, please try the command below:")
-            print_error("sudo sysctl -w kernel.kptr_restrict=0")
+            print_error(sudo + "sysctl -w kernel.kptr_restrict=0")
             sys.exit(1)
 
     if os.path.isfile("/proc/sys/kernel/perf_event_paranoid"):
         if int(open("/proc/sys/kernel/perf_event_paranoid").read()) != -1:
             print_error('PerfEvent is not avaiable, please try the command below:')
-            print_error('sudo sysctl -w kernel.perf_event_paranoid=-1')
+            print_error(sudo + 'sysctl -w kernel.perf_event_paranoid=-1')
             sys.exit(1)
 
     if subprocess.call(['mkdir', '-p', logdir]) != 0:
@@ -207,7 +207,7 @@ def sofa_record(command, cfg):
     subprocess.call('rm %s/*.csv > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/*.txt > /dev/null 2> /dev/null' % logdir, shell=True)
     if os.path.isfile('%s/container_root' % logdir):
-        subprocess.call( with_sudo + 'umount %s/container_root' % logdir, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.call( sudo + 'umount %s/container_root' % logdir, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     try:
         print_main_progress("Prologue of Recording...")
@@ -248,7 +248,7 @@ def sofa_record(command, cfg):
                 p_vmstat = subprocess.Popen(['vmstat', '-w', '1'], stdout=logfile)
 
         if cfg.blktrace_device is not None:
-            p_blktrace = subprocess.Popen('sudo blktrace --dev=%s' % cfg.blktrace_device, stderr=DEVNULL, stdout=DEVNULL, shell=True)
+            p_blktrace = subprocess.Popen(sudo + 'blktrace --dev=%s -o trace -D %s' % (cfg.blktrace_device, logdir), stderr=DEVNULL, stdout=DEVNULL, shell=True)
             subprocess.call('echo "blktrace enabled"', shell=True)
 
         if os.path.isfile('/proc/cpuinfo'): 
@@ -330,20 +330,20 @@ def sofa_record(command, cfg):
 
         if platform.platform().find('Darwin') != -1:
             print_warning(cfg,"Use /usr/bin/time to measure program performance instead of perf.")
-            profile_command = '/usr/bin/time -l %s' % (command_prefix+command)
+            profile_command = '/usr/bin/time -l %s' % (command_prefix + command)
             cfg.perf_events = ""
         else:
-            if int(os.system('command -v perf 1> /dev/null')) == 0:
+            if cfg.no_perf_events or int(os.system('command -v perf 1> /dev/null')) != 0:
+                print_warning(cfg,"Use /usr/bin/time to measure program performance instead of perf.")
+                profile_command = '/usr/bin/time -v %s' % (command_prefix + command)
+                cfg.perf_events = ""
+            else:
                 ret = str(subprocess.check_output(['perf stat -e cycles ls 2>&1 '], shell=True))
                 if ret.find('not supported') >=0:
                     profile_command = 'perf record -o %s/perf.data -F %s %s %s' % (logdir, sample_freq, perf_options, command_prefix+command)
                     cfg.perf_events = ""
                 else:
                     profile_command = 'perf record -o %s/perf.data -e %s -F %s %s %s' % (logdir, cfg.perf_events, sample_freq, perf_options, command_prefix+command) 
-            else:
-                print_warning(cfg,"Use /usr/bin/time to measure program performance instead of perf.")
-                profile_command = '/usr/bin/time -v %s' % (command_prefix+command)
-                cfg.perf_events = ""
         
         with open(logdir+'perf_events_used.txt','w') as f:
             f.write(cfg.perf_events)
@@ -392,7 +392,8 @@ def sofa_record(command, cfg):
             print_hint('Profiling Command : ' + profile_command)
             if platform.platform().find('Darwin') != -1:
                 print_hint('On Darwin, press Ctrl+C to continue if being blocked for a while.')
-            p_perf = subprocess.Popen(profile_command, shell=True)
+            with open(cfg.logdir + '/sofa.err', 'w') as errfile:
+                p_perf = subprocess.Popen(profile_command, shell=True, stderr=errfile)
         
         try:
             if os.path.isfile(cfg.logdir+'/cidfile.txt'):
@@ -429,10 +430,10 @@ def sofa_record(command, cfg):
             print_info(cfg,"tried terminating vmstat")
         if p_blktrace != None:
             #TODO: seek for a elegant killing solution 
-            subprocess.call('sudo pkill blktrace', shell=True)
+            subprocess.call(sudo + 'pkill blktrace', shell=True)
             if cfg.blktrace_device is not None:
-                os.system('sudo blkparse -i %s -o %s/blktrace.txt -d %s/blktrace.out > /dev/null' % (cfg.blktrace_device.split('/')[-1], logdir, logdir))
-                os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)
+                os.system(sudo + 'blkparse -i %s/trace.blktrace.* -o %s/blktrace.txt -d %s/blktrace.out > /dev/null' % (logdir, logdir, logdir))
+                os.system('rm -rf %s/trace.blktrace.*' % logdir)
             print_info(cfg,"tried terminating blktrace")
         if p_cpuinfo != None:
             p_cpuinfo.terminate()
@@ -477,10 +478,10 @@ def sofa_record(command, cfg):
             print_info(cfg,"tried killing vmstat")
         if p_blktrace != None:
             #TODO: seek for a elegant killing solution 
-            subprocess.call('sudo pkill blktrace', shell=True)
+            subprocess.call(sudo + 'pkill blktrace', shell=True)
             if cfg.blktrace_device is not None:
-                os.system('sudo blkparse -i %s -o %s/blktrace.txt > /dev/null' % (cfg.blktrace_device,logdir))
-                os.system('rm -rf %s.blktrace.*' % cfg.blktrace_device)
+                os.system(sudo + 'blkparse -i %s/trace.blktrace.* -o %s/blktrace.txt -d %s/blktrace.out > /dev/null' % (logdir, logdir, logdir))
+                os.system('rm -rf %s/trace.blktrace.*' % logdir)
             print_info(cfg,"tried terminating blktrace")
         if p_cpuinfo != None:
             p_cpuinfo.kill()

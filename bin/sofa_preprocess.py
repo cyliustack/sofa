@@ -488,10 +488,11 @@ def sofa_preprocess(cfg):
             mpstat_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
             n_cores = int(mpstat[:,1].max() + 1)
             stride = n_cores + 1
+            usr_sys_list = []
             for i in range(len(mpstat)):
                 if len(mpstat[i]) < len(header):
                     continue
-                if i <= stride or mpstat[i,1] == -1:
+                if i <= stride:
                     continue
                 #time, cpu,  user，nice, system, idle, iowait, irq, softirq
                 core = mpstat[i,1]
@@ -510,34 +511,38 @@ def sofa_preprocess(cfg):
 
                 if not cfg.absolute_timestamp:
                     t_begin = t_begin - cfg.time_base
-
-                deviceId = core
-                metric = cpu_time
-                event = -1
-                copyKind = -1
-                payload = -1
-                bandwidth = -1
-                pkt_src = pkt_dst = -1
-                pid = tid = -1
-                mpstat_info = 'mpstat_core%d (usr|sys|idl|iow|irq): |%3d|%3d|%3d|%3d|%3d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
-
-                trace_usr = [
-                    t_begin,
-                    event,
-                    metric,
-                    deviceId,
-                    copyKind,
-                    payload,
-                    bandwidth,
-                    pkt_src,
-                    pkt_dst,
-                    pid,
-                    tid,
-                    mpstat_info,
-                    0]
                 
-                mpstat_list.append(trace_usr)
-                
+                if mpstat[i,1] != -1:
+                    deviceId = core
+                    metric = cpu_time
+                    event = -1
+                    copyKind = -1
+                    payload = -1
+                    bandwidth = -1
+                    pkt_src = pkt_dst = -1
+                    pid = tid = -1
+                    mpstat_info = 'mpstat_core%d (usr|sys|idl|iow|irq): |%3d|%3d|%3d|%3d|%3d|' % (core, d_mp_usr, d_mp_sys, d_mp_idl, d_mp_iow, d_mp_irq)
+
+                    trace_usr = [
+                        t_begin,
+                        event,
+                        metric,
+                        deviceId,
+                        copyKind,
+                        payload,
+                        bandwidth,
+                        pkt_src,
+                        pkt_dst,
+                        pid,
+                        tid,
+                        mpstat_info,
+                        0]
+                    
+                    mpstat_list.append(trace_usr)
+                else:
+                    usr_sys_list.append(tuple([t_begin, d_mp_usr, d_mp_sys]))
+            usr_sys_table = pd.DataFrame(usr_sys_list, columns=['time', 'usr', 'sys'])
+            usr_sys_table.to_csv('%s/usr_sys.csv' %logdir, index=False)
             mpstat_traces = list_to_csv_and_traces(cfg, mpstat_list, 'mpstat.csv', 'w')
 
     if os.path.isfile('%s/diskstat.txt' % logdir):
@@ -658,11 +663,11 @@ def sofa_preprocess(cfg):
             diskstat_traces.to_csv('%s/diskstat.csv' %logdir, index=False)
             diskstat_table.to_csv('%s/diskstat_vector.csv' %logdir, index=False)
    
-            if cfg.blktrace_device:
-                devi = cfg.blktrace_device.split('/')[-1]
-                de = (diskstat_table['dev'] == devi)
+            if cfg.diskstat_filters:
+                print(cfg.diskstat_filters)
+                de = (diskstat_table['dev'] == cfg.diskstat_filters)
                 diskstat_table = diskstat_table[de]
-                diskstat_table.to_csv('%s/diskstat_vector_ui.csv' %logdir, index=False)
+            diskstat_table.to_csv('%s/diskstat_vector_ui.csv' %logdir, index=False)
 
     #     dev   cpu   sequence  timestamp   pid  event operation start_block+number_of_blocks   process
     # <mjr,mnr>        number
@@ -683,6 +688,7 @@ def sofa_preprocess(cfg):
             lines = f.readlines()
             print_info(cfg,"Length of blktrace = %d" % len(lines))
             if len(lines) > 0:
+                blktrace_d_dict = {}
                 blktrace_d_list = []
                 blktrace_list = []
                 blktrace_d_list.append(np.empty((len(sofa_fieldnames), 0)).tolist())
@@ -738,31 +744,30 @@ def sofa_preprocess(cfg):
 
                         if 'D' is event:
                             blktrace_d_list.append(trace)
+                            blktrace_d_dict[blktrace_start_block] = trace
 
                         if 'C' is event:
-                            for i in range(len(blktrace_d_list)):
-                                if i==0:
-                                    continue
-                                if int(blktrace_d_list[i][2])==int(blktrace_start_block):
-                                    time_consume = float(blktrace_timestamp)-float(blktrace_d_list[i][0])
-                                    # print('blktrace_d_list[i]:%s'%blktrace_d_list[i])
-                                    # print('int(blktrace_timestamp):%f, int(blktrace_d_list[i][0]:%f, time_consume:%f' % (float(blktrace_timestamp), float(blktrace_d_list[i][0]), time_consume))
-                                    trace = [
-                                        blktrace_d_list[i][0],
-                                        event,
-                                        float(time_consume),
-                                        deviceId,
-                                        copyKind,
-                                        payload,
-                                        bandwidth,
-                                        pkt_src,
-                                        pkt_dst,
-                                        pid,
-                                        tid,
-                                        name_info,
-                                        cpuid]
-                                    blktrace_list.append(trace)
-                                    blktrace_d_list[i][11] = 'latency=%0.6f' % float(time_consume)
+                            try:
+                                d_event = blktrace_d_dict[blktrace_start_block]
+                            except:
+                                continue
+                            time_consume = float(blktrace_timestamp - d_event[0])
+                            name_info = 'latency=%0.6f' % float(time_consume)
+                            trace = [
+                                 d_event[0],
+                                 event,
+                                 float(time_consume),
+                                 deviceId,
+                                 copyKind,
+                                 payload,
+                                 bandwidth,
+                                 pkt_src,
+                                 pkt_dst,
+                                 pid,
+                                 tid,
+                                 name_info,
+                                 cpuid]
+                            blktrace_list.append(trace)                        
 
                 blk_d_traces = list_to_csv_and_traces(
                     cfg, blktrace_d_list, 'blktrace.csv', 'w')
@@ -771,7 +776,6 @@ def sofa_preprocess(cfg):
 
                 if record_error_flag == 1 :
                     print_warning(cfg,'blktrace maybe record failed!')
-
 
     # procs -----------------------memory---------------------- ---swap-- -
     #  r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
@@ -1313,7 +1317,7 @@ def sofa_preprocess(cfg):
                     tmp_time = time
                     tmp_tx = tx
                     tmp_rx = rx    
-                bandwidth_result.to_csv('%s/netbandwidth.csv' %logdir, header=True)
+                bandwidth_result.to_csv('%s/netbandwidth.csv' %logdir, header=True, index=False)
                 tx_traces = pd.DataFrame(tx_list, columns = sofa_fieldnames)
                 tx_traces.to_csv(
                             logdir + 'netstat.csv',
@@ -1774,8 +1778,7 @@ def sofa_preprocess(cfg):
                     perf_timebase_uptime = float(lines[-2].split()[2].split(':')[0])
                     perf_timebase_unix = float(lines[-1].split()[0])
                 except:
-                    print_warning(cfg,'Incorrect format in perf_timebase.txt; the profiling time might be too short.') 
-
+                    print_warning(cfg,'Incorrect format in perf_timebase.txt; the profiling time might be too short.')
 
     try:
         with open(logdir + 'perf.script') as f:

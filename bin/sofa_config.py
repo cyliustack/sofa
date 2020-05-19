@@ -63,8 +63,10 @@ class SOFA_Config:
     spotlight_gpu = False
     blktrace_device = None
     nvsmi_data = False
-    roi_begin=0
-    roi_end=0
-    netstat_interface=None
-    nvsmi_time_zone=0
-    nvprof_inside=False
+    roi_begin = 0
+    roi_end = 0
+    netstat_interface = None
+    nvsmi_time_zone = 0
+    nvprof_inside = False
+    diskstat_filters = None
+    no_perf_events = False
