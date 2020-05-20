@@ -61,10 +61,9 @@ function clear_install_dir()
 function install_sofa()
 {
     echo "Installing..."
-    cp -rf ${SCRIPT_PATH}/bin       ${PREFIX}
-    cp -rf ${SCRIPT_PATH}/bin       ${PREFIX}
-    cp -rf ${SCRIPT_PATH}/plugins   ${PREFIX}
-    cp -rf ${SCRIPT_PATH}/sofaboard ${PREFIX}
+    cp -raf ${SCRIPT_PATH}/bin       ${PREFIX}
+    cp -raf ${SCRIPT_PATH}/plugins   ${PREFIX}
+    cp -raf ${SCRIPT_PATH}/sofaboard ${PREFIX}
 
     # Create a new file for SOFA environment
 ################## heredoc style
@@ -77,22 +76,16 @@ EOF
     # Create an uninstall script
 ################## heredoc style
     cat > ${PREFIX}/tools/uninstall.sh <<EOF
-# Change the directory
-cd ${PREFIX}
-[[ \$(pwd) != ${PREFIX} ]] && echo "Fail to change directory. Stop uninstalling..." && exit 1
 # Remove installed files
-rm -f ${BIN_FILES[@]}
-rm -f ${PLUGIN_FILES[@]}
-rm -f ${SOFABOARD_FILES[@]}
-# Remove all python caches
-rm -rf __pycache__ plugins/__pycache__ bin/__pycache__
-# Remove generated files
-rm -f tools/activate.sh
-rm -f tools/uninstall.sh
+rm -r ${PREFIX}/bin 
+rm -r ${PREFIX}/sofaboard 
+rm -r ${PREFIX}/plugins 
+rm -r ${PREFIX}/tools 
 # Remove directory only if it is empty!
-rmdir --ignore-fail-on-non-empty ${INSTALL_DIRS[@]}
 rmdir --ignore-fail-on-non-empty ${PREFIX}
 EOF
+
+chmod +x ${PREFIX}/tools/uninstall.sh 
 ##################
 }
 
