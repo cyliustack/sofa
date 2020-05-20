@@ -1,3 +1,0 @@
-procs -----------------------memory---------------------- ---swap-- -----io---- -system-- --------cpu--------
- r  b         swpd         free         buff        cache   si   so    bi    bo   in   cs  us  sy  id  wa  st
- 3  0            0    159326672       978404     19153132    0    0     1    13    0    2   1   1  98   0   0
