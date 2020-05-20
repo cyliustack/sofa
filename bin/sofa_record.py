@@ -171,14 +171,16 @@ def sofa_record(command, cfg):
     sudo = ''
     if int(os.system('command -v sudo  1> /dev/null')) == 0:
         sudo = 'sudo '
+    
+    subprocess.call('g++ ' + cfg.script_path + '/sofa_perf_timebase.cc -o ' + logdir + '/sofa_perf_timebase', shell=True)
+    if not os.path.isfile(logdir + '/sofa_perf_timebase'):
+        print_error(logdir + '/sofa_perf_timebase is not found')
+        sys.exit(-1)
 
-
-#    if int(open("/proc/sys/kernel/yama/ptrace_scope").read()) != 0:
-#        print_error(
-#            "Could not attach to process, please try the command below:")
-#        print_error("sudo sysctl -w kernel.yama.ptrace_scope=0")
-#        sys.exit(1)
-
+    subprocess.call('nvcc ' + cfg.script_path + '/cuhello.cu -o ' + logdir + '/cuhello', shell=True, stderr=DEVNULL)
+    if not os.path.isfile(logdir + '/cuhelo'):
+        print_warning(cfg, 'No nvcc found; nvcc is required to improve perf timestamp accuracy.') 
+    
     if os.path.isfile("/proc/sys/kernel/kptr_restrict"):
         if int(open("/proc/sys/kernel/kptr_restrict").read()) != 0:
             print_error(
@@ -229,9 +231,9 @@ def sofa_record(command, cfg):
             subprocess.call('cp /proc/kallsyms %s/' % (logdir), shell=True )
             subprocess.call('chmod +w %s/kallsyms' % (logdir), shell=True )
 
-        print_info(cfg,"Script path of SOFA: "+cfg.script_path)
+        print_info(cfg,"Script path of SOFA: " + cfg.script_path) 
         with open(logdir+'/perf_timebase.txt', 'w') as logfile:
-            subprocess.call('%s/sofa_perf_timebase' % (cfg.script_path), shell=True, stderr=logfile, stdout=logfile)
+            subprocess.call('%s/sofa_perf_timebase' % (logdir), shell=True, stderr=logfile, stdout=logfile)
         subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -q -o %s/cuhello.perf.data %s/cuhello' % (logdir,logdir,cfg.script_path), shell=True, stderr=DEVNULL, stdout=DEVNULL)
         if int(os.system('perf 2>&1 1>/dev/null')) == 0:
             subprocess.call('nvprof --profile-child-processes -o %s/cuhello%%p.nvvp -- perf record -q -o %s/cuhello.perf.data %s/cuhello' % (logdir,logdir,cfg.script_path), shell=True, stderr=DEVNULL, stdout=DEVNULL)
