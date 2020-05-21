@@ -171,7 +171,11 @@ def sofa_record(command, cfg):
     sudo = ''
     if int(os.system('command -v sudo  1> /dev/null')) == 0:
         sudo = 'sudo '
-    
+ 
+    if subprocess.call(['mkdir', '-p', logdir]) != 0:
+        print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
+        sys.exit(1)
+   
     subprocess.call('g++ ' + cfg.script_path + '/sofa_perf_timebase.cc -o ' + logdir + '/sofa_perf_timebase', shell=True)
     if not os.path.isfile(logdir + '/sofa_perf_timebase'):
         print_error(logdir + '/sofa_perf_timebase is not found')
@@ -193,10 +197,6 @@ def sofa_record(command, cfg):
             print_error('PerfEvent is not avaiable, please try the command below:')
             print_error(sudo + 'sysctl -w kernel.perf_event_paranoid=-1')
             sys.exit(1)
-
-    if subprocess.call(['mkdir', '-p', logdir]) != 0:
-        print_error('Cannot create the directory' + logdir + ',which is needed for sofa logged files.' )
-        sys.exit(1)
 
     print_info(cfg,'Clean previous logged files')
     # Not equal to sofa_clean(...) !!
