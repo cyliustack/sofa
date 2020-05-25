@@ -44,13 +44,17 @@ SOFA provides options for advanced usages. Some examples are shown below. Please
 `sofa record "python3.6 pytorch_dnn_example.py -a resnet50 /mnt/dataset/imagenet/mini-imagenet/raw-data --epochs=1 --batch-size=64"`   
 ![Alt text](./figures/pytorch_resnet50.png)
 
-
 `sofa record "./scout dt-bench ps:resnet50 --hosts='192.168.0.100,192.168.0.101'"`   
 ![Alt text](./figures/sofa_network.png)
-
 
 `sofa record "~/cuda_samples/1_Utilities/bandwidthTest/bandwidthTest"`  
 ![Alt text](./figures/bandwidth.png)
 
 `sofa record "./scout t-bench resnet50_real"`   
 ![Alt text](./figures/realdata.png)
+
+
+# Development and Contributions
+We strongly encourage and appreciate any contributions to SOFA to make our performance engineering work more comfortable. 
+But to maintain the quality of the codes, we need to regulate cooperations as the following:   
+1. Please run `test/test.py` before sending pull request. If you would like to test SOFA on some platforms, you could run `./test/test.py --dockerfiles Dockerfile.ubuntu.1604,Dockerfile.ubuntu.1804` where all dockerfiles must be placed inside directory of test.
