@@ -1,8 +1,6 @@
 FROM ubuntu:18.04
-
 RUN apt update -y
-RUN apt install git wget curl vim -y
-
-
-
-
+RUN apt install git wget curl vim python3 -y
+COPY sofaroot/tools/prepare.sh prepare.sh 
+RUN ./prepare.sh
+COPY sofaroot /sofaroot

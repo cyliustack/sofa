@@ -1,6 +1,6 @@
-FROM ubuntu:19.10
-RUN apt update -y
-RUN apt install git wget curl vim python3 -y
+FROM centos:8 
+RUN yum update -y
+RUN yum install git wget curl vim python3 -y
 COPY sofaroot/tools/prepare.sh prepare.sh 
 RUN ./prepare.sh
 COPY sofaroot /sofaroot

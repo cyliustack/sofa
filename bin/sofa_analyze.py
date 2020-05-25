@@ -1039,6 +1039,7 @@ def sofa_analyze(cfg):
         ['bash', '-c', 'cp %s/../sofaboard/* %s;' % (sofa_home, cfg.logdir)])
     subprocess.Popen(['sleep', '2'])
     print('\n\n')
+    print('Complete!!')
 
 def cluster_analyze(cfg):
     if cfg.verbose:
