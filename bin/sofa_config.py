@@ -44,6 +44,8 @@ class SOFA_Config:
     time_base = 0
     pid = -1
     timeout = 30
+    sys_mon_rate = 10
+    is_idle_threshold = 10
     columns = sofa_fieldnames = [
     "timestamp",  # 0
     "event",  # 1
@@ -69,4 +71,4 @@ class SOFA_Config:
     nvsmi_time_zone = 0
     nvprof_inside = False
     diskstat_filters = None
-    no_perf_events = False
+    no_perf_events = False 

@@ -80,6 +80,7 @@ if __name__ == "__main__":
     group_record.add_argument(
         '--netstat_interface',
         help='interface to monitor by netstat: like eth0 or ib0')
+    group_record.add_argument('--sys-mon-rate', help='assign Hz value to monitor system, default:10')
     group_record.add_argument('--nvprof_inside', action='store_true')
     group_record.add_argument('--no-perf-events', action='store_true', help = 'Profiling without perf')
 
@@ -152,7 +153,7 @@ if __name__ == "__main__":
     group_report.add_argument('--spotlight_gpu', help='start profiling when GPU SM utilization is high.', action='store_true')
     group_report.add_argument('--with-gui', help='launch a http server to provide Web GUI.', action='store_true')
     group_report.add_argument('--nvsmi_time_zone', metavar='8', type=int, help='time zone for nvsmi_query.txt')
-
+    group_report.add_argument('--is-idle-threshold', metavar='10', type=int, help='assign idle threshold value(percentage) to concurrency breakdown')
 	
     args = parser.parse_args()
     if args.logdir is not None:
@@ -214,6 +215,12 @@ if __name__ == "__main__":
 
     if args.num_iterations is not None:
         cfg.num_iterations = args.num_iterations
+
+    if args.sys_mon_rate:
+        cfg.sys_mon_rate = args.sys_mon_rate
+
+    if args.is_idle_threshold:
+        cfg.is_idle_threshold = args.is_idle_threshold
 
     if args.pid is not None:
         cfg.pid = args.pid

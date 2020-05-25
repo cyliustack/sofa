@@ -22,38 +22,38 @@ import platform
 
 from sofa_print import *
 
-def service_get_cpuinfo(logdir):
+def service_get_cpuinfo(logdir, cfg):
     next_call = time.time()
     while True:
         #print(datetime.datetime.now())
-        next_call = next_call + 0.1;
+        next_call = next_call + (1 / float(cfg.sys_mon_rate));
         get_cpuinfo(logdir)
         time_remained = next_call - time.time()
         if time_remained > 0: 
             time.sleep(time_remained)
 
-def service_get_mpstat(logdir):
+def service_get_mpstat(logdir, cfg):
     next_call = time.time()
     while True:
-        next_call = next_call + 0.1;
+        next_call = next_call + (1 / float(cfg.sys_mon_rate))
         get_mpstat(logdir)
         time_remained = next_call - time.time()
         if time_remained > 0: 
             time.sleep(time_remained)
 
-def service_get_diskstat(logdir):
+def service_get_diskstat(logdir, cfg):
     next_call = time.time()
     while True:
-        next_call = next_call + 0.1;
+        next_call = next_call + (1 / float(cfg.sys_mon_rate))
         get_diskstat(logdir)
         time_remained = next_call - time.time()
         if time_remained > 0: 
             time.sleep(time_remained)
 
-def service_get_netstat(logdir, interface):
+def service_get_netstat(logdir, interface, cfg):
     next_call = time.time()
     while True:
-        next_call = next_call + 0.1
+        next_call = next_call + (1 / float(cfg.sys_mon_rate))
         get_netstat(logdir, interface)
         time_remained = next_call - time.time()
         if time_remained > 0:
@@ -201,6 +201,7 @@ def sofa_record(command, cfg):
     print_info(cfg,'Clean previous logged files')
     # Not equal to sofa_clean(...) !!
     subprocess.call('rm ' + os.getcwd() + '/perf.data 1> /dev/null 2> /dev/null', shell=True )
+    subprocess.call('rm %s/perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
     subprocess.call('rm %s/cuhello.perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
     subprocess.call('rm %s/sofa.pcap > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/gputrace*.nvvp > /dev/null 2> /dev/null' % logdir, shell=True)
@@ -256,21 +257,21 @@ def sofa_record(command, cfg):
         if os.path.isfile('/proc/cpuinfo'): 
             with open('%s/cpuinfo.txt' % logdir, 'w') as logfile:
                 logfile.write('')
-                timerThread = threading.Thread(target=service_get_cpuinfo, args=[logdir])
+                timerThread = threading.Thread(target=service_get_cpuinfo, args=[logdir, cfg])
                 timerThread.daemon = True
                 timerThread.start()
         
         if subprocess.call('which mpstat', shell=True) == 0: 
             with open('%s/mpstat.txt' % logdir, 'w') as logfile:
                 logfile.write('time,cpu,user,nice,system,idle,iowait,irq,softirq\n')
-                timerThread = threading.Thread(target=service_get_mpstat, args=[logdir])
+                timerThread = threading.Thread(target=service_get_mpstat, args=[logdir, cfg])
                 timerThread.daemon = True
                 timerThread.start()
 
         if os.path.isfile('/proc/diskstats'):
             with open('%s/diskstat.txt' % logdir, 'w') as logfile:
                 logfile.write('')
-                timerThread = threading.Thread(target=service_get_diskstat, args=[logdir])
+                timerThread = threading.Thread(target=service_get_diskstat, args=[logdir, cfg])
                 timerThread.daemon = True
                 timerThread.start()
 
@@ -283,7 +284,7 @@ def sofa_record(command, cfg):
                     interface = cfg.netstat_interface
                 else:
                     interface = interface.split(':')[0]
-                timerThread = threading.Thread(target=service_get_netstat, args=[logdir, interface])
+                timerThread = threading.Thread(target=service_get_netstat, args=[logdir, interface, cfg])
                 timerThread.daemon = True
                 timerThread.start()
         
@@ -299,9 +300,14 @@ def sofa_record(command, cfg):
         if int(os.system('command -v nvidia-smi 1>/dev/null')) == 0:
             with open('%s/nvsmi.txt' % logdir, 'w') as logfile:
                 p_nvsmi = subprocess.Popen(['nvidia-smi', 'dmon', '-s', 'u'], stdout=logfile)
-            with open('%s/nvsmi_query.txt' % logdir, 'w') as logfile:                                                                                                                                           
-                p_nvsmi_query = subprocess.Popen(['nvidia-smi', '--query-gpu=timestamp,gpu_name,index,utilization.gpu,utilization.memory',
-                                            '-lms', '100', '--format=csv'], stdout=logfile)
+            with open('%s/nvsmi_query.txt' % logdir, 'w') as logfile:
+                sample_time = 1 / float(cfg.sys_mon_rate)
+                if sample_time >= 1:
+                    p_nvsmi_query = subprocess.Popen(['nvidia-smi', '--query-gpu=timestamp,gpu_name,index,utilization.gpu,utilization.memory',
+                                            '-l', str(int(sample_time)), '--format=csv'], stdout=logfile)
+                else:                                                                                                                                          
+                    p_nvsmi_query = subprocess.Popen(['nvidia-smi', '--query-gpu=timestamp,gpu_name,index,utilization.gpu,utilization.memory',
+                                            '-lms', str(int(sample_time * 1000)), '--format=csv'], stdout=logfile)
             with open('%s/nvlink_topo.txt' % logdir, 'w') as logfile:
                 p_nvtopo = subprocess.Popen(['nvidia-smi', 'topo', '-m'], stdout=logfile)
 
