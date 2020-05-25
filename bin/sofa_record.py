@@ -200,7 +200,7 @@ def sofa_record(command, cfg):
 
     print_info(cfg,'Clean previous logged files')
     # Not equal to sofa_clean(...) !!
-    subprocess.call('rm %s/perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
+    subprocess.call('rm ' + os.getcwd() + '/perf.data 1> /dev/null 2> /dev/null', shell=True )
     subprocess.call('rm %s/cuhello.perf.data > /dev/null 2> /dev/null' % logdir, shell=True )
     subprocess.call('rm %s/sofa.pcap > /dev/null 2> /dev/null' % logdir, shell=True)
     subprocess.call('rm %s/gputrace*.nvvp > /dev/null 2> /dev/null' % logdir, shell=True)
@@ -350,6 +350,7 @@ def sofa_record(command, cfg):
         with open(logdir+'perf_events_used.txt','w') as f:
             f.write(cfg.perf_events)
 
+        subprocess.call('rm ' + os.getcwd() + '/perf.data 1> /dev/null 2> /dev/null', shell=True )
 
         # Launch SOFA recording
         if command.find('docker') != -1:
