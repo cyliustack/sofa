@@ -10,7 +10,7 @@ import getpass
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Test Script')
-    parser.add_argument('dockerfiles', nargs='+', metavar='Dockerfile.xxx.xxx', help='Specify the dockerfile to build and run.')
+    parser.add_argument('--dockerfiles', metavar='Dockerfile1,Dockerfile2', help='Specify the dockerfile to build and run.')
     args = parser.parse_args()
     
     distro  = ''
@@ -25,7 +25,16 @@ if __name__ == '__main__':
         logfile.write('====== Test SOFA on Different OS distributions ======\n')
         logfile.write('This test is done by ' + getpass.getuser() + ' at ' + date_time + '\n')
 
-    for dockerfile in args.dockerfiles:
+    dockerfiles = ['Dockerfile.ubuntu.1604', 
+                   'Dockerfile.ubuntu.1804',
+                   'Dockerfile.centos.7',
+                   'Dockerfile.centos.8',
+                   'Dockerfile.opensuse.leap',]
+
+    if args.dockerfiles != None:
+        dockerfiles = args.dockerfiles.split(',')
+
+    for dockerfile in dockerfiles:
         if not os.path.isfile(dockerfile):
             print(dockerfile + ' is not found.')
             sys.exit(-1)
