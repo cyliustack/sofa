@@ -76,8 +76,8 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
     if cfg.verbose:
         print_title('Concurrency Breakdown Analysis')
 
-    total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
-    elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0}
+    total_elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0, 'idl':0}
+    elapsed_time_ratio = {'usr':0, 'sys':0, 'gpu':0, 'iow':0, 'idl':0}
     total_interval_vector = []
     total_performace_vector = []
     
@@ -89,12 +89,13 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
     t_begin = df_mpstat.iloc[0]['timestamp']
     t_end = df_mpstat.iloc[-1]['timestamp']
     t = t_begin
+    sample_time = (1 / float(cfg.sys_mon_rate))
     while t < t_end:
-        t = t + 0.1
+        t = t + sample_time
         if cfg.roi_end > 0 and (t < cfg.roi_begin or t > cfg.roi_end):
             continue
         
-        window_begin = t - 0.1 
+        window_begin = t - sample_time 
         window_end = t
        
         if len(df_cpu) > 0: 
@@ -123,6 +124,7 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
 
         mp_usr = []
         mp_sys = []
+        mp_idl = []
         mp_iow = []
 
         usr = []
@@ -135,9 +137,10 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
             ratios = df_mpstat_interval.iloc[i]['name'].split(':')[1].split('|')
             
             #print(ratios)
-            mp_usr.append(0.1*int(ratios[1])/100.0)
-            mp_sys.append(0.1*int(ratios[2])/100.0)
-            mp_iow.append(0.1*int(ratios[4])/100.0)
+            mp_usr.append(sample_time*int(ratios[1])/100.0)
+            mp_sys.append(sample_time*int(ratios[2])/100.0)
+            mp_idl.append(sample_time*int(ratios[3])/100.0)
+            mp_iow.append(sample_time*int(ratios[4])/100.0)
 
             usr.append(int(ratios[1]))
             sys.append(int(ratios[2]))
@@ -150,33 +153,38 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
                 cpu_min = cpu_tmp
         mp_usr = np.asarray(mp_usr)
         mp_sys = np.asarray(mp_sys)
+        mp_idl = np.asarray(mp_idl)
         mp_iow = np.asarray(mp_iow)
 
         usr = np.asarray(usr)
         sys = np.asarray(sys)
         irq = np.asarray(irq)
 
-        elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0} 
+        elapsed_time = {'usr':0, 'sys':0, 'gpu':0, 'iow':0, 'idl':0} 
 
         if len(df_mpstat_interval) > 0:
             elapsed_time['usr'] = mp_usr.max()
             elapsed_time['sys'] = mp_sys.max()
-            elapsed_time['gpu'] = df_nvsmi_interval['duration'].sum() * 0.01 * 0.1 
+            elapsed_time['gpu'] = df_nvsmi_interval['duration'].max() * 0.01 * sample_time
             elapsed_time['iow'] = mp_iow.max()
             #print('gput,usrt = ', elapsed_time['gpu'], elapsed_time['usr']) 
             dominator = max(elapsed_time, key=elapsed_time.get)
             #if elapsed_time['gpu'] > 0.1 :
             #    dominator = 'gpu'
-            total_elapsed_time[dominator] = total_elapsed_time[dominator] + 0.1
+            if elapsed_time[dominator] > sample_time * int(cfg.is_idle_threshold)/100:
+                total_elapsed_time[dominator] = total_elapsed_time[dominator] + sample_time
+            else:
+                total_elapsed_time['idl'] += sample_time
 
             if num_gpus > 0:
-                time_gpu_avg = df_nvsmi_interval['duration'].sum() * 0.01 * 0.1 / num_gpus
+                time_gpu_avg = df_nvsmi_interval['duration'].sum() * 0.01 * sample_time / num_gpus
             else:
                 time_gpu_avg = 0 
 
             interval_vector = [mp_usr.max(),
                                mp_sys.max(),
                                mp_iow.max(),
+                               mp_idl.max(),
                                time_gpu_avg,
                                df_tx_interval['bandwidth'].sum(),
                                df_rx_interval['bandwidth'].sum()]                             
@@ -199,12 +207,15 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
         elapsed_time_ratio['usr'] = 100 * total_elapsed_time['usr'] / total_all_elapsed_time 
         elapsed_time_ratio['sys'] = 100 * total_elapsed_time['sys'] / total_all_elapsed_time 
         elapsed_time_ratio['gpu'] = 100 * total_elapsed_time['gpu'] / total_all_elapsed_time 
+        elapsed_time_ratio['idl'] = 100 * total_elapsed_time['idl'] / total_all_elapsed_time
         elapsed_time_ratio['iow'] = 100 * total_elapsed_time['iow'] / total_all_elapsed_time 
         if cfg.verbose:
             print('Elapsed Time = %.1lf ' % total_all_elapsed_time)
             print('USR = %.1lf %%' % elapsed_time_ratio['usr'])
             print('SYS = %.1lf %%' % elapsed_time_ratio['sys'])
-            print('GPU = %.1lf %%' % elapsed_time_ratio['gpu'])
+            if num_gpus > 0:
+                print('GPU = %.1lf %%' % elapsed_time_ratio['gpu'])
+            print('IDL = %.1lf %%' % elapsed_time_ratio['idl'])
             print('IOW = %.1lf %%' % elapsed_time_ratio['iow'])
         if cfg.spotlight_gpu:
             elapsed_hotspot_time = cfg.roi_end - cfg.roi_begin 
@@ -222,7 +233,7 @@ def concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_b
     if len(total_performace_vector) > 0:
         performance_table = pd.DataFrame(total_performace_vector, columns = ['time', 'max_gpu_util', 'avg_gpu_util', 'min_gpu_util', 'cpu_util', 'cpu_max', 'cpu_min'])
         performance_table.to_csv('%s/performance.csv' % logdir)
-        vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'gpu', 'net_tx', 'net_rx'])
+        vector_table = pd.DataFrame(total_interval_vector, columns = ['usr' , 'sys', 'iow', 'idl','gpu', 'net_tx', 'net_rx'])
         pearson = vector_table.corr(method ='pearson').round(2)
         if cfg.verbose:
             print('Correlation Table :')
