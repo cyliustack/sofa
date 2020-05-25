@@ -977,11 +977,13 @@ def sofa_analyze(cfg):
         print_warning(cfg, "%s is not found. If there is no need to profile GPU, just ignore it." % filein_gpu)
 
     try:
-        if len(df_nvsmi)>0 and len(df_mpstat)>0:
+        if len(df_mpstat)>0:
             df_nvsmi.append(df_mpstat.iloc[0])
             features = concurrency_breakdown(logdir, cfg, df_mpstat, df_cpu, df_gpu, df_nvsmi, df_bandwidth, features)
     except IOError as e:
         print_warning(cfg, "Some files are not found, which are needed for concurrency_breakdown analysis")
+
+
 
 
 

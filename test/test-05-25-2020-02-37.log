@@ -1,0 +1,7 @@
+====== Test SOFA on Different OS distributions ======
+This test is done by centos at 05-25-2020-02-37
+Testing on ubuntu:1604 PASSED!
+Testing on ubuntu:1804 PASSED!
+Testing on centos:7 PASSED!
+Testing on centos:8 PASSED!
+Testing on opensuse:leap PASSED!
