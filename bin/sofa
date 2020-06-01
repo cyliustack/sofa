@@ -32,7 +32,7 @@ if __name__ == "__main__":
  
     print_hint("Welcome to SOFA! Your Python version is %s.%s.%s" % sys.version_info[:3])
    
-    sofa_exec_path = os.path.abspath( __file__ )
+    sofa_exec_path = os.path.abspath(os.path.abspath(sys.argv[0]))
     if Path(sofa_exec_path).is_symlink():
         cfg.script_path = os.path.dirname(os.readlink(sofa_exec_path))
     else:
