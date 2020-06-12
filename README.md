@@ -57,4 +57,4 @@ SOFA provides options for advanced usages. Some examples are shown below. Please
 # Development and Contributions
 We strongly encourage and appreciate any contributions to SOFA to make our performance engineering work more comfortable. 
 But to maintain the quality of the codes, we need to regulate cooperations as the following:   
-1. Please run `test/test.py` before sending pull request. If you would like to test SOFA on some platforms, you could run `./test/test.py --dockerfiles Dockerfile.ubuntu.1604,Dockerfile.ubuntu.1804` where all dockerfiles must be placed inside directory of test.
+1. Please run `test/test.py` before sending pull request. If you want to test SOFA on some platforms, you could run `./test/test.py --dockerfiles Dockerfile.ubuntu.1604,Dockerfile.ubuntu.1804` where corresponding dockerfiles must be placed inside directory of test.
