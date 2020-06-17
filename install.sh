@@ -70,6 +70,8 @@ function install_sofa()
     cat > ${PREFIX}/tools/activate.sh <<EOF
 export PATH=${PREFIX}/bin:\$PATH
 export PATH=\$PATH:/usr/local/cuda/bin
+export PYTHONPATH=\$PYTHONPATH:${PREFIX}/plugins
+export PYTHONPATH=\$PYTHONPATH:${PREFIX}/bin
 EOF
 ##################
 
