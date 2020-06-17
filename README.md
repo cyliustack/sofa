@@ -1,5 +1,5 @@
 # Introduction
-SOFA: SOFA (Swarm-Oriented Function Call Analysis)     
+SOFA: A Cross-framework Performance Profiler for Heterogeneous Computing Systems and Distributed Machine Learning Systems.
 
 ![Alt text](./figures/sofa.png)
     
