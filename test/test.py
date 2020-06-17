@@ -54,6 +54,7 @@ if __name__ == '__main__':
         call('rm -r sofaroot/*', shell=True )
         call('cp -r ' + this_dir + '/../tools/ sofaroot/', shell=True )
         call('cp -r ' + this_dir + '/../bin/ sofaroot/', shell=True )
+        call('cp -r ' + this_dir + '/../plugins/ sofaroot/', shell=True )
         call('cp -r ' + this_dir + '/../sofaboard/ sofaroot/', shell=True )
         call('cp ' + this_dir + '/../install.sh sofaroot/', shell=True )
 
@@ -64,8 +65,8 @@ if __name__ == '__main__':
         call('docker rm -f sofa_test', shell=True, stdout=DEVNULL, stderr=DEVNULL)
         call('docker run --name sofa_test --rm -itd --network host --privileged ' + image_name + ' bash', shell=True)
         call('docker exec sofa_test bash /sofaroot/install.sh /opt/sofa', shell=True)
-        call('docker exec sofa_test python3 /opt/sofa/bin/sofa record "sleep 5"', shell=True)
-        result = check_output('docker exec sofa_test python3 /opt/sofa/bin/sofa report --verbose', shell=True).decode("utf-8")
+        call('docker exec sofa_test bash -c "source /opt/sofa/tools/activate.sh && sofa record "sleep 5""', shell=True)
+        result = check_output('docker exec sofa_test bash -c "source /opt/sofa/tools/activate.sh && sofa report --verbose"', shell=True).decode("utf-8")
         print(result)
         with open(logfile_name, 'a') as logfile:
             if result.find('Complete!!') != -1:
