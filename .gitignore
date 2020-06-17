@@ -7,3 +7,5 @@ sofa-pcm/*.d
 *.cfg
 *.pyc
 __pycache__
+sofalog
+test/sofaroot
