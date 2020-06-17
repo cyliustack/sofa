@@ -18,6 +18,7 @@ from sofa_preprocess import *
 from sofa_print import *
 from sofa_record import *
 from sofa_viz import *
+import dummy_plugin
 
 if __name__ == "__main__":
     cfg = SOFA_Config()
@@ -31,7 +32,7 @@ if __name__ == "__main__":
     np.seterr(divide='ignore',invalid='ignore')
  
     print_hint("Welcome to SOFA! Your Python version is %s.%s.%s" % sys.version_info[:3])
-   
+  
     sofa_exec_path = os.path.abspath(os.path.abspath(sys.argv[0]))
     if Path(sofa_exec_path).is_symlink():
         cfg.script_path = os.path.dirname(os.readlink(sofa_exec_path))
@@ -156,6 +157,7 @@ if __name__ == "__main__":
     group_report.add_argument('--is-idle-threshold', metavar='10', type=int, help='assign idle threshold value(percentage) to concurrency breakdown')
 	
     args = parser.parse_args()
+
     if args.logdir is not None:
         cfg.logdir = args.logdir + '/'
 
@@ -238,7 +240,6 @@ if __name__ == "__main__":
 
     if args.strace_min_time is not None:
         cfg.strace_min_time = args.strace_min_time
-
     else:
         cfg.strace_min_time = 1e-6
 
@@ -318,6 +319,7 @@ if __name__ == "__main__":
 
     print_info(cfg,"logdir = %s" % cfg.logdir)
 
+    dummy_plugin.dummy_plugin(cfg)
 
     if not cfg.cluster_ip and command != 'record' and not os.path.isdir(cfg.logdir):
         print_error('Cannot find %s'%cfg.logdir)
