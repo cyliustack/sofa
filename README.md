@@ -1,5 +1,5 @@
 # Introduction
-SOFA: A Cross-framework Performance Profiler for Heterogeneous Computing Systems and Distributed Machine Learning Systems.
+SOFA: A Cross-framework performance profiler for heterogeneous computing systems, especially for HPC and distributed machine learning systems.
 
 ![Alt text](./figures/sofa.png)
     
