@@ -1,7 +1,10 @@
+# Community
+[SOFA on Slack](https://sofa-cnj2673.slack.com)
+
 # Introduction
 SOFA: A Cross-framework performance profiler for heterogeneous computing systems, especially for HPC and distributed machine learning systems.
 
-![Alt text](./figures/sofa.png)
+![Alt text](./figures/sofa.png) 
     
 # Prerequisite
 1. Run `./tools/prepare.sh` to install all the necessary packages and python packages.
